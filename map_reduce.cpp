@@ -1,12 +1,12 @@
 /*
  * Project:
- *      CxxDojo (https://github.com/wo3kie/cpp-dojo)
+ *      HFTDojo (https://github.com/wo3kie/hft-dojo)
  *
  * Author:
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "./map_reduce_algo.hpp"
+#include "./map_reduce.hpp"
 #include "./assert.hpp"
 
 using Trivial = int;
