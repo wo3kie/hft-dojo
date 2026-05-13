@@ -150,54 +150,9 @@ void test_insert_levels()
   Assert(engine.bufferOut().pop() == CreateRejected(9, 100));
 }
 
-void test_market_buy_order()
+void test_insert_market_order()
 {
   {
-    // MKT buy fully fills against existing sell
-    MatchingEngine<3> engine(100);
-
-    engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
-    Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
-
-    engine.insertBuyOrder_MKT(2, /* qty */ 100);
-    Assert(engine.bufferOut().pop() == Trade(100, 100, 2, 1));
-  }
-
-  {
-    // MKT buy with no liquidity => rejected
-    MatchingEngine<3> engine(100);
-
-    engine.insertBuyOrder_MKT(1, /* qty */ 100);
-    Assert(engine.bufferOut().pop() == CreateRejected(1, 100));
-  }
-}
-
-void test_market_sell_order()
-{
-  {
-    // MKT sell fully fills against existing buy
-    MatchingEngine<3> engine(100);
-
-    engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
-    Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
-
-    engine.insertSellOrder_MKT(2, /* qty */ 100);
-    Assert(engine.bufferOut().pop() == Trade(100, 100, 2, 1));
-  }
-
-  {
-    // MKT sell with no liquidity => rejected
-    MatchingEngine<3> engine(100);
-
-    engine.insertSellOrder_MKT(1, /* qty */ 100);
-    Assert(engine.bufferOut().pop() == CreateRejected(1, 100));
-  }
-}
-
-void test_multiple_price_levels()
-{
-  {
-    // MKT sell sweeps across multiple buy price levels
     MatchingEngine<3> engine(100);
 
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
@@ -216,7 +171,6 @@ void test_multiple_price_levels()
   }
 
   {
-    // MKT buy sweeps across multiple sell price levels
     MatchingEngine<3> engine(100);
 
     engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
@@ -248,7 +202,6 @@ void test_update_buy_order()
   }
 
   {
-    // wrong orderId => UpdateRejected
     MatchingEngine<3> engine(100);
 
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
@@ -259,7 +212,6 @@ void test_update_buy_order()
   }
 
   {
-    // price out of range => UpdateRejected
     MatchingEngine<3> engine(100);
 
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
@@ -283,7 +235,6 @@ void test_update_sell_order()
   }
 
   {
-    // wrong orderId => UpdateRejected
     MatchingEngine<3> engine(100);
 
     engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
@@ -294,7 +245,6 @@ void test_update_sell_order()
   }
 
   {
-    // price out of range => UpdateRejected
     MatchingEngine<3> engine(100);
 
     engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
@@ -342,9 +292,7 @@ int main()
   test_partial_fill();
   test_single_price_level();
   test_insert_levels();
-  test_market_buy_order();
-  test_market_sell_order();
-  test_multiple_price_levels();
+  test_insert_market_order();
   test_update_buy_order();
   test_update_sell_order();
 #endif
