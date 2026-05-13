@@ -2,7 +2,7 @@
 
 /*
  * Project:
- *      CxxDojo (www.github.com/wo3kie/cpp-dojo)
+ *      HFTDojo (www.github.com/wo3kie/hft-dojo)
  *
  * Author:
  *      Lukasz Czerwinski (www.lukaszczerwinski.pl)
