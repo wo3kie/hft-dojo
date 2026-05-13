@@ -2,7 +2,7 @@
 
 /*
  * Website:
- *      https://github.com/wo3kie/cpp-dojo
+ *      HFTDojo https://github.com/wo3kie/hft-dojo
  *
  * Author:
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
@@ -134,13 +134,11 @@ public:
     return _storage[index].value;
   }
 
-  void for_each(const std::function<void(const TType&)>& func) const
+  template<typename F>
+  void for_each(F&& f) const
   {
-    int32_t index = _head;
-
-    while(index != -1) {
-      func(_storage[index].value);
-      index = _storage[index].next;
+    for(int32_t index = _head; index != -1; index = _storage[index].next) {
+      f(_storage[index].value);
     }
   }
   

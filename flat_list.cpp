@@ -1,3 +1,11 @@
+/*
+ * Project:
+ *      HFTDojo (https://github.com/wo3kie/hft-dojo)
+ *
+ * Author:
+ *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
+ */
+
 #include <cassert>
 #include <iostream>
 
@@ -137,6 +145,22 @@ void test_reuse_slots()
   assert(v2 == 30);
 }
 
+void test_for_each()
+{
+  FlatList<4, int> list;
+
+  list.push_back(1);
+  list.push_back(2);
+  list.push_back(3);
+
+  int sum = 0;
+  list.for_each([&sum](int value) {
+    sum += value;
+  });
+
+  assert(sum == 6);
+}
+
 int main()
 {
   test_push_back();
@@ -145,4 +169,5 @@ int main()
   test_remove_tail();
   test_full();
   test_reuse_slots();
+  test_for_each();
 }
