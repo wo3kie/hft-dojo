@@ -6,7 +6,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Set the project name
-project(cxxDojo)
+project(HFTDojo)
 
 # debug information
 set(CMAKE_BUILD_TYPE Debug)
