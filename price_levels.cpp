@@ -33,7 +33,7 @@ void test_price_levels_min_max_price()
 void test_price_levels_min_price_below_zero()
 {
   PriceLevels<31> pl(16, 0);
-  Assert(pl.minPrice() == 0);
+  Assert(pl.minPrice() == 1);
   Assert(pl.maxPrice() == 47);
 }
 
@@ -71,7 +71,9 @@ void test_price_levels_price_to_index_conversion()
   
   Assert(pl.priceToIndex(100) == 0);
   Assert(pl.priceToIndex(105) == 5);
-  Assert(pl.priceToIndex(95) == -5);
+  Assert(pl.priceToIndex(99) == 63);
+  Assert(pl.priceToIndex(98) == 62);
+  Assert(pl.priceToIndex(97) == 61);
 }
 
 void test_price_levels_shift_up()

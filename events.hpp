@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <ostream>
 
-enum EventType : int32_t
+enum EventType : uint32_t
 {
   ETrade = 1,
 
@@ -29,10 +29,10 @@ enum EventType : int32_t
 
 struct Event
 {
-  int32_t m1{-1};
-  int32_t m2{-1};
-  int32_t m3{-1};
-  int32_t m4{-1};
+  uint32_t m1{0};
+  uint32_t m2{0};
+  uint32_t m3{0};
+  uint32_t m4{0};
 };
 
 bool operator==(const Event& lhs, const Event& rhs)
@@ -40,49 +40,49 @@ bool operator==(const Event& lhs, const Event& rhs)
   return lhs.m1 == rhs.m1 && lhs.m2 == rhs.m2 && lhs.m3 == rhs.m3 && lhs.m4 == rhs.m4;
 }
 
-Event Trade(int32_t price, int32_t qty, int32_t maker, int32_t taker)
+Event Trade(uint32_t price, uint32_t qty, uint32_t maker, uint32_t taker)
 {
   return {.m1 = price, .m2 = qty, .m3 = maker, .m4 = taker};
 }
 
-Event CreateAccepted(int32_t id, int32_t slot)
+Event CreateAccepted(uint32_t id, uint32_t slot)
 {
   return {.m1 = EventType::ECreateAccepted, .m2 = id, .m3 = slot};
 }
 
-Event CreateRejected(int32_t id, int32_t size)
+Event CreateRejected(uint32_t id, uint32_t size)
 {
   return {.m1 = EventType::ECreateRejected, .m2 = id, .m3 = size};
 }
 
-Event CancelAccepted(int32_t id)
+Event CancelAccepted(uint32_t id)
 {
   return {.m1 = EventType::ECancelAccepted, .m2 = id};
 }
 
-Event CancelRejected(int32_t id)
+Event CancelRejected(uint32_t id)
 {
   return {.m1 = EventType::ECancelRejected, .m2 = id};
 }
 
-Event UpdateAccepted(int32_t id)
+Event UpdateAccepted(uint32_t id)
 {
   return {.m1 = EventType::EUpdateAccepted, .m2 = id};
 }
 
-Event UpdateRejected(int32_t id, int32_t size)
+Event UpdateRejected(uint32_t id, uint32_t size)
 {
   return {.m1 = EventType::EUpdateRejected, .m2 = id, .m3 = size};
 }
 
-Event OrderExpired(int32_t id)
+Event OrderExpired(uint32_t id)
 {
   return {.m1 = EventType::EOrderExpired, .m2 = id};
 }
 
 std::ostream& operator<<(std::ostream& os, const Event& event)
 {
-  if (event.m4 != -1) {
+  if (event.m4 != 0) {
     return os << "Trade: price=" << event.m1 << ", qty=" << event.m2 << ", maker=" << event.m3 << ", taker=" << event.m4;
   }
   

@@ -13,5 +13,5 @@
 struct Order
 {
   OrderId id;
-  int32_t qty;
+  Qty qty;
 };

@@ -27,7 +27,17 @@ inline T min(T x, T y) noexcept {
     return y ^ ((x ^ y) & -(x < y));
 }
 
+template<std::unsigned_integral T>
+inline T min(T x, T y) noexcept {
+    return y ^ ((x ^ y) & -(x < y));
+}
+
 template<std::signed_integral T>
+inline T max(T x, T y) noexcept {
+    return x ^ ((x ^ y) & -(x < y));
+}
+
+template<std::unsigned_integral T>
 inline T max(T x, T y) noexcept {
     return x ^ ((x ^ y) & -(x < y));
 }
@@ -38,6 +48,11 @@ T abs(T x) noexcept {
 }
 
 template<std::signed_integral T>
+bool in_range(T x, T min, T max) noexcept {
+    return (x >= min) && (x <= max);
+}
+
+template<std::unsigned_integral T>
 bool in_range(T x, T min, T max) noexcept {
     return (x >= min) && (x <= max);
 }

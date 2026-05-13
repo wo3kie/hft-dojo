@@ -20,84 +20,92 @@ struct PriceLevel
 };
 
 
-template<int32_t Levels>
+template<uint32_t Levels>
 struct PriceLevels
 {
   static_assert((Levels & (Levels + 1)) == 0);
 
-  PriceLevels(int32_t centerPrice = 0, int32_t centerIndex = 0)
+  PriceLevels(Price centerPrice = 0, uint32_t centerIndex = 0)
     : _centerPrice(centerPrice)
     , _centerIndex(centerIndex)
     
   {
   }
 
-  int32_t centerPrice() const
+  Price centerPrice() const
   {
     return _centerPrice;
   }
 
-  int32_t levels() const {
+  uint32_t levels() const {
     return Levels;
   }
 
-  int32_t minPrice() const
+  Price minPrice() const
   {
-    return bl::max0(_centerPrice - Levels);
+    if (_centerPrice + 1 < Levels) {
+      return 1;
+    } else {
+      return _centerPrice - Levels;
+    }
   }
 
-  int32_t maxPrice() const
+  Price maxPrice() const
   {
     return _centerPrice + Levels;
   }
 
-  PriceLevel& index(int32_t index)
+  PriceLevel& index(Index index)
   {
     index += _centerIndex;
     return _levels[index];
   }
 
-  const PriceLevel& index(int32_t index) const
+  const PriceLevel& index(Index index) const
   {
     index += _centerIndex;
+    index &= (Levels + 1 + Levels + 1) - 1;
     return _levels[index];
   }
 
-  PriceLevel& price(int32_t price)
+  PriceLevel& price(Price price)
   {
-    price -= _centerPrice;
     price += _centerIndex;
+    price -= _centerPrice;
+    price &= (Levels + 1 + Levels + 1) - 1;
     return _levels[price];
   }
 
-  const PriceLevel& price(int32_t price) const
+  const PriceLevel& price(Price price) const
   {
-    price -= _centerPrice;
     price += _centerIndex;
+    price -= _centerPrice;
+    price &= (Levels + 1 + Levels + 1) - 1;
     return _levels[price];
   }
 
-  int32_t priceToIndex(int32_t price) const
+  Index priceToIndex(Price price) const
   {
     price -= _centerPrice;
+    price &= (Levels + 1 + Levels + 1) - 1;
     return price;
   }
 
   void shiftUp() {
     _centerPrice += 1;
     _centerIndex += 1;
-    _centerIndex &= (Levels - 1);
+    _centerIndex &= (Levels + 1 + Levels + 1) - 1;
   }
 
   void shiftDown() {
     _centerPrice -= 1;
     _centerIndex -= 1;
-    _centerIndex &= (Levels - 1);
+    _centerIndex &= (Levels + 1 + Levels + 1) - 1;
   }
 
 private:
-  int32_t _centerPrice;
-  int32_t _centerIndex;
+  Price _centerPrice;
+  Price _centerIndex;
 
   Array<PriceLevel, Levels + 1 + Levels + 1> _levels;
 };
