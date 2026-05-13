@@ -27,7 +27,7 @@ struct MatchingEngine
   }
 
 public:
-  void insertSellOrder_PL(int32_t orderId, int32_t price, int32_t qty)
+  void insertSellOrder_PL(OrderId orderId, int32_t price, int32_t qty)
   {
     if (UNLIKELY(_orderBook.checkSellPrice(price) == false)) {
       return emitEvent(CreateRejected(orderId, qty));
@@ -40,7 +40,7 @@ public:
     }
   }
 
-  void insertSellOrder_MKT(int32_t orderId, int32_t qty)
+  void insertSellOrder_MKT(OrderId orderId, int32_t qty)
   {
     qty = tradeSell(orderId, 0, qty);
     
@@ -49,7 +49,7 @@ public:
     }
   }
 
-  void insertBuyOrder_PL(int32_t orderId, int32_t price, int32_t qty)
+  void insertBuyOrder_PL(OrderId orderId, int32_t price, int32_t qty)
   {
     if (UNLIKELY(_orderBook.checkBuyPrice(price) == false)) {
       return emitEvent(CreateRejected(orderId, qty));
@@ -62,7 +62,7 @@ public:
     }
   }
 
-  void insertBuyOrder_MKT(int32_t orderId, int32_t qty)
+  void insertBuyOrder_MKT(OrderId orderId, int32_t qty)
   {
     qty = tradeBuy(orderId, 9999, qty);
     
@@ -71,7 +71,7 @@ public:
     }
   }
 
-  void updateBuy(int32_t orderId, int32_t slot, int32_t price, int32_t qty)
+  void updateBuy(OrderId orderId, int32_t slot, int32_t price, int32_t qty)
   {
     if (UNLIKELY(_orderBook.checkBuyPrice(price) == false)) {
       return emitEvent(UpdateRejected(orderId, qty));
@@ -80,7 +80,7 @@ public:
     _orderBook.updateBuyOrder(orderId, slot, price, qty);
   }
 
-  void updateSell(int32_t orderId, int32_t slot, int32_t price, int32_t qty)
+  void updateSell(OrderId orderId, int32_t slot, int32_t price, int32_t qty)
   {
     if (UNLIKELY(_orderBook.checkSellPrice(price) == false)) {
       return emitEvent(UpdateRejected(orderId, qty));
@@ -89,7 +89,7 @@ public:
     _orderBook.updateSellOrder(orderId, slot, price, qty);
   }
 
-  void cancelBuy(int32_t orderId, int32_t slot, int32_t price)
+  void cancelBuy(OrderId orderId, int32_t slot, int32_t price)
   {
     if (UNLIKELY(_orderBook.checkBuyOrder(price) == false)) {
       return emitEvent(CancelRejected(orderId));
@@ -98,7 +98,7 @@ public:
     _orderBook.cancelBuyOrder(orderId, slot, price);
   }
 
-  void cancelSell(int32_t orderId, int32_t slot, int32_t price)
+  void cancelSell(OrderId orderId, int32_t slot, int32_t price)
   {
     if (UNLIKELY(_orderBook.checkSellOrder(price) == false)) {
       return emitEvent(CancelRejected(orderId));
@@ -137,7 +137,7 @@ private:
     }
   }
 
-  int32_t tradeAtPriceLevel(int32_t orderId, int32_t price, int32_t qty, PriceLevel& level)
+  int32_t tradeAtPriceLevel(OrderId orderId, int32_t price, int32_t qty, PriceLevel& level)
   {
     while(qty > 0 && ! level.orders.empty()) {
       Order& otherOrder = level.orders.front();
@@ -149,7 +149,7 @@ private:
       emitEvent(Trade(price, tradeQty, orderId, otherOrder.id));
       
       if(otherOrder.qty == 0) {
-        level.orders.front().id = -1;
+        level.orders.front().id = InvalidOrderId;
         level.orders.pop_front();
       }
     }
@@ -157,7 +157,7 @@ private:
     return qty;
   }
 
-  int32_t tradeSell(int32_t orderId, int32_t priceTo, int32_t qty)
+  int32_t tradeSell(OrderId orderId, int32_t priceTo, int32_t qty)
   {
     if (UNLIKELY(_orderBook._buyTopPrice == -1)) {
       return qty;
@@ -190,7 +190,7 @@ private:
     }
   }
 
-  int32_t tradeBuy(int32_t orderId, int32_t priceTo, int32_t qty)
+  int32_t tradeBuy(OrderId orderId, int32_t priceTo, int32_t qty)
   {
     if (UNLIKELY(_orderBook._sellTopPrice == -1)) {
       return qty;

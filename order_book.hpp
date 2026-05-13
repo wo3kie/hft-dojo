@@ -113,7 +113,7 @@ struct OrderBook
     return bl::in_range(price, minPrice, maxPrice);
   }
 
-  void insertSellOrder(int32_t orderId, int32_t price, int32_t qty) {
+  void insertSellOrder(OrderId orderId, int32_t price, int32_t qty) {
     PriceLevel& level = _sellLevels.price(price);
     int32_t slot = level.orders.push_back({orderId, qty});
 
@@ -130,7 +130,7 @@ struct OrderBook
     _sellTopPrice = bl::min(clearSignBit(_sellTopPrice), price);
   }
 
-  void insertBuyOrder(int32_t orderId, int32_t price, int32_t qty) {
+  void insertBuyOrder(OrderId orderId, int32_t price, int32_t qty) {
     PriceLevel& level = _buyLevels.price(price);
     int32_t slot = level.orders.push_back({orderId, qty});
 
@@ -143,7 +143,7 @@ struct OrderBook
     _buyTopPrice = bl::max(_buyTopPrice, price);
   }
 
-  void updateSellOrder(int32_t orderId, int32_t slot, int32_t price, int32_t qty) {
+  void updateSellOrder(OrderId orderId, int32_t slot, int32_t price, int32_t qty) {
     PriceLevel& level = _sellLevels.price(price);
     Order& order = level.orders.at(slot);
 
@@ -155,7 +155,7 @@ struct OrderBook
     emitEvent(UpdateAccepted(orderId));
   }
 
-  void updateBuyOrder(int32_t orderId, int32_t slot, int32_t price, int32_t qty) {
+  void updateBuyOrder(OrderId orderId, int32_t slot, int32_t price, int32_t qty) {
     PriceLevel& level = _buyLevels.price(price);
     Order& order = level.orders.at(slot);
 
@@ -167,7 +167,7 @@ struct OrderBook
     emitEvent(UpdateAccepted(orderId));
   }
 
-  void cancelSellOrder(int32_t orderId, int32_t slot, int32_t price) {
+  void cancelSellOrder(OrderId orderId, int32_t slot, int32_t price) {
     PriceLevel& level = _sellLevels.price(price);
     Order& order = level.orders.at(slot);
 
@@ -175,12 +175,12 @@ struct OrderBook
       return emitEvent(CancelRejected(orderId));
     }
 
-    order.id = -1;
+    order.id = InvalidOrderId;
     level.orders.pop_back();
     emitEvent(CancelAccepted(orderId));
   }
 
-  void cancelBuyOrder(int32_t orderId, int32_t slot, int32_t price) {
+  void cancelBuyOrder(OrderId orderId, int32_t slot, int32_t price) {
     PriceLevel& level = _buyLevels.price(price);
     Order& order = level.orders.at(slot);
 
@@ -188,7 +188,7 @@ struct OrderBook
       return emitEvent(CancelRejected(orderId));
     }
 
-    order.id = -1;
+    order.id = InvalidOrderId;
     level.orders.pop_back();
     emitEvent(CancelAccepted(orderId));
   }
@@ -231,7 +231,7 @@ struct OrderBook
       
       emitEvent(OrderExpired(order.id));
       
-      order.id = -1;
+      order.id = InvalidOrderId;
       level.orders.pop_front();
     }
   }

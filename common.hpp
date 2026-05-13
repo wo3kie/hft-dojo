@@ -8,10 +8,7 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "./common.hpp"
+#include <cstdint>
 
-struct Order
-{
-  OrderId id;
-  int32_t qty;
-};
+typedef int32_t OrderId;
+constexpr OrderId InvalidOrderId = -1;
