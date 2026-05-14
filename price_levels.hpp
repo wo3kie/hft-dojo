@@ -22,11 +22,12 @@ struct PriceLevel
 template<uint32_t Levels>
 struct PriceLevels
 {
+  static_assert((Levels & (Levels + 1)) == 0);
+
   constexpr static uint32_t Size = Levels + 1 + Levels + 1;
   constexpr static uint32_t Mask = Size - 1;
 
-  static_assert((Levels & (Levels + 1)) == 0);
-
+public:
   PriceLevels(Price centerPrice)
     : _centerPrice(centerPrice)
     , _centerIndex(Levels)
@@ -35,6 +36,13 @@ struct PriceLevels
     Assert(centerPrice < MaxPrice - Levels);
   }
 
+  PriceLevels(PriceLevels&&) = default;
+  PriceLevels(const PriceLevels&) = delete;
+  
+  PriceLevels& operator=(PriceLevels&&) = default;
+  PriceLevels& operator=(const PriceLevels&) = delete;
+
+public:
   Price centerPrice() const
   {
     return _centerPrice;
@@ -59,45 +67,40 @@ struct PriceLevels
   {
     const Price minPrice = this->minPrice();
     const Price maxPrice = this->maxPrice();
-    const bool result = bl::in_range(price, minPrice, maxPrice);
-    return result;
+    return bl::in_range(price, minPrice, maxPrice);
   }
 
   PriceLevel& index(Index index)
   {
-    PriceLevel& level = _levels[index];
-    return level;
+    return _levels[index];
   }
 
   const PriceLevel& index(Index index) const
   {
-    const PriceLevel& level = _levels[index];
-    return level;
+    return _levels[index];
   }
 
   PriceLevel& price(Price price)
   {
     const Index index = priceToIndex(price);
-    PriceLevel& level = _levels[index];
-    return level;
+    return _levels[index];
   }
 
   const PriceLevel& price(Price price) const
   {
     const Index index = priceToIndex(price);
-    const PriceLevel& level = _levels[index];
-    return level;
+    return _levels[index];
   }
 
   Index priceToIndex(Price price) const
   {
     Assert(checkPrice(price));
     
-    Index index = (Index)price;
-    index += _centerIndex;
-    index -= _centerPrice;
-    index &= Mask;
-    return index;
+    price -= _centerPrice;
+    price += _centerIndex;
+    price &= Mask;
+
+    return ((Index)price);
   }
 
   void shiftUp()
