@@ -9,137 +9,120 @@
 #include "./price_levels.hpp"
 #include "./assert.hpp"
 
-void test_price_levels_constructor()
+void test_price_levels_basic_1()
 {
-  {
-    PriceLevels<3> pl(7);
-    Assert(pl.centerPrice() == 7);
-    Assert(pl.levels() == 3);
-    Assert(pl.minPrice() == 4);
-    Assert(pl.maxPrice() == 10);
-    Assert(pl.checkPrice(0) == false);
-    Assert(pl.checkPrice(1) == false);
-    Assert(pl.checkPrice(4) == true);
-    Assert(pl.checkPrice(7) == true);
-    Assert(pl.checkPrice(10) == true);
-    Assert(pl.checkPrice(11) == false);
+  PriceLevels<3> pl(7);
 
-    Assert(pl.priceToIndex(4) == 0);
-    Assert(pl.priceToIndex(5) == 1);
-    Assert(pl.priceToIndex(6) == 2);
-    Assert(pl.priceToIndex(7) == 3);
-    Assert(pl.priceToIndex(8) == 4);
-    Assert(pl.priceToIndex(9) == 5);
-    Assert(pl.priceToIndex(10) == 6);
+  Assert(pl.centerPrice() == 7);
+  Assert(pl.minPrice() == 4);
+  Assert(pl.maxPrice() == 10);
+
+  Assert(pl.priceToIndex(4) == 0);
+  Assert(pl.priceToIndex(5) == 1);
+  Assert(pl.priceToIndex(6) == 2);
+  Assert(pl.priceToIndex(7) == 3);
+  Assert(pl.priceToIndex(8) == 4);
+  Assert(pl.priceToIndex(9) == 5);
+  Assert(pl.priceToIndex(10) == 6);
+}
+
+void test_price_levels_basic_2()
+{
+  PriceLevels<31> pl(32);
+
+  Assert(pl.centerPrice() == 32);
+  Assert(pl.minPrice() == 1);
+  Assert(pl.maxPrice() == 63);
+
+  Assert(pl.priceToIndex(1) == 0);
+  Assert(pl.priceToIndex(31) == 30);
+  Assert(pl.priceToIndex(32) == 31);
+  Assert(pl.priceToIndex(33) == 32);
+  Assert(pl.priceToIndex(63) == 62);
+}
+
+void test_price_levels_shift_1()
+{
+  PriceLevels<31> pl(100);
+
+  for(std::size_t i = 0; i < 68; ++i) {
+    pl.shiftDown();
   }
 
-  {
-    PriceLevels<31> pl(32);
-    Assert(pl.centerPrice() == 32);
-    Assert(pl.levels() == 31);
-    Assert(pl.minPrice() == 1);
-    Assert(pl.maxPrice() == 63);
-    Assert(pl.checkPrice(0) == false);
-    Assert(pl.checkPrice(1) == true);
-    Assert(pl.checkPrice(31) == true);
-    Assert(pl.checkPrice(32) == true);
-    Assert(pl.checkPrice(63) == true);
-    Assert(pl.checkPrice(64) == false);
+  Assert(pl.centerPrice() == 100 - 68);
+  Assert(pl.minPrice() == 100 - 31 - 68);
+  Assert(pl.maxPrice() == 100 + 31 - 68);
 
-    Assert(pl.priceToIndex(1) == 0);
-    Assert(pl.priceToIndex(31) == 30);
-    Assert(pl.priceToIndex(32) == 31);
-    Assert(pl.priceToIndex(33) == 32);
-    Assert(pl.priceToIndex(63) == 62);
+  for(std::size_t i = 0; i < 68; ++i) {
+    pl.shiftUp();
   }
-}
 
-void test_price_levels_access_by_index()
-{
-  PriceLevels<31> pl(100);
-
-  PriceLevel& level = pl.index(0);
-  Assert(&pl.index(0) == &level);
-
-  PriceLevel& level_pos = pl.index(5);
-  Assert(&pl.index(5) == &level_pos);
-
-  PriceLevel& level_neg = pl.index(-5);
-  Assert(&pl.index(-5) == &level_neg);
-}
-
-void test_price_levels_access_by_price()
-{
-  PriceLevels<31> pl(100);
-
-  PriceLevel& level100 = pl.price(100);
-  Assert(&pl.price(100) == &level100);
-
-  PriceLevel& level105 = pl.price(105);
-  Assert(&pl.price(105) == &level105);
-
-  PriceLevel& level95 = pl.price(95);
-  Assert(&pl.price(95) == &level95);
-}
-
-void test_price_levels_price_to_index_conversion()
-{
-  PriceLevels<31> pl(100);
-
-  Assert(pl.checkPrice(68) == false);
-  Assert(pl.checkPrice(69) == true);
+  Assert(pl.centerPrice() == 100);
+  Assert(pl.minPrice() == 100 - 31);
+  Assert(pl.maxPrice() == 100 + 31);
 
   Assert(pl.priceToIndex(69) == 0);
   Assert(pl.priceToIndex(99) == 30);
   Assert(pl.priceToIndex(100) == 31);
   Assert(pl.priceToIndex(101) == 32);
   Assert(pl.priceToIndex(131) == 62);
-
-  Assert(pl.checkPrice(131) == true);
-  Assert(pl.checkPrice(132) == false);
 }
 
-void test_price_levels_shift_up()
+void test_price_levels_shift_2()
 {
   PriceLevels<31> pl(100);
+
+  for(std::size_t i = 0; i < 68; ++i) {
+    pl.shiftUp();
+  }
+  
+  Assert(pl.centerPrice() == 100 + 68);
+  Assert(pl.minPrice() == 100 - 31 + 68);
+  Assert(pl.maxPrice() == 100 + 31 + 68);
+
+  for(std::size_t i = 0; i < 68; ++i) {
+    pl.shiftDown();
+  }
+
   Assert(pl.centerPrice() == 100);
+  Assert(pl.minPrice() == 69);
+  Assert(pl.maxPrice() == 131);
 
-  pl.shiftUp();
-  Assert(pl.centerPrice() == 101);
-
-  pl.shiftUp();
-  Assert(pl.centerPrice() == 102);
+  Assert(pl.priceToIndex(69) == 0);
+  Assert(pl.priceToIndex(99) == 30);
+  Assert(pl.priceToIndex(100) == 31);
+  Assert(pl.priceToIndex(101) == 32);
+  Assert(pl.priceToIndex(131) == 62);
 }
 
-void test_price_levels_shift_down()
+void test_price_levels_storage_access()
 {
-  PriceLevels<31> pl(100);
-  Assert(pl.centerPrice() == 100);
+  PriceLevels<3> pl(6);
 
-  pl.shiftDown();
-  Assert(pl.centerPrice() == 99);
+  int32_t node3 = pl.price(3).orders.push_back(Order(3, 33));
+  int32_t node4 = pl.price(4).orders.push_back(Order(4, 44));
+  int32_t node5 = pl.price(5).orders.push_back(Order(5, 55));
+  int32_t node6 = pl.price(6).orders.push_back(Order(6, 66));
+  int32_t node7 = pl.price(7).orders.push_back(Order(7, 77));
+  int32_t node8 = pl.price(8).orders.push_back(Order(8, 88));
+  int32_t node9 = pl.price(9).orders.push_back(Order(9, 99));
 
-  pl.shiftDown();
-  Assert(pl.centerPrice() == 98);
-}
-
-void test_price_levels_shift_with_price_access()
-{
-  PriceLevels<31> pl(100);
-
-  pl.shiftUp();
-  Assert(pl.centerPrice() == 101);
-  Assert(pl.minPrice() == 70);
-  Assert(pl.maxPrice() == 132);
+  Assert( pl.price(3).orders.front() == Order(3, 33) );
+  Assert(pl.price(4).orders.front() == Order(4, 44));
+  Assert(pl.price(5).orders.front() == Order(5, 55));
+  Assert(pl.price(6).orders.front() == Order(6, 66));
+  Assert(pl.price(7).orders.front() == Order(7, 77));
+  Assert(pl.price(8).orders.front() == Order(8, 88));
+  Assert(pl.price(9).orders.front() == Order(9, 99));
 }
 
 int main()
 {
-  test_price_levels_constructor();
-  test_price_levels_access_by_index();
-  test_price_levels_access_by_price();
-  test_price_levels_price_to_index_conversion();
-  test_price_levels_shift_up();
-  test_price_levels_shift_down();
-  test_price_levels_shift_with_price_access();
+  test_price_levels_basic_1();
+  test_price_levels_basic_2();
+
+  test_price_levels_shift_1();
+  test_price_levels_shift_2();
+
+  test_price_levels_storage_access();
 }

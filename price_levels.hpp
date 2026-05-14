@@ -57,45 +57,41 @@ struct PriceLevels
 
   bool checkPrice(Price price) const
   {
-    Price minPrice = this->minPrice();
-    Price maxPrice = this->maxPrice();
-    bool result = bl::in_range(price, minPrice, maxPrice);
+    const Price minPrice = this->minPrice();
+    const Price maxPrice = this->maxPrice();
+    const bool result = bl::in_range(price, minPrice, maxPrice);
     return result;
   }
 
   PriceLevel& index(Index index)
   {
-    index &= Mask;
     PriceLevel& level = _levels[index];
     return level;
   }
 
   const PriceLevel& index(Index index) const
   {
-    index &= Mask;
     const PriceLevel& level = _levels[index];
     return level;
   }
 
   PriceLevel& price(Price price)
   {
-    Index index = priceToIndex(price);
+    const Index index = priceToIndex(price);
     PriceLevel& level = _levels[index];
     return level;
   }
 
   const PriceLevel& price(Price price) const
   {
-    Index index = priceToIndex(price);
+    const Index index = priceToIndex(price);
     const PriceLevel& level = _levels[index];
     return level;
   }
 
   Index priceToIndex(Price price) const
   {
-    {
-      Assert(checkPrice(price));
-    }
+    Assert(checkPrice(price));
     
     Index index = (Index)price;
     index += _centerIndex;
@@ -106,10 +102,8 @@ struct PriceLevels
 
   void shiftUp()
   {
-    {
-      Assert(_centerPrice <= MaxPrice - Levels);
-    }
-
+    Assert(maxPrice() < MaxPrice);
+    
     _centerPrice += 1;
     _centerIndex += 1;
     _centerIndex &= Mask;
@@ -117,9 +111,7 @@ struct PriceLevels
 
   void shiftDown()
   {
-    {
-      Assert(_centerPrice >= Levels);
-    }
+    Assert(minPrice() > 1);
     
     _centerPrice -= 1;
     _centerIndex -= 1;
