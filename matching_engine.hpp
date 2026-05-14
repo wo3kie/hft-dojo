@@ -32,7 +32,7 @@ public:
   {
     {
       Assert(orderId != InvalidOrderId);
-      Assert(price != InvalidPrice);
+      Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
       Assert(qty != 0);
     }
 
@@ -65,7 +65,7 @@ public:
   {
     {
       Assert(orderId != InvalidOrderId);
-      Assert(price != InvalidPrice);
+      Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
       Assert(qty != 0);
     }
 
@@ -99,7 +99,7 @@ public:
     {
       Assert(orderId != InvalidOrderId);
       Assert(slot != InvalidIndex);
-      Assert(price != InvalidPrice);
+      Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
       Assert(qty != 0);
     }
 
@@ -115,7 +115,7 @@ public:
     {
       Assert(orderId != InvalidOrderId);
       Assert(slot != InvalidIndex);
-      Assert(price != InvalidPrice);
+      Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
       Assert(qty != 0);
     }
 
@@ -131,7 +131,7 @@ public:
     {
       Assert(orderId != InvalidOrderId);
       Assert(slot != InvalidIndex);
-      Assert(price != InvalidPrice);
+      Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
     }
 
     if(UNLIKELY(_orderBook.checkBuyOrder(price) == false)) {
@@ -146,7 +146,7 @@ public:
     {
       Assert(orderId != InvalidOrderId);
       Assert(slot != InvalidIndex);
-      Assert(price != InvalidPrice);
+      Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
     }
 
     if(UNLIKELY(_orderBook.checkSellOrder(price) == false)) {
@@ -228,7 +228,7 @@ private:
         PriceLevel& level = _orderBook._buyLevels.index(index);
         qty = tradeAtPriceLevel(orderId, price, qty, level);
 
-        Index empty = (Index)level.orders.empty();
+        const Price empty = (Price)level.orders.empty();
         _orderBook._buyTopPrice -= empty;
 
         shiftOrderBook(price);
@@ -259,7 +259,7 @@ private:
         PriceLevel& level = _orderBook._sellLevels.index(index);
         qty = tradeAtPriceLevel(orderId, price, qty, level);
 
-        Index empty = (Index)level.orders.empty();
+        const Price empty = (Price)level.orders.empty();
         _orderBook._sellTopPrice += empty;
 
         shiftOrderBook(price);
