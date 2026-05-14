@@ -43,7 +43,7 @@ public:
     return _storage[_head].value;
   }
 
- TType& back()
+  TType& back()
   {
     assert(! empty());
     return _storage[_tail].value;
@@ -51,7 +51,7 @@ public:
 
   int32_t push_front(const TType& value)
   {
-    if (full()) {
+    if(full()) {
       return -1;
     }
 
@@ -62,7 +62,7 @@ public:
 
   int32_t push_back(const TType& value)
   {
-    if (full()) {
+    if(full()) {
       return -1;
     }
 
@@ -118,19 +118,19 @@ public:
     _storage[Size - 1].prev = -1;
   }
 
-  const TType& at(int32_t index) const 
+  const TType& at(int32_t index) const
   {
     assert(! empty());
     assert(index >= 0 && index < static_cast<int32_t>(Size));
-    
+
     return _storage[index].value;
   }
 
-  TType& at(int32_t index) 
+  TType& at(int32_t index)
   {
     assert(! empty());
     assert(index >= 0 && index < static_cast<int32_t>(Size));
-    
+
     return _storage[index].value;
   }
 
@@ -141,7 +141,7 @@ public:
       f(_storage[index].value);
     }
   }
-  
+
 private:
   int32_t _allocate_node()
   {

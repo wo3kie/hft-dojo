@@ -27,7 +27,7 @@ void test_push_front()
   int v1 = list.back();
   list.pop_back();
   assert(v1 == 10);
- 
+
   int v2 = list.back();
   list.pop_back();
   assert(v2 == 20);
@@ -163,6 +163,7 @@ void test_for_each()
 
 int main()
 {
+  test_push_front();
   test_push_back();
   test_remove_middle();
   test_remove_head();
