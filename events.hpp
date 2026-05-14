@@ -17,7 +17,7 @@ enum EventType : uint32_t
 
   ECreateAccepted,
   ECreateRejected,
-  
+
   EUpdateAccepted,
   EUpdateRejected,
 
@@ -82,35 +82,35 @@ Event OrderExpired(uint32_t id)
 
 std::ostream& operator<<(std::ostream& os, const Event& event)
 {
-  if (event.m4 != 0) {
+  if(event.m4 != 0) {
     return os << "Trade: price=" << event.m1 << ", qty=" << event.m2 << ", maker=" << event.m3 << ", taker=" << event.m4;
   }
-  
-  if (event.m1 == EventType::ECreateAccepted) {
+
+  if(event.m1 == EventType::ECreateAccepted) {
     return os << "CreateAccepted: id=" << event.m2 << ", slot=" << event.m3;
   }
-  
-  if (event.m1 == EventType::ECreateRejected) {
+
+  if(event.m1 == EventType::ECreateRejected) {
     return os << "CreateRejected: id=" << event.m2 << ", size=" << event.m3;
   }
-  
-  if (event.m1 == EventType::EUpdateAccepted) {
+
+  if(event.m1 == EventType::EUpdateAccepted) {
     return os << "UpdateAccepted: id=" << event.m2;
   }
-  
-  if (event.m1 == EventType::EUpdateRejected) {
+
+  if(event.m1 == EventType::EUpdateRejected) {
     return os << "UpdateRejected: id=" << event.m2 << ", size=" << event.m3;
   }
-  
-  if (event.m1 == EventType::ECancelAccepted) {
+
+  if(event.m1 == EventType::ECancelAccepted) {
     return os << "CancelAccepted: id=" << event.m2;
   }
-  
-  if (event.m1 == EventType::ECancelRejected) {
+
+  if(event.m1 == EventType::ECancelRejected) {
     return os << "CancelRejected: id=" << event.m2;
   }
-  
-  if (event.m1 == EventType::EOrderExpired) {
+
+  if(event.m1 == EventType::EOrderExpired) {
     return os << "OrderExpired: id=" << event.m2;
   }
 
