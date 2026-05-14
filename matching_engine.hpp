@@ -8,6 +8,7 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
+#include <xmmintrin.h>
 #include <cstdint>
 
 #include "./events.hpp"
@@ -164,6 +165,7 @@ private:
   void emitEvent(Event event)
   {
     while(_bufferOut.push(event) == false) {
+      _mm_pause();
     }
   }
 
@@ -188,20 +190,13 @@ private:
 
   Qty tradeAtPriceLevel(OrderId orderId, Price price, Qty qty, PriceLevel& level)
   {
-    {
-      Assert(orderId != InvalidOrderId);
-      Assert(price != InvalidPrice);
-      Assert(qty != 0);
-    }
+    Assert(bl::in_range(price, MinPrice, MaxPrice));
 
-    while(qty != 0 && ! level.orders.empty()) {
+    while((qty != 0) && (! level.orders.empty())) {
       Order& otherOrder = level.orders.front();
-      Qty tradeQty = std::min(qty, otherOrder.qty);
+      Qty tradeQty = bl::min(qty, otherOrder.qty);
 
-      Assert(qty >= tradeQty);
       qty -= tradeQty;
-
-      Assert(otherOrder.qty >= tradeQty);
       otherOrder.qty -= tradeQty;
 
       emitEvent(Trade(price, tradeQty, orderId, otherOrder.id));
@@ -217,11 +212,7 @@ private:
 
   Qty tradeSell(OrderId orderId, Price priceTo, Qty qty)
   {
-    {
-      Assert(orderId != InvalidOrderId);
-      Assert(priceTo != InvalidPrice);
-      Assert(qty != 0);
-    }
+    Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
 
     if(UNLIKELY(_orderBook._buyTopPrice == InvalidPrice)) {
       return qty;
@@ -233,11 +224,7 @@ private:
       Price price = _orderBook.buyPriceFrom();
       Index index = _orderBook.buyIndexFrom();
 
-      while(price >= priceTo) {
-        if(qty == 0) {
-          break;
-        }
-
+      while((qty != 0) && (price >= priceTo)) {
         PriceLevel& level = _orderBook._buyLevels.index(index);
         qty = tradeAtPriceLevel(orderId, price, qty, level);
 
@@ -256,11 +243,7 @@ private:
 
   Qty tradeBuy(OrderId orderId, Price priceTo, Qty qty)
   {
-    {
-      Assert(orderId != InvalidOrderId);
-      Assert(priceTo != InvalidPrice);
-      Assert(qty != 0);
-    }
+    Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
 
     if(UNLIKELY(_orderBook._sellTopPrice == InvalidPrice)) {
       return qty;
@@ -272,11 +255,7 @@ private:
       Price price = _orderBook.sellPriceFrom();
       Index index = _orderBook.sellIndexFrom();
 
-      while(price <= priceTo) {
-        if(qty == 0) {
-          break;
-        }
-
+      while((qty != 0) && (price <= priceTo)) {
         PriceLevel& level = _orderBook._sellLevels.index(index);
         qty = tradeAtPriceLevel(orderId, price, qty, level);
 
