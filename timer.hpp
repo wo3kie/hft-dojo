@@ -1,46 +1,54 @@
 #pragma once
 
 #include <chrono>
-#include <iostream>
 #include <functional>
+#include <iostream>
 #include <string>
 
-struct Duration {
+struct Duration
+{
   using duration = std::chrono::duration<long int, std::nano>;
-  
-  Duration(const duration& d) 
-    : _d(d) 
-  {}
 
-  long int ns() const {
+  Duration(const duration& d)
+    : _d(d)
+  {
+  }
+
+  long int ns() const
+  {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(_d).count();
   }
 
-  long int us() const {
+  long int us() const
+  {
     return std::chrono::duration_cast<std::chrono::microseconds>(_d).count();
   }
 
-  long int ms() const {
+  long int ms() const
+  {
     return std::chrono::duration_cast<std::chrono::milliseconds>(_d).count();
   }
 
-  long int s() const {
+  long int s() const
+  {
     return std::chrono::duration_cast<std::chrono::seconds>(_d).count();
   }
 
-  std::string format() const {
-    if (ns() < 1000) {
+  std::string format() const
+  {
+    if(ns() < 1000) {
       return std::to_string(ns()) + "ns";
-    } else if (us() < 1000) {
+    } else if(us() < 1000) {
       return std::to_string(us()) + "µs";
-    } else if (ms() < 1000) {
+    } else if(ms() < 1000) {
       return std::to_string(ms()) + "ms";
     } else {
       return std::to_string(s()) + "s";
     }
   }
 
-  void log(std::function<void (long int, const std::string&)> f) const {
+  void log(std::function<void(long int, const std::string&)> f) const
+  {
     f(ns(), format());
   }
 
@@ -48,7 +56,8 @@ struct Duration {
 };
 
 template<typename T>
-Duration timer(const T& t, int rep = 1) {
+Duration timer(const T& t, int rep = 1)
+{
   // typedef ratio< 1,  1000000000000000000 > atto;
   // typedef ratio< 1,     1000000000000000 > femto;
   // typedef ratio< 1,        1000000000000 > pico;
