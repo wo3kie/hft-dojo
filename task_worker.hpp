@@ -14,6 +14,7 @@
 #include <optional>
 #include <thread>
 #include <utility>
+#include <xmmintrin.h>
 
 #include <pthread.h>
 
@@ -29,7 +30,15 @@ struct YieldIdlePolicy
   }
 };
 
-template<std::size_t QueueSize, typename TTask, typename IdlePolicy = YieldIdlePolicy>
+struct PauseIdlePolicy
+{
+  static void doIt()
+  {
+    _mm_pause();
+  }
+};
+
+template<std::size_t QueueSize, typename TTask, typename IdlePolicy = PauseIdlePolicy>
 class TaskWorkerSPSC
 {
 public:
