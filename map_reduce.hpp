@@ -12,20 +12,23 @@
 #include <future>
 #include <utility>
 
-namespace detail {
+namespace detail
+{
 
-template <typename, template<typename, std::size_t> class>
-struct is_specialization_of : std::false_type {};
+template<typename, template<typename, std::size_t> class>
+struct is_specialization_of: std::false_type
+{
+};
 
-template <typename T, std::size_t N, template<typename, std::size_t> class C>
-struct is_specialization_of<C<T,N>, C> : std::true_type {};
+template<typename T, std::size_t N, template<typename, std::size_t> class C>
+struct is_specialization_of<C<T, N>, C>: std::true_type
+{
+};
 
 template<typename T>
-inline constexpr bool is_std_array_v =
-  is_specialization_of<std::remove_cvref_t<T>, std::array>::value;
+inline constexpr bool is_std_array_v = is_specialization_of<std::remove_cvref_t<T>, std::array>::value;
 
-
-}
+} // namespace detail
 
 template<typename TMapFn, typename TReduceFn>
 struct MapReduce
@@ -45,18 +48,16 @@ struct MapReduce
   MapReduce& operator=(MapReduce&&) = delete;
 
   template<typename TIn, typename... TIns>
-    requires (!detail::is_std_array_v<std::remove_cvref_t<TIn>>)
+    requires(! detail::is_std_array_v<std::remove_cvref_t<TIn>>)
   [[nodiscard]] auto run(TIn&& value, TIns&&... values)
   {
     auto task = [&](auto&& val) {
-        return std::async(std::launch::async, [this, v = std::forward<decltype(val)>(val)]() mutable {
-            return this->_map_fn(std::move(v));
-        });
+      return std::async(std::launch::async, [this, v = std::forward<decltype(val)>(val)]() mutable {
+        return this->_map_fn(std::move(v));
+      });
     };
 
-    std::array futures = {
-      task(std::forward<TIns>(values))...
-    };
+    std::array futures = {task(std::forward<TIns>(values))...};
 
     auto init = this->_map_fn(std::forward<TIn>(value));
 
@@ -71,26 +72,23 @@ struct MapReduce
   [[nodiscard]] auto run(const std::array<TIn, N>& arr)
   {
     return std::apply(
-      [&](auto&&... elems) {
-        return run(std::forward<decltype(elems)>(elems)...);
-      },
-      arr
-    );
+        [&](auto&&... elems) {
+          return run(std::forward<decltype(elems)>(elems)...);
+        },
+        arr);
   }
 
   template<typename TOut, typename TIn, typename... TIns>
-    requires (!detail::is_std_array_v<std::remove_cvref_t<TIn>>)
+    requires(! detail::is_std_array_v<std::remove_cvref_t<TIn>>)
   [[nodiscard]] auto run_with_init(TOut&& init, TIn&& value, TIns&&... values)
   {
     auto task = [&](auto&& val) {
-        return std::async(std::launch::async, [this, v = std::forward<decltype(val)>(val)]() mutable {
-            return this->_map_fn(std::move(v));
-        });
+      return std::async(std::launch::async, [this, v = std::forward<decltype(val)>(val)]() mutable {
+        return this->_map_fn(std::move(v));
+      });
     };
 
-    std::array futures = {
-      task(std::forward<TIns>(values))...
-    };
+    std::array futures = {task(std::forward<TIns>(values))...};
 
     init = _reduce_fn(std::forward<TOut>(init), _map_fn(std::forward<TIn>(value)));
 
@@ -105,11 +103,10 @@ struct MapReduce
   auto run_with_init(TOut&& init, const std::array<TIn, N>& arr)
   {
     return std::apply(
-      [&](auto&&... elems) {
-        return run_with_init(std::forward<TOut>(init), std::forward<decltype(elems)>(elems)...);
-      },
-      arr
-    );
+        [&](auto&&... elems) {
+          return run_with_init(std::forward<TOut>(init), std::forward<decltype(elems)>(elems)...);
+        },
+        arr);
   }
 
 private:
