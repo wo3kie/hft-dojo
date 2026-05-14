@@ -35,12 +35,12 @@ public:
   Channel& operator=(const Channel&) = delete;
 
 public:
-  void set(TType value) 
+  void set(TType value)
   {
     _value = std::move(value);
     _ready.store(true, std::memory_order_release);
   }
-  
+
   [[nodiscard]] TType& get(bool yield = true)
   {
     while(! _ready.load(std::memory_order_acquire)) {
@@ -83,11 +83,11 @@ public:
   bool try_submit(F&& f, Channel<T>& channel)
   {
     assert(_worker.running_approx());
-    
+
     if(_worker.full_approx()) {
       return false;
     }
-    
+
     std::function<void()> task = [f = std::forward<F>(f), &channel]() mutable {
       static_assert(noexcept(f(channel)));
       f(channel);
@@ -100,7 +100,7 @@ public:
   template<class F, typename T>
   void submit(F&& f, Channel<T>& channel)
   {
-    while(!try_submit(std::forward<F>(f), channel)) {
+    while(! try_submit(std::forward<F>(f), channel)) {
       IdlePolicy::doIt();
     }
   }
