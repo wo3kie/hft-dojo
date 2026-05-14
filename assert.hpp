@@ -12,13 +12,15 @@
 #include <functional>
 #include <iostream>
 
-namespace impl {
+namespace impl
+{
 
 /*
  * _ExpressionDecomposerStart
  */
 
-struct _ExpressionDecomposerStart {
+struct _ExpressionDecomposerStart
+{
   const char* const _file;
   int _line;
 };
@@ -28,7 +30,8 @@ struct _ExpressionDecomposerStart {
  */
 
 template<typename Actual, typename Expected>
-struct _ExpressionDecomposerBinary {
+struct _ExpressionDecomposerBinary
+{
   _ExpressionDecomposerBinary(
       const char* const file, //
       int line,
@@ -36,12 +39,12 @@ struct _ExpressionDecomposerBinary {
       bool result,
       const Actual& actual,
       const Expected& expected)
-      : _file(file)
-      , _line(line)
-      , _op(op)
-      , _result(result)
-      , _actual(actual)
-      , _expected(expected) //
+    : _file(file)
+    , _line(line)
+    , _op(op)
+    , _result(result)
+    , _actual(actual)
+    , _expected(expected) //
   {
     on_error([](const char* file, int line, const char* op, const Actual& actual, const Expected& expected) -> void {
       constexpr bool is_stream_insertable = requires { std::cerr << actual; } && //
@@ -60,7 +63,8 @@ struct _ExpressionDecomposerBinary {
     });
   }
 
-  ~_ExpressionDecomposerBinary() noexcept {
+  ~_ExpressionDecomposerBinary() noexcept
+  {
     if(*this) {
       // empty
     } else {
@@ -68,17 +72,18 @@ struct _ExpressionDecomposerBinary {
     }
   }
 
-  operator bool() const {
+  operator bool() const
+  {
     return _result;
   }
 
-  void on_error(
-      std::function<void(
-          const char* /* file */, //
-          int /* line */,
-          const char* /* op */,
-          const Actual& /* actual */,
-          const Expected& /* expected */)> f) noexcept {
+  void on_error(std::function<void(
+                    const char* /* file */, //
+                    int /* line */,
+                    const char* /* op */,
+                    const Actual& /* actual */,
+                    const Expected& /* expected */)> f) noexcept
+  {
     _f = f;
   }
 
@@ -96,12 +101,13 @@ struct _ExpressionDecomposerBinary {
  */
 
 template<typename Actual>
-struct _ExpressionDecomposerUnary {
+struct _ExpressionDecomposerUnary
+{
   _ExpressionDecomposerUnary(const char* const file, int line, const Actual& actual)
-      : _unary{true}
-      , _actual(actual)
-      , _line(line)
-      , _file(file) //
+    : _unary{true}
+    , _actual(actual)
+    , _line(line)
+    , _file(file) //
   {
     on_error([](const char* file, int line, const Actual& actual) -> void {
       constexpr bool is_stream_insertable = requires { std::cerr << actual; };
@@ -118,7 +124,8 @@ struct _ExpressionDecomposerUnary {
     });
   }
 
-  ~_ExpressionDecomposerUnary() {
+  ~_ExpressionDecomposerUnary()
+  {
     if(_unary) {
       if constexpr(std::is_convertible_v<Actual, bool>) {
         if(_actual) {
@@ -132,42 +139,49 @@ struct _ExpressionDecomposerUnary {
   }
 
   template<typename Expected>
-  _ExpressionDecomposerBinary<Actual, Expected> operator==(const Expected& expected) {
+  _ExpressionDecomposerBinary<Actual, Expected> operator==(const Expected& expected)
+  {
     _unary = false;
     return {_file, _line, "==", _actual == expected, _actual, expected};
   }
 
   template<typename Expected>
-  _ExpressionDecomposerBinary<Actual, Expected> operator!=(const Expected& expected) {
+  _ExpressionDecomposerBinary<Actual, Expected> operator!=(const Expected& expected)
+  {
     _unary = false;
     return {_file, _line, "!=", _actual != expected, _actual, expected};
   }
 
   template<typename Expected>
-  _ExpressionDecomposerBinary<Actual, Expected> operator<(const Expected& expected) {
+  _ExpressionDecomposerBinary<Actual, Expected> operator<(const Expected& expected)
+  {
     _unary = false;
     return {_file, _line, "<", _actual < expected, _actual, expected};
   }
 
   template<typename Expected>
-  _ExpressionDecomposerBinary<Actual, Expected> operator<=(const Expected& expected) {
+  _ExpressionDecomposerBinary<Actual, Expected> operator<=(const Expected& expected)
+  {
     _unary = false;
     return {_file, _line, "<=", _actual <= expected, _actual, expected};
   }
 
   template<typename Expected>
-  _ExpressionDecomposerBinary<Actual, Expected> operator>(const Expected& expected) {
+  _ExpressionDecomposerBinary<Actual, Expected> operator>(const Expected& expected)
+  {
     _unary = false;
     return {_file, _line, ">", _actual > expected, _actual, expected};
   }
 
   template<typename Expected>
-  _ExpressionDecomposerBinary<Actual, Expected> operator>=(const Expected& expected) {
+  _ExpressionDecomposerBinary<Actual, Expected> operator>=(const Expected& expected)
+  {
     _unary = false;
     return {_file, _line, ">=", _actual >= expected, _actual, expected};
   }
 
-  void on_error(std::function<void(const char* /* file */, int /* line */, const Actual& /* actual */)> f) {
+  void on_error(std::function<void(const char* /* file */, int /* line */, const Actual& /* actual */)> f)
+  {
     _f = f;
   }
 
@@ -185,7 +199,8 @@ struct _ExpressionDecomposerUnary {
  */
 
 template<typename Actual>
-_ExpressionDecomposerUnary<Actual> operator<<(const _ExpressionDecomposerStart& e, const Actual& value) {
+_ExpressionDecomposerUnary<Actual> operator<<(const _ExpressionDecomposerStart& e, const Actual& value)
+{
   return _ExpressionDecomposerUnary<Actual>(e._file, e._line, value);
 }
 
