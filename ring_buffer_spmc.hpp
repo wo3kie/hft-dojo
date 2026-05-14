@@ -121,6 +121,17 @@ public:
     return out;
   }
 
+  /* extension, for single threaded debugging */ template<typename F>
+  void _for_each(F&& f) const
+  {   
+    const std::size_t popped = _popped.load(std::memory_order_acquire);
+    const std::size_t pushed = _pushed.load(std::memory_order_acquire);
+
+    for(std::size_t i = popped; i < pushed; ++i) {
+      f(_buffer[_index(i)]);
+    }
+  }
+
 private:
   /* approximate */ [[nodiscard]] bool _empty(std::size_t pushed, std::size_t popped) const noexcept
   {

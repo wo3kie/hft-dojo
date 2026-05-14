@@ -18,14 +18,15 @@
  */
 
 template<typename TValue, std::size_t Capacity>
-class RingBufferMT {
+class RingBufferMT
+{
 public:
   using value_type = TValue;
-  
+
   RingBufferMT() = default;
   RingBufferMT(RingBufferMT&&) = delete;
   RingBufferMT(const RingBufferMT&) = delete;
-  
+
   ~RingBufferMT() = default;
 
   RingBufferMT& operator=(RingBufferMT&&) = delete;
@@ -33,11 +34,12 @@ public:
 
 public:
   template<typename TT>
-  bool push(TT&& t) {
+  bool push(TT&& t)
+  {
     std::unique_lock<std::mutex> lock(_mutex);
 
     _notFull.wait(lock, [this]() {
-      return !this->_buffer.full();
+      return ! this->_buffer.full();
     });
 
     _buffer.push(std::forward<TT>(t));
@@ -46,11 +48,12 @@ public:
     return true;
   }
 
-  bool pop(TValue& out) {
+  bool pop(TValue& out)
+  {
     std::unique_lock<std::mutex> lock(_mutex);
 
     _notEmpty.wait(lock, [this]() {
-      return !this->_buffer.empty();
+      return ! this->_buffer.empty();
     });
 
     out = std::move(_buffer.pop());
@@ -59,24 +62,28 @@ public:
     return true;
   }
 
-  [[nodiscard]] static constexpr std::size_t capacity() noexcept {
+  [[nodiscard]] static constexpr std::size_t capacity() noexcept
+  {
     return Capacity;
   }
 
-  bool empty() const noexcept {
+  bool empty() const noexcept
+  {
     std::lock_guard<std::mutex> lock(_mutex);
     return _buffer.empty();
   }
 
-  bool full() const noexcept {
+  bool full() const noexcept
+  {
     std::lock_guard<std::mutex> lock(_mutex);
     return _buffer.full();
   }
 
-  /* extension */ [[nodiscard]] TValue pop() {
+  /* extension */ [[nodiscard]] TValue pop()
+  {
     TValue out;
 
-    if (!pop(out)) {
+    if(! pop(out)) {
       throw std::runtime_error("RingBufferMT is empty");
     }
 

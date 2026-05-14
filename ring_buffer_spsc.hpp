@@ -11,7 +11,8 @@
  */
 
 template<typename TValue, std::size_t Capacity>
-class RingBufferSPSC {
+class RingBufferSPSC
+{
 public:
   using value_type = TValue;
 
@@ -26,7 +27,8 @@ public:
 
 public:
   template<typename T>
-  bool push(T&& value) {
+  bool push(T&& value)
+  {
     const std::size_t head = _head.load(std::memory_order_acquire);
     const std::size_t tail = _tail.load(std::memory_order_relaxed);
 
@@ -40,7 +42,8 @@ public:
     return true;
   }
 
-  bool pop(TValue& out) {
+  bool pop(TValue& out)
+  {
     const std::size_t head = _head.load(std::memory_order_relaxed);
     const std::size_t tail = _tail.load(std::memory_order_acquire);
 
@@ -50,31 +53,35 @@ public:
 
     out = std::move(_buffer[head]);
     _head.store(_index(head + 1), std::memory_order_release);
-   
+
     return true;
   }
 
-  [[nodiscard]] static constexpr std::size_t capacity() noexcept {
+  [[nodiscard]] static constexpr std::size_t capacity() noexcept
+  {
     return Capacity;
   }
 
-  /* approximate */ [[nodiscard]] bool empty_approx() const noexcept {
+  /* approximate */ [[nodiscard]] bool empty_approx() const noexcept
+  {
     const std::size_t head = _head.load(std::memory_order_acquire);
     const std::size_t tail = _tail.load(std::memory_order_acquire);
 
-    return head == tail ;
+    return head == tail;
   }
 
-  /* approximate */ [[nodiscard]] bool full_approx() const noexcept {
+  /* approximate */ [[nodiscard]] bool full_approx() const noexcept
+  {
     const std::size_t head = _head.load(std::memory_order_acquire);
     const std::size_t tail = _tail.load(std::memory_order_acquire);
 
     return head == _index(tail + 1);
   }
 
-  /* extension */ [[nodiscard]] TValue pop() {
+  /* extension */ [[nodiscard]] TValue pop()
+  {
     TValue out;
-   
+
     if(pop(out) == false) {
       throw std::runtime_error("Buffer is empty");
     }
@@ -82,8 +89,19 @@ public:
     return out;
   }
 
+  /* extension, for single threaded debugging */ template<typename F>
+  void _for_each(F&& f) const {
+    const std::size_t head = _head.load(std::memory_order_acquire);
+    const std::size_t tail = _tail.load(std::memory_order_acquire);
+
+    for(std::size_t i = head; i != tail; i = _index(i + 1)) {
+      f(_buffer[i]);
+    }
+  }
+
 private:
-  [[nodiscard]] static constexpr std::size_t _index(std::size_t i) noexcept {
+  [[nodiscard]] static constexpr std::size_t _index(std::size_t i) noexcept
+  {
     constexpr bool isPowerOf2 = ((Capacity + 1) & Capacity) == 0;
 
     if constexpr(isPowerOf2) {

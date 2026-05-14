@@ -25,7 +25,8 @@
  */
 
 template<std::size_t P /* Producers */, std::size_t C /* Consumers */, typename TRBuffer>
-void test_ring_buffer() {
+void test_ring_buffer()
+{
   static_assert(P > 0 && C > 0);
 
   constexpr std::size_t K = 100 * TRBuffer::capacity();
@@ -78,7 +79,7 @@ void test_ring_buffer() {
   for(auto& t : producers) {
     t.join();
   }
-    
+
   for(auto& t : consumers) {
     t.join();
   }
@@ -86,16 +87,38 @@ void test_ring_buffer() {
   Assert(consumed_total.load(std::memory_order_relaxed) == TOTAL)
       .on_error([](const char* file, int line, const char* op, const auto& actual, const auto& expected) {
         std::cerr << "Assertion failed: actual: " << actual << ", "
-                  << "expected: " << expected << " "
+                  << "expected: " << expected  << " "
                   << "on " << demangle(typeid(TRBuffer).name()) << std::endl;
       });
 }
+
+template< template<typename, std::size_t> class TBuffer>
+void test_ring_buffer_foreach() 
+{
+  TBuffer<int, 8> rBuffer;
+  std::vector<int> values;
+
+  for(int i = 0; i < 5; ++i) {
+    rBuffer.push(i);
+  }
+
+  rBuffer._for_each([&](int v) {
+    values.push_back(v);
+  });
+
+  Assert((values == std::vector<int>{0, 1, 2, 3, 4}));
+};
 
 /*
  * main
  */
 
-int main() {
+int main()
+{
+  test_ring_buffer_foreach<RingBuffer>();
+  test_ring_buffer_foreach<RingBufferSPSC>();
+  test_ring_buffer_foreach<RingBufferSPMC>();
+
   timer([]() {
     test_ring_buffer<1, 1, RingBuffer<int, 2>>();
   }).log([](long int /* ns */, const std::string& fmt) {
