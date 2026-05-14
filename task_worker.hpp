@@ -42,7 +42,9 @@ public:
 
 public:
   explicit TaskWorkerSPSC(std::size_t cpuAffinity = NoAffinity)
-    : _thread([this, cpuAffinity]() { this->_run(cpuAffinity); })
+    : _thread([this, cpuAffinity]() {
+      this->_run(cpuAffinity);
+    })
   {
   }
 
@@ -100,18 +102,18 @@ public:
 private:
   void _setThreadAffinity(std::size_t cpuAffinity) const noexcept
   {
-    if (cpuAffinity == NoAffinity) {
+    if(cpuAffinity == NoAffinity) {
       return;
     }
 
-    if (cpuAffinity >= std::thread::hardware_concurrency()) {
+    if(cpuAffinity >= std::thread::hardware_concurrency()) {
       return;
     }
 
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(cpuAffinity, &cpuset);
-   
+
     if(pthread_t thread = pthread_self(); pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset) != 0) {
       // Failed to set thread affinity, continue anyway.
     }
