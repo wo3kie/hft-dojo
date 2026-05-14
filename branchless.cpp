@@ -6,8 +6,8 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "./assert.hpp"
 #include "./branchless.hpp"
+#include "./assert.hpp"
 
 void test_min0()
 {
@@ -54,14 +54,14 @@ void test_abs()
 
 void test_in_range()
 {
-  Assert(bl::in_range( 9, 10, 20) == false);
+  Assert(bl::in_range(9, 10, 20) == false);
   Assert(bl::in_range(10, 10, 20) == true);
   Assert(bl::in_range(11, 10, 20) == true);
   Assert(bl::in_range(19, 10, 20) == true);
   Assert(bl::in_range(20, 10, 20) == true);
   Assert(bl::in_range(21, 10, 20) == false);
 
-  Assert(bl::in_range( -9, -20, -10) == false);
+  Assert(bl::in_range(-9, -20, -10) == false);
   Assert(bl::in_range(-10, -20, -10) == true);
   Assert(bl::in_range(-11, -20, -10) == true);
   Assert(bl::in_range(-19, -20, -10) == true);
