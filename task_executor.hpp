@@ -8,6 +8,10 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
+#include <atomic>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <exception>
 #include <future>
 #include <memory>
@@ -22,7 +26,7 @@
  * Channel
  */
 
-template<class TType>
+template<class TType, typename IdlePolicy = PauseIdlePolicy>
 struct Channel
 {
 public:
@@ -41,12 +45,10 @@ public:
     _ready.store(true, std::memory_order_release);
   }
 
-  [[nodiscard]] TType& get(bool yield = true)
+  [[nodiscard]] TType& get()
   {
     while(! _ready.load(std::memory_order_acquire)) {
-      if(yield) {
-        std::this_thread::yield();
-      }
+      IdlePolicy::doIt();
     }
 
     return _value;
@@ -61,7 +63,7 @@ private:
  * TaskExecutor
  */
 
-template<std::size_t QueueSize, typename IdlePolicy = YieldIdlePolicy>
+template<std::size_t QueueSize, typename IdlePolicy = PauseIdlePolicy>
 class TaskExecutor
 {
 public:
