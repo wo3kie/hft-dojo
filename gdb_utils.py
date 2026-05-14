@@ -18,7 +18,7 @@ class PrintFlatList(gdb.Command):
             elems.append(str(node["value"]))
             head = int(node["next"])
 
-        if len(elems) <= 2 * N:
+        if (N == -1) or (len(elems) <= 2 * N):
             shown = elems
         else:
             shown = elems[:N] + ["..."] + elems[-N:]
