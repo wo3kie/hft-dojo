@@ -6,8 +6,8 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "./assert.hpp"
 #include "./order_book.hpp"
+#include "./assert.hpp"
 #include "./ring_buffer_spsc.hpp"
 
 void test_order_book_insert_buy_order()

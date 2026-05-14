@@ -8,25 +8,22 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "./flat_list.hpp"
-#include "./assert.hpp"
-#include "./ring_buffer_spsc.hpp"
-#include "./branchless.hpp"
-#include "./likely.hpp"
 #include "./array.hpp"
-#include "./price_levels.hpp"
+#include "./assert.hpp"
+#include "./branchless.hpp"
 #include "./events.hpp"
+#include "./flat_list.hpp"
+#include "./likely.hpp"
+#include "./price_levels.hpp"
+#include "./ring_buffer_spsc.hpp"
 
-#include <cassert>
 #include <array>
-#include <chrono>
-#include <iostream>
-#include <limits>
-#include <functional>
-#include <utility>
 #include <cassert>
+#include <chrono>
+#include <functional>
 #include <iostream>
 #include <limits>
+#include <utility>
 
 template<uint32_t Levels>
 struct OrderBook
@@ -101,7 +98,7 @@ struct OrderBook
   {
     Price minPrice = _sellLevels.minPrice();
     Price maxPrice = _sellLevels.maxPrice();
-    
+
     return bl::in_range<Price>(price, minPrice, maxPrice);
   }
 
@@ -109,11 +106,12 @@ struct OrderBook
   {
     Price minPrice = _buyLevels.minPrice();
     Price maxPrice = _buyLevels.maxPrice();
-    
+
     return bl::in_range(price, minPrice, maxPrice);
   }
 
-  void insertSellOrder(OrderId orderId, Price price, Qty qty) {
+  void insertSellOrder(OrderId orderId, Price price, Qty qty)
+  {
     PriceLevel& level = _sellLevels.price(price);
     Index slot = level.orders.push_back({orderId, qty});
 
@@ -124,13 +122,15 @@ struct OrderBook
     emitEvent(CreateAccepted(orderId, slot));
 
     auto zero_to_max = [](Price x) -> Price {
-      return x | -Price(x == 0);;
+      return x | -Price(x == 0);
+      ;
     };
 
     _sellTopPrice = bl::min(zero_to_max(_sellTopPrice), price);
   }
 
-  void insertBuyOrder(OrderId orderId, Price price, Qty qty) {
+  void insertBuyOrder(OrderId orderId, Price price, Qty qty)
+  {
     PriceLevel& level = _buyLevels.price(price);
     Index slot = level.orders.push_back({orderId, qty});
 
@@ -143,7 +143,8 @@ struct OrderBook
     _buyTopPrice = bl::max(_buyTopPrice, price);
   }
 
-  void updateSellOrder(OrderId orderId, Index slot, Price price, Qty qty) {
+  void updateSellOrder(OrderId orderId, Index slot, Price price, Qty qty)
+  {
     PriceLevel& level = _sellLevels.price(price);
     Order& order = level.orders.at(slot);
 
@@ -155,7 +156,8 @@ struct OrderBook
     emitEvent(UpdateAccepted(orderId));
   }
 
-  void updateBuyOrder(OrderId orderId, Index slot, Price price, Qty qty) {
+  void updateBuyOrder(OrderId orderId, Index slot, Price price, Qty qty)
+  {
     PriceLevel& level = _buyLevels.price(price);
     Order& order = level.orders.at(slot);
 
@@ -167,7 +169,8 @@ struct OrderBook
     emitEvent(UpdateAccepted(orderId));
   }
 
-  void cancelSellOrder(OrderId orderId, Index slot, Price price) {
+  void cancelSellOrder(OrderId orderId, Index slot, Price price)
+  {
     PriceLevel& level = _sellLevels.price(price);
     Order& order = level.orders.at(slot);
 
@@ -180,7 +183,8 @@ struct OrderBook
     emitEvent(CancelAccepted(orderId));
   }
 
-  void cancelBuyOrder(OrderId orderId, Index slot, Price price) {
+  void cancelBuyOrder(OrderId orderId, Index slot, Price price)
+  {
     PriceLevel& level = _buyLevels.price(price);
     Order& order = level.orders.at(slot);
 
@@ -193,7 +197,8 @@ struct OrderBook
     emitEvent(CancelAccepted(orderId));
   }
 
-  void shiftUp() {
+  void shiftUp()
+  {
     {
       Price minPrice = _buyLevels.minPrice();
       PriceLevel& level = _buyLevels.price(minPrice);
@@ -209,7 +214,8 @@ struct OrderBook
     }
   }
 
-  void shiftDown() {
+  void shiftDown()
+  {
     {
       Price maxPrice = _buyLevels.maxPrice();
       PriceLevel& level = _buyLevels.price(maxPrice);
@@ -225,12 +231,13 @@ struct OrderBook
     }
   }
 
-  void expireOrders(PriceLevel& level) {
+  void expireOrders(PriceLevel& level)
+  {
     while(level.orders.empty() == false) {
       Order& order = level.orders.front();
-      
+
       emitEvent(OrderExpired(order.id));
-      
+
       order.id = InvalidOrderId;
       level.orders.pop_front();
     }
