@@ -17,7 +17,8 @@ struct Array
   static_assert((Size & (Size - 1)) == 0);
 
 public:
-  int32_t size() const {
+  int32_t size() const
+  {
     return Size;
   }
 
