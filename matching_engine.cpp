@@ -197,7 +197,7 @@ void test_update_buy_order()
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
 
-    engine.updateBuy(1, /* slot */ 0, /* price */ 100, /* qty */ 50);
+    engine.updateBuyOrder(1, /* slot */ 0, /* price */ 100, /* qty */ 50);
     Assert(engine.bufferOut().pop() == UpdateAccepted(1));
   }
 
@@ -207,7 +207,7 @@ void test_update_buy_order()
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
 
-    engine.updateBuy(99, /* slot */ 0, /* price */ 100, /* qty */ 50);
+    engine.updateBuyOrder(99, /* slot */ 0, /* price */ 100, /* qty */ 50);
     Assert(engine.bufferOut().pop() == UpdateRejected(99, 50));
   }
 
@@ -217,7 +217,7 @@ void test_update_buy_order()
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
 
-    engine.updateBuy(1, /* slot */ 0, /* price */ 200, /* qty */ 50);
+    engine.updateBuyOrder(1, /* slot */ 0, /* price */ 200, /* qty */ 50);
     Assert(engine.bufferOut().pop() == UpdateRejected(1, 50));
   }
 }
@@ -230,7 +230,7 @@ void test_update_sell_order()
     engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
 
-    engine.updateSell(1, /* slot */ 0, /* price */ 100, /* qty */ 50);
+    engine.updateSellOrder(1, /* slot */ 0, /* price */ 100, /* qty */ 50);
     Assert(engine.bufferOut().pop() == UpdateAccepted(1));
   }
 
@@ -240,7 +240,7 @@ void test_update_sell_order()
     engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
 
-    engine.updateSell(99, /* slot */ 0, /* price */ 100, /* qty */ 50);
+    engine.updateSellOrder(99, /* slot */ 0, /* price */ 100, /* qty */ 50);
     Assert(engine.bufferOut().pop() == UpdateRejected(99, 50));
   }
 
@@ -250,26 +250,26 @@ void test_update_sell_order()
     engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
 
-    engine.updateSell(1, /* slot */ 0, /* price */ 200, /* qty */ 50);
+    engine.updateSellOrder(1, /* slot */ 0, /* price */ 200, /* qty */ 50);
     Assert(engine.bufferOut().pop() == UpdateRejected(1, 50));
   }
 }
 
 int I = 0;
 
-void bench()
+void bench(uint32_t iters = 1000)
 {
   MatchingEngine<3> engine(100);
 
-  I = 0;
+  uint32_t orderId = 1;
+  uint32_t minPrice = 97;
+  uint32_t maxPrice = 103;
+  
+  I = iters * (maxPrice - minPrice + 1 /* prices */) * (32 /* orders */) * (2 /* buy/sell */);
 
-  int32_t orderId = 0;
-  int32_t minPrice = 96;
-  int32_t maxPrice = 104;
-
-  for(int32_t i = 0; i < 1000; ++i) {
-    for(int32_t p = minPrice; p <= maxPrice; ++p) {
-      for(int32_t o = 0; o < 32; ++o) {
+  for(uint32_t i = 0; i < iters; ++i) {
+    for(uint32_t p = minPrice; p <= maxPrice; ++p) {
+      for(uint32_t o = 0; o < 32; ++o) {
         engine.insertBuyOrder_PL(orderId++, p, 100);
       }
 
@@ -284,15 +284,11 @@ int main()
 {
 
 #ifdef NDEBUG
-  timer(
-      []() {
-        bench();
-      },
-      1000)
-      .log([&](long int ns, const std::string& formatted) {
+  timer([]() { bench(); }, 1000).log([&](long int ns, const std::string& formatted) {
         std::cout << "Bench took " << formatted << " (" << ns << "ns) for " << I << " events" << std::endl;
       });
 #else
+
   test_simple_transaction();
   test_partial_fill();
   test_single_price_level();

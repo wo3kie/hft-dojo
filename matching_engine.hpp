@@ -32,7 +32,7 @@ public:
   {
     {
       Assert(orderId != InvalidOrderId);
-      Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
+      Assert(price != InvalidPrice);
       Assert(qty != 0);
     }
 
@@ -65,7 +65,7 @@ public:
   {
     {
       Assert(orderId != InvalidOrderId);
-      Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
+      Assert(price != InvalidPrice);
       Assert(qty != 0);
     }
 
@@ -94,12 +94,12 @@ public:
     }
   }
 
-  void updateBuy(OrderId orderId, Index slot, Price price, Qty qty)
+  void updateBuyOrder(OrderId orderId, Index slot, Price price, Qty qty)
   {
     {
       Assert(orderId != InvalidOrderId);
       Assert(slot != InvalidIndex);
-      Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
+      Assert(price != InvalidPrice);
       Assert(qty != 0);
     }
 
@@ -110,12 +110,12 @@ public:
     _orderBook.updateBuyOrder(orderId, slot, price, qty);
   }
 
-  void updateSell(OrderId orderId, Index slot, Price price, Qty qty)
+  void updateSellOrder(OrderId orderId, Index slot, Price price, Qty qty)
   {
     {
       Assert(orderId != InvalidOrderId);
       Assert(slot != InvalidIndex);
-      Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
+      Assert(price != InvalidPrice);
       Assert(qty != 0);
     }
 
@@ -126,30 +126,30 @@ public:
     _orderBook.updateSellOrder(orderId, slot, price, qty);
   }
 
-  void cancelBuy(OrderId orderId, Index slot, Price price)
+  void cancelBuyOrder(OrderId orderId, Index slot, Price price)
   {
     {
       Assert(orderId != InvalidOrderId);
       Assert(slot != InvalidIndex);
-      Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
+      Assert(price != InvalidPrice);
     }
 
-    if(UNLIKELY(_orderBook.checkBuyOrder(price) == false)) {
+    if(UNLIKELY(_orderBook.checkBuyPrice(price) == false)) {
       return emitEvent(CancelRejected(orderId));
     }
 
     _orderBook.cancelBuyOrder(orderId, slot, price);
   }
 
-  void cancelSell(OrderId orderId, Index slot, Price price)
+  void cancelSellOrder(OrderId orderId, Index slot, Price price)
   {
     {
       Assert(orderId != InvalidOrderId);
       Assert(slot != InvalidIndex);
-      Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
+      Assert(price != InvalidPrice);
     }
 
-    if(UNLIKELY(_orderBook.checkSellOrder(price) == false)) {
+    if(UNLIKELY(_orderBook.checkSellPrice(price) == false)) {
       return emitEvent(CancelRejected(orderId));
     }
 
@@ -167,16 +167,22 @@ private:
     while(_bufferOut.push(event) == false) {
       _mm_pause();
     }
+
+#ifdef NDEBUG
+    (void)_bufferOut.pop();
+#endif
   }
 
   void shiftOrderBook(Price price)
   {
-    Price centerPrice = _orderBook.centerPrice();
-    Price minPrice = bl::min(centerPrice, price);
-    Price maxPrice = bl::max(centerPrice, price);
-
-    if(maxPrice - minPrice <= LevelsTolerance) {
-      return;
+    {
+      Price centerPrice = _orderBook.centerPrice();
+      Price minPrice = bl::min(centerPrice, price);
+      Price maxPrice = bl::max(centerPrice, price);
+      
+      if(maxPrice - minPrice <= LevelsTolerance) {
+        return;
+      }
     }
 
     while(_orderBook.centerPrice() < price) {
@@ -188,10 +194,8 @@ private:
     }
   }
 
-  Qty tradeAtPriceLevel(OrderId orderId, Price price, Qty qty, PriceLevel& level)
+  Qty trade(OrderId orderId, Price price, Qty qty, PriceLevel& level)
   {
-    Assert(bl::in_range(price, MinPrice, MaxPrice));
-
     while((qty != 0) && (! level.orders.empty())) {
       Order& otherOrder = level.orders.front();
       Qty tradeQty = bl::min(qty, otherOrder.qty);
@@ -210,65 +214,69 @@ private:
     return qty;
   }
 
-  Qty tradeSell(OrderId orderId, Price priceTo, Qty qty)
+  Qty _tradeSell(OrderId orderId, const Price priceLimit, Qty qty)
   {
-    Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
+    Assert(_orderBook.checkSellPrice(priceLimit));
 
-    if(UNLIKELY(_orderBook._buyTopPrice == InvalidPrice)) {
-      return qty;
+    Price price = _orderBook.topBuyPrice();
+    Index index = _orderBook.topBuyIndex();
+
+    while((qty != 0) && (price >= priceLimit)) {
+      PriceLevel& level = _orderBook.buyLevels().index(index);
+      qty = trade(orderId, price, qty, level);
+
+      const bool empty = level.orders.empty();
+      _orderBook.decTopBuyPrice(empty);
+
+      shiftOrderBook(price);
+
+      price -= 1;
+      index -= 1;
     }
 
-    {
-      priceTo = _orderBook.buyPriceTo(priceTo);
-
-      Price price = _orderBook.buyPriceFrom();
-      Index index = _orderBook.buyIndexFrom();
-
-      while((qty != 0) && (price >= priceTo)) {
-        PriceLevel& level = _orderBook._buyLevels.index(index);
-        qty = tradeAtPriceLevel(orderId, price, qty, level);
-
-        const Price empty = (Price)level.orders.empty();
-        _orderBook._buyTopPrice -= empty;
-
-        shiftOrderBook(price);
-
-        price -= 1;
-        index -= 1;
-      }
-
-      return qty;
-    }
+    return qty;
   }
 
-  Qty tradeBuy(OrderId orderId, Price priceTo, Qty qty)
+  Qty tradeSell(OrderId orderId, Price priceLimit, Qty qty)
   {
-    Assert(bl::in_range(priceTo, MinPrice, MaxPrice));
-
-    if(UNLIKELY(_orderBook._sellTopPrice == InvalidPrice)) {
+    if(UNLIKELY(_orderBook.topBuyPrice() == InvalidPrice)) {
       return qty;
     }
 
-    {
-      priceTo = _orderBook.sellPriceTo(priceTo);
+    priceLimit = _orderBook.buyPriceLimit(priceLimit);
+    return _tradeSell(orderId, priceLimit, qty);
+  }
 
-      Price price = _orderBook.sellPriceFrom();
-      Index index = _orderBook.sellIndexFrom();
+  Qty _tradeBuy(OrderId orderId, const Price priceLimit, Qty qty)
+  {
+    Assert(_orderBook.checkBuyPrice(priceLimit));
+    
+    Price price = _orderBook.topSellPrice();
+    Index index = _orderBook.topSellIndex();
 
-      while((qty != 0) && (price <= priceTo)) {
-        PriceLevel& level = _orderBook._sellLevels.index(index);
-        qty = tradeAtPriceLevel(orderId, price, qty, level);
+    while((qty != 0) && (price <= priceLimit)) {
+      PriceLevel& level = _orderBook.sellLevels().index(index);
+      qty = trade(orderId, price, qty, level);
 
-        const Price empty = (Price)level.orders.empty();
-        _orderBook._sellTopPrice += empty;
+      const bool empty = level.orders.empty();
+      _orderBook.incTopSellPrice(empty);
 
-        shiftOrderBook(price);
+      shiftOrderBook(price);
 
-        price += 1;
-        index += 1;
-      }
+      price += 1;
+      index += 1;
+    }
 
+    return qty;
+  }
+
+  Qty tradeBuy(OrderId orderId, Price priceLimit, Qty qty)
+  {
+    if(UNLIKELY(_orderBook.topSellPrice() == InvalidPrice)) {
       return qty;
     }
+
+    priceLimit = _orderBook.sellPriceLimit(priceLimit);
+    return _tradeBuy(orderId, priceLimit, qty);
   }
 };
