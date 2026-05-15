@@ -14,20 +14,6 @@ namespace bl /* branchless */
 {
 
 template<std::signed_integral T>
-inline T min0(T x) noexcept
-{
-  bool result = x & (x >> (sizeof(T) * 8 - 1));
-  return result;
-}
-
-template<std::signed_integral T>
-inline T max0(T x) noexcept
-{
-  bool result = x & ~(x >> (sizeof(T) * 8 - 1));
-  return result;
-}
-
-template<std::signed_integral T>
 inline T min(T x, T y) noexcept
 {
   T result = y ^ ((x ^ y) & -(x < y));

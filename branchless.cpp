@@ -9,24 +9,6 @@
 #include "./branchless.hpp"
 #include "./assert.hpp"
 
-void test_min0()
-{
-  Assert(bl::min0(-2) == -2);
-  Assert(bl::min0(-1) == -1);
-  Assert(bl::min0(0) == 0);
-  Assert(bl::min0(1) == 0);
-  Assert(bl::min0(2) == 0);
-}
-
-void test_max0()
-{
-  Assert(bl::max0(-2) == 0);
-  Assert(bl::max0(-1) == 0);
-  Assert(bl::max0(0) == 0);
-  Assert(bl::max0(1) == 1);
-  Assert(bl::max0(2) == 2);
-}
-
 void test_min()
 {
   Assert(bl::min(3, 7) == 3);
@@ -71,8 +53,6 @@ void test_in_range()
 
 int main()
 {
-  test_min0();
-  test_max0();
   test_min();
   test_max();
   test_abs();
