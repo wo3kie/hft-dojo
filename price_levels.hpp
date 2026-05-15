@@ -16,7 +16,7 @@
 
 struct PriceLevel
 {
-  FlatList<32, Order> orders;
+  FlatList<Order, 32> orders;
 };
 
 template<uint32_t Levels>

@@ -9,46 +9,47 @@
 #include <cassert>
 #include <iostream>
 
+#include "./assert.hpp"
 #include "./flat_list.hpp"
 
 void test_push_front()
 {
-  FlatList<8, int> list;
+  FlatList<int, 8> list;
 
   int32_t s1 = list.push_front(10);
-  assert(s1 != -1);
+  Assert(s1 != -1);
 
   int32_t s2 = list.push_front(20);
-  assert(s2 != -1);
+  Assert(s2 != -1);
 
   int32_t s3 = list.push_front(30);
-  assert(s3 != -1);
+  Assert(s3 != -1);
 
   int v1 = list.back();
   list.pop_back();
-  assert(v1 == 10);
+  Assert(v1 == 10);
 
   int v2 = list.back();
   list.pop_back();
-  assert(v2 == 20);
+  Assert(v2 == 20);
 
   int v3 = list.back();
   list.pop_back();
-  assert(v3 == 30);
+  Assert(v3 == 30);
 
-  assert(list.empty());
+  Assert(list.empty());
 }
 
 void test_push_back()
 {
-  FlatList<8, int> list;
+  FlatList<int, 8> list;
 
   int32_t s1 = list.push_back(10);
   int32_t s2 = list.push_back(20);
   int32_t s3 = list.push_back(30);
-  assert(s1 != -1);
-  assert(s2 != -1);
-  assert(s3 != -1);
+  Assert(s1 != -1);
+  Assert(s2 != -1);
+  Assert(s3 != -1);
 
   int v1 = list.front();
   list.pop_front();
@@ -56,15 +57,15 @@ void test_push_back()
   list.pop_front();
   int v3 = list.front();
   list.pop_front();
-  assert(v1 == 10);
-  assert(v2 == 20);
-  assert(v3 == 30);
-  assert(list.empty());
+  Assert(v1 == 10);
+  Assert(v2 == 20);
+  Assert(v3 == 30);
+  Assert(list.empty());
 }
 
 void test_remove_middle()
 {
-  FlatList<8, int> list;
+  FlatList<int, 8> list;
 
   int32_t s1 = list.push_back(1);
   int32_t s2 = list.push_back(2);
@@ -75,14 +76,14 @@ void test_remove_middle()
   list.pop_front();
   int v2 = list.front();
   list.pop_front();
-  assert(v1 == 1);
-  assert(v2 == 3);
-  assert(list.empty());
+  Assert(v1 == 1);
+  Assert(v2 == 3);
+  Assert(list.empty());
 }
 
 void test_remove_head()
 {
-  FlatList<8, int> list;
+  FlatList<int, 8> list;
 
   int32_t s1 = list.push_back(5);
   int32_t s2 = list.push_back(6);
@@ -93,14 +94,14 @@ void test_remove_head()
   list.pop_front();
   int v2 = list.front();
   list.pop_front();
-  assert(v1 == 6);
-  assert(v2 == 7);
-  assert(list.empty());
+  Assert(v1 == 6);
+  Assert(v2 == 7);
+  Assert(list.empty());
 }
 
 void test_remove_tail()
 {
-  FlatList<8, int> list;
+  FlatList<int, 8> list;
 
   int32_t s1 = list.push_back(11);
   int32_t s2 = list.push_back(22);
@@ -111,43 +112,43 @@ void test_remove_tail()
   list.pop_front();
   int v2 = list.front();
   list.pop_front();
-  assert(v1 == 11);
-  assert(v2 == 22);
-  assert(list.empty());
+  Assert(v1 == 11);
+  Assert(v2 == 22);
+  Assert(list.empty());
 }
 
 void test_full()
 {
-  FlatList<3, int> list;
+  FlatList<int, 3> list;
 
   int32_t s1 = list.push_back(1);
   int32_t s2 = list.push_back(2);
   int32_t s3 = list.push_back(3);
-  assert(list.full() == true);
+  Assert(list.full() == true);
 }
 
 void test_reuse_slots()
 {
-  FlatList<4, int> list;
+  FlatList<int, 4> list;
 
   int32_t s1 = list.push_back(10);
   int32_t s2 = list.push_back(20);
   list.remove(s1);
 
   int32_t s3 = list.push_back(30);
-  assert(s3 == s1);
+  Assert(s3 == s1);
 
   int v1 = list.front();
   list.pop_front();
   int v2 = list.front();
   list.pop_front();
-  assert(v1 == 20);
-  assert(v2 == 30);
+  Assert(v1 == 20);
+  Assert(v2 == 30);
 }
 
 void test_for_each()
 {
-  FlatList<4, int> list;
+  FlatList<int, 4> list;
 
   list.push_back(1);
   list.push_back(2);
@@ -158,7 +159,25 @@ void test_for_each()
     sum += value;
   });
 
-  assert(sum == 6);
+  Assert(sum == 6);
+}
+
+void test_gdb_function()
+{
+  FlatList<int, 32> list;
+
+  for(int i = 0; i < 32; ++i) {
+    list.push_back(i);
+  }
+
+  /*
+   * (gdb) source ./gdb_utils.py 
+   * (gdb) print_flat_list list
+   * FlatList<int, 32> [ 0, 1, 2, 3, ..., 28, 29, 30, 31 ]
+   */
+
+  Assert(list.at(0) == 0);
+  Assert(list.at(31) == 31);
 }
 
 int main()
@@ -171,4 +190,5 @@ int main()
   test_full();
   test_reuse_slots();
   test_for_each();
+  test_gdb_function();
 }

@@ -16,14 +16,14 @@
 
 #include <functional>
 
-template<std::size_t Size, typename TType>
+template<typename TValue, std::size_t Capacity>
 class FlatList
 {
   struct Node
   {
     int32_t next{-1};
     int32_t prev{-1};
-    TType value;
+    TValue value;
   };
 
 public:
@@ -32,42 +32,42 @@ public:
     , _head(-1)
     , _tail(-1)
   {
-    for(std::size_t i = 0; i < Size - 1; ++i) {
-      _storage[i].next = static_cast<int32_t>(i + 1);
+    for(std::size_t i = 0; i < Capacity - 1; ++i) {
+      _buffer[i].next = static_cast<int32_t>(i + 1);
     }
   }
 
-  TType& front()
+  TValue& front()
   {
     assert(! empty());
-    return _storage[_head].value;
+    return _buffer[_head].value;
   }
 
-  TType& back()
+  TValue& back()
   {
     assert(! empty());
-    return _storage[_tail].value;
+    return _buffer[_tail].value;
   }
 
-  int32_t push_front(const TType& value)
+  int32_t push_front(const TValue& value)
   {
     if(full()) {
       return -1;
     }
 
     const int32_t node_id = _push_front(_allocate_node());
-    _storage[node_id].value = value;
+    _buffer[node_id].value = value;
     return node_id;
   }
 
-  int32_t push_back(const TType& value)
+  int32_t push_back(const TValue& value)
   {
     if(full()) {
       return -1;
     }
 
     const int32_t node_id = _push_back(_allocate_node());
-    _storage[node_id].value = value;
+    _buffer[node_id].value = value;
     return node_id;
   }
 
@@ -88,7 +88,7 @@ public:
   void remove(int32_t index)
   {
     assert(! empty());
-    assert(index >= 0 && index < static_cast<int32_t>(Size));
+    assert(index >= 0 && index < static_cast<int32_t>(Capacity));
 
     _deallocate_node(_remove(index));
   }
@@ -109,36 +109,39 @@ public:
     _head = -1;
     _tail = -1;
 
-    for(std::size_t i = 0; i < Size - 1; ++i) {
-      _storage[i].next = static_cast<int32_t>(i + 1);
-      _storage[i].prev = -1;
+    for(std::size_t i = 0; i < Capacity - 1; ++i) {
+      _buffer[i].next = static_cast<int32_t>(i + 1);
+      _buffer[i].prev = -1;
     }
 
-    _storage[Size - 1].next = -1;
-    _storage[Size - 1].prev = -1;
+    _buffer[Capacity - 1].next = -1;
+    _buffer[Capacity - 1].prev = -1;
   }
 
-  const TType& at(int32_t index) const
+  const TValue& at(int32_t index) const
   {
     assert(! empty());
-    assert(index >= 0 && index < static_cast<int32_t>(Size));
+    assert(index >= 0 && index < static_cast<int32_t>(Capacity));
 
-    return _storage[index].value;
+    return _buffer[index].value;
   }
 
-  TType& at(int32_t index)
+  TValue& at(int32_t index)
   {
     assert(! empty());
-    assert(index >= 0 && index < static_cast<int32_t>(Size));
+    assert(index >= 0 && index < static_cast<int32_t>(Capacity));
 
-    return _storage[index].value;
+    return _buffer[index].value;
   }
 
   template<typename F>
   void for_each(F&& f) const
   {
-    for(int32_t index = _head; index != -1; index = _storage[index].next) {
-      f(_storage[index].value);
+    const int32_t head = _head;
+    const int32_t tail = _tail;
+
+    for(int32_t i = head; i != -1; i = _buffer[i].next) {
+      f(_buffer[i].value);
     }
   }
 
@@ -148,14 +151,14 @@ private:
     assert(! full());
 
     const int32_t node_id = _free;
-    _free = _storage[node_id].next;
+    _free = _buffer[node_id].next;
 
     return node_id;
   }
 
   void _deallocate_node(int32_t node_id)
   {
-    Node& node = _storage[node_id];
+    Node& node = _buffer[node_id];
     node.next = _free;
     node.prev = -1;
     _free = node_id;
@@ -163,14 +166,14 @@ private:
 
   int32_t _push_front(int32_t node_id)
   {
-    Node& node = _storage[node_id];
+    Node& node = _buffer[node_id];
     node.next = _head;
     node.prev = -1;
 
     if(empty()) {
       _tail = node_id;
     } else {
-      _storage[_head].prev = node_id;
+      _buffer[_head].prev = node_id;
     }
 
     return (_head = node_id);
@@ -178,14 +181,14 @@ private:
 
   int32_t _push_back(int32_t node_id)
   {
-    Node& node = _storage[node_id];
+    Node& node = _buffer[node_id];
     node.next = -1;
     node.prev = _tail;
 
     if(empty()) {
       _head = node_id;
     } else {
-      _storage[_tail].next = node_id;
+      _buffer[_tail].next = node_id;
     }
 
     return (_tail = node_id);
@@ -196,12 +199,12 @@ private:
     assert(! empty());
 
     const int32_t index = _head;
-    Node& node = _storage[index];
+    Node& node = _buffer[index];
 
     _head = node.next;
 
     if(_head != -1) {
-      _storage[_head].prev = -1;
+      _buffer[_head].prev = -1;
     } else {
       _tail = -1;
     }
@@ -214,12 +217,12 @@ private:
     assert(! empty());
 
     const int32_t index = _tail;
-    Node& node = _storage[index];
+    Node& node = _buffer[index];
 
     _tail = node.prev;
 
     if(_tail != -1) {
-      _storage[_tail].next = -1;
+      _buffer[_tail].next = -1;
     } else {
       _head = -1;
     }
@@ -231,16 +234,16 @@ private:
   {
     assert(! empty());
 
-    Node& node = _storage[index];
+    Node& node = _buffer[index];
 
     if(node.prev != -1) {
-      _storage[node.prev].next = node.next;
+      _buffer[node.prev].next = node.next;
     } else {
       _head = node.next;
     }
 
     if(node.next != -1) {
-      _storage[node.next].prev = node.prev;
+      _buffer[node.next].prev = node.prev;
     } else {
       _tail = node.prev;
     }
@@ -256,5 +259,5 @@ private:
   int32_t _head;
   int32_t _tail;
 
-  std::array<Node, Size> _storage;
+  Node _buffer[Capacity];
 };
