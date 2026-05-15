@@ -8,6 +8,7 @@
 
 #include <functional>
 #include <iostream>
+#include <xmmintrin.h>
 
 #include "./assert.hpp"
 #include "./task_worker.hpp"
@@ -20,9 +21,8 @@ int main()
     TaskWorkerSPSC<4, std::function<void()>> worker;
 
     for(std::size_t i = 0; i < 1024; ++i) {
-      while(! worker.push([i, &counter]() {
-        counter += 1;
-      })) {
+      while(! worker.push([i, &counter]() { counter += 1; })) {
+        _mm_pause();
       };
     }
 
