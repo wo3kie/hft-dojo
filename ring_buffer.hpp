@@ -38,8 +38,8 @@ public:
       return false;
     }
 
-    _buffer[_end] = std::forward<TT>(t);
-    _end = _increment(_end);
+    _buffer[_tail] = std::forward<TT>(t);
+    _tail = _index(_tail + 1);
 
     return true;
   }
@@ -50,8 +50,8 @@ public:
       return false;
     }
 
-    out = std::move(_buffer[_begin]);
-    _begin = _increment(_begin);
+    out = std::move(_buffer[_head]);
+    _head = _index(_head + 1);
 
     return true;
   }
@@ -63,12 +63,12 @@ public:
 
   [[nodiscard]] bool empty() const noexcept
   {
-    return _begin == _end;
+    return _head == _tail;
   }
 
   [[nodiscard]] bool full() const noexcept
   {
-    return _increment(_end) == _begin;
+    return _index(_tail + 1) == _head;
   }
 
   /* extension */ [[nodiscard]] TValue pop()
@@ -84,31 +84,29 @@ public:
 
   /* extension */ template<typename F>
   void _for_each(F&& f) const {
-    for(std::size_t i = _begin; i != _end; i = _increment(i)) {
+    const std::size_t head = _head;
+    const std::size_t tail = _tail;
+
+    for(std::size_t i = head; i != tail; i = _index(i + 1)) {
       f(_buffer[i]);
     }
   }
 
 private:
-  static constexpr bool is_power_of_2(std::size_t n) noexcept
+  [[nodiscard]] static constexpr std::size_t _index(std::size_t i) noexcept 
   {
-    return (n & (n - 1)) == 0;
-  }
+    constexpr bool isPowerOf2 = ((Capacity + 1) & Capacity) == 0;
 
-  [[nodiscard]] static constexpr std::size_t _increment(std::size_t i) noexcept
-  {
-    constexpr std::size_t BufferSize = Capacity + 1;
-
-    if constexpr(is_power_of_2(BufferSize)) {
-      return (i + 1) & (BufferSize - 1);
+    if constexpr(isPowerOf2) {
+      return i & Capacity;
     } else {
-      return (i + 1) % BufferSize;
+      return i % (Capacity + 1);
     }
   }
 
 private:
-  std::size_t _begin{0};
-  std::size_t _end{0};
+  std::size_t _head{0};
+  std::size_t _tail{0};
 
-  std::array<TValue, /* N+1 trick */ Capacity + 1> _buffer;
+  TValue _buffer[/* N+1 trick */ Capacity + 1];
 };

@@ -109,12 +109,41 @@ void test_ring_buffer_foreach()
   Assert((values == std::vector<int>{0, 1, 2, 3, 4}));
 };
 
+template< template<typename, std::size_t> class TBuffer>
+void test_ring_buffer_gdb()
+{
+  TBuffer<int, 128> rBuffer;
+
+  for(int i = 0; i < 128; ++i) {
+    rBuffer.push(i);
+  }
+
+  /*
+   * (gdb) source ../gdb_utils.py
+   *
+   * (gdb) print_ring_buffer rBuffer
+   * RingBuffer<int, 128> [ 0, 1, 2, 3, ..., 124, 125, 126, 127 ]
+   * 
+   * (gdb) print_ring_buffer_spsc rBuffer
+   * RingBufferSPSC<int, 128> [ 0, 1, 2, 3, ..., 124, 125, 126, 127 ]
+   * 
+   * (gdb) print_ring_buffer_spmc rBuffer
+   * RingBufferSPMC<int, 128> [ 0, 1, 2, 3, ..., 124, 125, 126, 127 ]
+   */
+ 
+  Assert(rBuffer.capacity() == 128);
+};
+
 /*
  * main
  */
 
 int main()
 {
+  test_ring_buffer_gdb<RingBuffer>();
+  test_ring_buffer_gdb<RingBufferSPSC>();
+  test_ring_buffer_gdb<RingBufferSPMC>();
+
   test_ring_buffer_foreach<RingBuffer>();
   test_ring_buffer_foreach<RingBufferSPSC>();
   test_ring_buffer_foreach<RingBufferSPMC>();
