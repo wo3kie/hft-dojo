@@ -29,46 +29,14 @@ void test_basic()
   Channel<int> channel7;
   Channel<int> channel8;
 
-  Assert(exec.try_submit(
-      [](Channel<int>& channel) noexcept {
-        channel.set(1);
-      },
-      channel1));
-  Assert(exec.try_submit(
-      [](Channel<int>& channel) noexcept {
-        channel.set(2);
-      },
-      channel2));
-  Assert(exec.try_submit(
-      [](Channel<int>& channel) noexcept {
-        channel.set(3);
-      },
-      channel3));
-  Assert(exec.try_submit(
-      [](Channel<int>& channel) noexcept {
-        channel.set(4);
-      },
-      channel4));
-  exec.submit(
-      [](Channel<int>& channel) noexcept {
-        channel.set(5);
-      },
-      channel5);
-  exec.submit(
-      [](Channel<int>& channel) noexcept {
-        channel.set(6);
-      },
-      channel6);
-  exec.submit(
-      [](Channel<int>& channel) noexcept {
-        channel.set(7);
-      },
-      channel7);
-  exec.submit(
-      [](Channel<int>& channel) noexcept {
-        channel.set(8);
-      },
-      channel8);
+  Assert(exec.try_submit([](Channel<int>& channel) noexcept { channel.set(1); }, channel1));
+  Assert(exec.try_submit([](Channel<int>& channel) noexcept { channel.set(2); }, channel2));
+  Assert(exec.try_submit([](Channel<int>& channel) noexcept { channel.set(3); }, channel3));
+  Assert(exec.try_submit([](Channel<int>& channel) noexcept { channel.set(4); }, channel4));
+  exec.submit([](Channel<int>& channel) noexcept { channel.set(5); }, channel5);
+  exec.submit([](Channel<int>& channel) noexcept { channel.set(6); }, channel6);
+  exec.submit([](Channel<int>& channel) noexcept { channel.set(7); }, channel7);
+  exec.submit([](Channel<int>& channel) noexcept { channel.set(8); }, channel8);
 
   Assert(channel1.get() == 1);
   Assert(channel2.get() == 2);
