@@ -23,97 +23,144 @@
 #include <functional>
 #include <iostream>
 #include <limits>
-#include <utility>
+#include <xmmintrin.h>
 
 template<uint32_t Levels>
 struct OrderBook
 {
+public:
   static_assert((Levels & (Levels + 1)) == 0);
 
-  Price _sellTopPrice;
-  Price _buyTopPrice;
-
-  PriceLevels<Levels> _sellLevels;
-  PriceLevels<Levels> _buyLevels;
-
-  RingBufferSPSC<Event, 1024>& _bufferOut;
-
+public:
   OrderBook(RingBufferSPSC<Event, 1024>& bufferOut, Price centerPrice)
-    : _sellTopPrice{InvalidPrice}
-    , _buyTopPrice{InvalidPrice}
+    : _topSellPrice{InvalidPrice}
+    , _topBuyPrice{InvalidPrice}
     , _buyLevels(centerPrice)
     , _sellLevels(centerPrice)
     , _bufferOut(bufferOut)
   {
   }
 
+  OrderBook(OrderBook&&) = delete;
+  OrderBook(const OrderBook&) = delete;
+
+  OrderBook& operator=(OrderBook&&) = delete;
+  OrderBook& operator=(const OrderBook&) = delete;
+
+public:
   Price centerPrice() const
   {
-    return _buyLevels.centerPrice();
+    Assert(_sellLevels.centerPrice() == _buyLevels.centerPrice());
+    return _sellLevels.centerPrice();
   }
 
   void emitEvent(Event event)
   {
     while(_bufferOut.push(event) == false) {
+      _mm_pause();
     }
+
+#ifdef NDEBUG
+    (void)_bufferOut.pop();
+#endif
   }
 
-  Price buyPriceFrom() const
+  Price topBuyPrice() const
   {
-    return _buyTopPrice;
+    return _topBuyPrice;
   }
 
-  Price buyPriceTo(Price price) const
+  Price buyPriceLimit(Price price = MinPrice) const
   {
-    Price min_price = _buyLevels.minPrice();
-    Price max_price = bl::max(price, min_price);
-    return max_price;
+    const Price min_price = _buyLevels.minPrice();
+    return bl::max(price, min_price);
   }
 
-  Index buyIndexFrom() const
+  void decTopBuyPrice(bool empty = true)
   {
-    Index index = _buyLevels.priceToIndex(_buyTopPrice);
-    return index;
+    /*
+     * branchless version for conditional decrement:
+     *
+     * if (buyOrders.empty()) {
+     *  _topBuyPrice -= 1;
+     * }
+     * 
+     */
+
+    _topBuyPrice -= (Price)empty;
   }
 
-  Price sellPriceFrom() const
+  void incTopSellPrice(bool empty = true)
   {
-    return _sellTopPrice;
+    /*
+     * branchless version for conditional increment:
+     *
+     * if (sellOrders.empty()) {
+     *  _topSellPrice += 1;
+     * }
+     * 
+     */
+
+    _topSellPrice += (Price)empty;
   }
 
-  Price sellPriceTo(Price price) const
+  Index topBuyIndex() const
   {
-    Price maxPrice = _sellLevels.maxPrice();
-    Price minPrice = bl::min(price, maxPrice);
-    return minPrice;
+    return _buyLevels.priceToIndex(_topBuyPrice);
   }
 
-  Index sellIndexFrom() const
+  Price topSellPrice() const
   {
-    Index index = _sellLevels.priceToIndex(_sellTopPrice);
-    return index;
+    return _topSellPrice;
+  }
+
+  Price sellPriceLimit(Price price = MaxPrice) const
+  {
+    const Price maxPrice = _sellLevels.maxPrice();
+    return bl::min(price, maxPrice);
+  }
+
+  Index topSellIndex() const
+  {
+    return _sellLevels.priceToIndex(_topSellPrice);
   }
 
   bool checkSellPrice(Price price) const
   {
-    Price minPrice = _sellLevels.minPrice();
-    Price maxPrice = _sellLevels.maxPrice();
+    const Price minPrice = _sellLevels.minPrice();
+    const Price maxPrice = _sellLevels.maxPrice();
 
     return bl::in_range<Price>(price, minPrice, maxPrice);
   }
 
   bool checkBuyPrice(Price price) const
   {
-    Price minPrice = _buyLevels.minPrice();
-    Price maxPrice = _buyLevels.maxPrice();
+    const Price minPrice = _buyLevels.minPrice();
+    const Price maxPrice = _buyLevels.maxPrice();
 
     return bl::in_range(price, minPrice, maxPrice);
+  }
+
+  PriceLevels<Levels>& sellLevels() {
+    return _sellLevels;
+  }
+
+  const PriceLevels<Levels>& sellLevels() const {
+    return _sellLevels;
+  }
+
+  PriceLevels<Levels>& buyLevels() {
+    return _buyLevels;
+  }
+
+  const PriceLevels<Levels>& buyLevels() const {
+    return _buyLevels;
   }
 
   void insertSellOrder(OrderId orderId, Price price, Qty qty)
   {
     PriceLevel& level = _sellLevels.price(price);
-    Index slot = level.orders.push_back({orderId, qty});
+    const Index slot = level.orders.push_back({orderId, qty});
 
     if(UNLIKELY(slot == InvalidIndex)) {
       return emitEvent(CreateRejected(orderId, qty));
@@ -121,18 +168,23 @@ struct OrderBook
 
     emitEvent(CreateAccepted(orderId, slot));
 
-    auto zero_to_max = [](Price x) -> Price {
-      return x | -Price(x == 0);
-      ;
-    };
+    {
+      /*
+       * if (_topSellPrice == uint32_t(0)) {
+       *   _topSellPrice = price;
+       * } else {
+       *   _topSellPrice = bl::min(_topSellPrice, price);
+       * }
+       */
 
-    _sellTopPrice = bl::min(zero_to_max(_sellTopPrice), price);
+      _topSellPrice = bl::min(_topSellPrice - 1, price - 1) + 1;
+    }
   }
 
   void insertBuyOrder(OrderId orderId, Price price, Qty qty)
   {
     PriceLevel& level = _buyLevels.price(price);
-    Index slot = level.orders.push_back({orderId, qty});
+    const Index slot = level.orders.push_back({orderId, qty});
 
     if(UNLIKELY(slot == InvalidIndex)) {
       return emitEvent(CreateRejected(orderId, qty));
@@ -140,7 +192,7 @@ struct OrderBook
 
     emitEvent(CreateAccepted(orderId, slot));
 
-    _buyTopPrice = bl::max(_buyTopPrice, price);
+    _topBuyPrice = bl::max(_topBuyPrice, price);
   }
 
   void updateSellOrder(OrderId orderId, Index slot, Price price, Qty qty)
@@ -200,14 +252,14 @@ struct OrderBook
   void shiftUp()
   {
     {
-      Price minPrice = _buyLevels.minPrice();
+      const Price minPrice = _buyLevels.minPrice();
       PriceLevel& level = _buyLevels.price(minPrice);
       expireOrders(level);
       _buyLevels.shiftUp();
     }
 
     {
-      Price minPrice = _sellLevels.minPrice();
+      const Price minPrice = _sellLevels.minPrice();
       PriceLevel& level = _sellLevels.price(minPrice);
       expireOrders(level);
       _sellLevels.shiftUp();
@@ -217,14 +269,14 @@ struct OrderBook
   void shiftDown()
   {
     {
-      Price maxPrice = _buyLevels.maxPrice();
+      const Price maxPrice = _buyLevels.maxPrice();
       PriceLevel& level = _buyLevels.price(maxPrice);
       expireOrders(level);
       _buyLevels.shiftDown();
     }
 
     {
-      Price maxPrice = _sellLevels.maxPrice();
+      const Price maxPrice = _sellLevels.maxPrice();
       PriceLevel& level = _sellLevels.price(maxPrice);
       expireOrders(level);
       _sellLevels.shiftDown();
@@ -242,4 +294,13 @@ struct OrderBook
       level.orders.pop_front();
     }
   }
+
+private:
+  Price _topSellPrice;
+  Price _topBuyPrice;
+
+  PriceLevels<Levels> _sellLevels;
+  PriceLevels<Levels> _buyLevels;
+
+  RingBufferSPSC<Event, 1024>& _bufferOut;
 };

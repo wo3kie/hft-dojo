@@ -16,8 +16,8 @@ void test_order_book_insert_buy_order()
   OrderBook<31> ob(buffer, 100);
 
   ob.insertBuyOrder(1, 100, 10);
-  Assert(ob.buyPriceFrom() == 100);
-  Assert(ob.buyIndexFrom() == 0);
+  Assert(ob.topBuyPrice() == 100);
+  Assert(ob.topBuyIndex() == 31);
 }
 
 void test_order_book_insert_sell_order()
@@ -26,8 +26,8 @@ void test_order_book_insert_sell_order()
   OrderBook<31> ob(buffer, 100);
 
   ob.insertSellOrder(1, 100, 10);
-  Assert(ob.sellPriceFrom() == 100);
-  Assert(ob.sellIndexFrom() == 0);
+  Assert(ob.topSellPrice() == 100);
+  Assert(ob.topSellIndex() == 31);
 }
 
 void test_order_book_shift_up()
