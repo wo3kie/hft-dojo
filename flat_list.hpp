@@ -21,20 +21,15 @@ class FlatList
 {
   struct Node
   {
-    int32_t next{-1};
-    int32_t prev{-1};
+    int32_t next;
+    int32_t prev;
     TValue value;
   };
 
 public:
   FlatList()
-    : _free(0)
-    , _head(-1)
-    , _tail(-1)
   {
-    for(std::size_t i = 0; i < Capacity - 1; ++i) {
-      _buffer[i].next = static_cast<int32_t>(i + 1);
-    }
+    clear();
   }
 
   TValue& front()
@@ -93,6 +88,11 @@ public:
     _deallocate_node(_remove(index));
   }
 
+  std::size_t capacity() const
+  {
+    return Capacity;
+  }
+
   bool empty() const
   {
     return _head == -1;
@@ -110,12 +110,12 @@ public:
     _tail = -1;
 
     for(std::size_t i = 0; i < Capacity - 1; ++i) {
-      _buffer[i].next = static_cast<int32_t>(i + 1);
+      _buffer[i].next = i + 1;
       _buffer[i].prev = -1;
     }
 
     _buffer[Capacity - 1].next = -1;
-    _buffer[Capacity - 1].prev = -1;
+    _buffer[Capacity - 1].prev = -2;
   }
 
   const TValue& at(int32_t index) const
