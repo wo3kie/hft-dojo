@@ -74,13 +74,13 @@ rm -rf build
   
 - **matching_engine** - A simple implementation of a matching engine for a limit order book. It supports basic order types like limit and market orders, as well as order cancellation and modification.
   
-- **order_book** - A simple implementation of a limit order book that supports basic operations like adding, removing, and modifying orders. It also provides a feature of sliding window to follow ptice trends.
+- **order_book** - A simple implementation of a limit order book that supports basic operations like adding, removing, and modifying orders. It also provides a feature of sliding window to follow price trends.
   
 - **price_levels** - A simple implementation of a price level data structure that can be used to store orders at a specific price level in a limit order book.
   
 - **ring_buffer** - A simple implementation of a ring buffer with no synchronization for single-threaded scenarios.
   
-- **ring_buffer_mutexe** - A simple implementation of a ring buffer that uses mutexes for synchronization. It supports multiple producers and multiple consumers.
+- **ring_buffer_mutex** - A simple implementation of a ring buffer that uses mutexes for synchronization. It supports multiple producers and multiple consumers.
   
 - **ring_buffer_spsc** - A simple implementation of a ring buffer that is designed for single producer and single consumer scenarios. It uses atomic operations for synchronization.
   
