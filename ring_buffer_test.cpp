@@ -93,23 +93,6 @@ void test_ring_buffer()
 }
 
 template< template<typename, std::size_t> class TBuffer>
-void test_ring_buffer_foreach() 
-{
-  TBuffer<int, 8> rBuffer;
-  std::vector<int> values;
-
-  for(int i = 0; i < 5; ++i) {
-    rBuffer.push(i);
-  }
-
-  rBuffer._for_each([&](int v) {
-    values.push_back(v);
-  });
-
-  Assert((values == std::vector<int>{0, 1, 2, 3, 4}));
-};
-
-template< template<typename, std::size_t> class TBuffer>
 void test_ring_buffer_gdb()
 {
   TBuffer<int, 128> rBuffer;
@@ -143,10 +126,6 @@ int main()
   test_ring_buffer_gdb<RingBuffer>();
   test_ring_buffer_gdb<RingBufferSPSC>();
   test_ring_buffer_gdb<RingBufferSPMC>();
-
-  test_ring_buffer_foreach<RingBuffer>();
-  test_ring_buffer_foreach<RingBufferSPSC>();
-  test_ring_buffer_foreach<RingBufferSPMC>();
 
   timer([]() {
     test_ring_buffer<1, 1, RingBuffer<int, 2>>();

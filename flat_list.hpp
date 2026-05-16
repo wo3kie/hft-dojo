@@ -134,17 +134,6 @@ public:
     return _buffer[index].value;
   }
 
-  template<typename F>
-  void for_each(F&& f) const
-  {
-    const int32_t head = _head;
-    const int32_t tail = _tail;
-
-    for(int32_t i = head; i != -1; i = _buffer[i].next) {
-      f(_buffer[i].value);
-    }
-  }
-
 private:
   int32_t _allocate_node()
   {

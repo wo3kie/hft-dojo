@@ -146,22 +146,6 @@ void test_reuse_slots()
   Assert(v2 == 30);
 }
 
-void test_for_each()
-{
-  FlatList<int, 4> list;
-
-  list.push_back(1);
-  list.push_back(2);
-  list.push_back(3);
-
-  int sum = 0;
-  list.for_each([&sum](int value) {
-    sum += value;
-  });
-
-  Assert(sum == 6);
-}
-
 void test_gdb_function()
 {
   FlatList<int, 32> list;
@@ -189,6 +173,5 @@ int main()
   test_remove_tail();
   test_full();
   test_reuse_slots();
-  test_for_each();
   test_gdb_function();
 }

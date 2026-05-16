@@ -89,16 +89,6 @@ public:
     return out;
   }
 
-  /* extension, for single threaded debugging */ template<typename F>
-  void _for_each(F&& f) const {
-    const std::size_t head = _head.load(std::memory_order_acquire);
-    const std::size_t tail = _tail.load(std::memory_order_acquire);
-
-    for(std::size_t i = head; i != tail; i = _index(i + 1)) {
-      f(_buffer[i]);
-    }
-  }
-
 private:
   [[nodiscard]] static constexpr std::size_t _index(std::size_t i) noexcept
   {

@@ -82,16 +82,6 @@ public:
     return out;
   }
 
-  /* extension */ template<typename F>
-  void _for_each(F&& f) const {
-    const std::size_t head = _head;
-    const std::size_t tail = _tail;
-
-    for(std::size_t i = head; i != tail; i = _index(i + 1)) {
-      f(_buffer[i]);
-    }
-  }
-
 private:
   [[nodiscard]] static constexpr std::size_t _index(std::size_t i) noexcept 
   {
