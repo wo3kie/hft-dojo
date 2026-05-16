@@ -198,7 +198,7 @@ public:
   void updateSellOrder(OrderId orderId, Index slot, Price price, Qty qty)
   {
     PriceLevel& level = _sellLevels.price(price);
-    Order& order = level.orders.at(slot);
+    Order& order = level.orders.data(slot);
 
     if(UNLIKELY(order.id != orderId)) {
       return emitEvent(UpdateRejected(orderId, qty));
@@ -211,7 +211,7 @@ public:
   void updateBuyOrder(OrderId orderId, Index slot, Price price, Qty qty)
   {
     PriceLevel& level = _buyLevels.price(price);
-    Order& order = level.orders.at(slot);
+    Order& order = level.orders.data(slot);
 
     if(UNLIKELY(order.id != orderId)) {
       return emitEvent(UpdateRejected(orderId, qty));
@@ -224,7 +224,7 @@ public:
   void cancelSellOrder(OrderId orderId, Index slot, Price price)
   {
     PriceLevel& level = _sellLevels.price(price);
-    Order& order = level.orders.at(slot);
+    Order& order = level.orders.data(slot);
 
     if(UNLIKELY(order.id != orderId)) {
       return emitEvent(CancelRejected(orderId));
@@ -238,7 +238,7 @@ public:
   void cancelBuyOrder(OrderId orderId, Index slot, Price price)
   {
     PriceLevel& level = _buyLevels.price(price);
-    Order& order = level.orders.at(slot);
+    Order& order = level.orders.data(slot);
 
     if(UNLIKELY(order.id != orderId)) {
       return emitEvent(CancelRejected(orderId));

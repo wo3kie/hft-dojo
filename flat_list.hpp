@@ -80,12 +80,12 @@ public:
     _deallocate_node(_pop_back());
   }
 
-  void remove(int32_t index)
+  void remove(int32_t slot)
   {
     assert(! empty());
-    assert(index >= 0 && index < static_cast<int32_t>(Capacity));
+    assert(slot >= 0 && slot < capacity());
 
-    _deallocate_node(_remove(index));
+    _deallocate_node(_remove(slot));
   }
 
   std::size_t capacity() const
@@ -118,20 +118,20 @@ public:
     _buffer[Capacity - 1].prev = -2;
   }
 
-  const TValue& at(int32_t index) const
+  const TValue& data(int32_t slot) const
   {
     assert(! empty());
-    assert(index >= 0 && index < static_cast<int32_t>(Capacity));
+    assert(slot >= 0 && slot < capacity());
 
-    return _buffer[index].value;
+    return _buffer[slot].value;
   }
 
-  TValue& at(int32_t index)
+  TValue& data(int32_t slot)
   {
     assert(! empty());
-    assert(index >= 0 && index < static_cast<int32_t>(Capacity));
+    assert(slot >= 0 && slot < capacity());
 
-    return _buffer[index].value;
+    return _buffer[slot].value;
   }
 
 private:

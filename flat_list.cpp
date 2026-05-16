@@ -19,9 +19,9 @@ void test_flat_list_1()
   Assert(list.empty());
 
   for(int i = 0; i < list.capacity(); ++i) {
-    int32_t at = list.push_back(i);
-    Assert(at != -1);
-    Assert(list.at(at) == i);
+    int32_t data = list.push_back(i);
+    Assert(data != -1);
+    Assert(list.data(data) == i);
   }
 
   Assert(list.full());
@@ -42,9 +42,9 @@ void test_flat_list_2()
   Assert(list.empty());
 
   for(int i = 0; i < list.capacity(); ++i) {
-    int32_t at = list.push_front(i);
-    Assert(at != -1);
-    Assert(list.at(at) == i);
+    int32_t data = list.push_front(i);
+    Assert(data != -1);
+    Assert(list.data(data) == i);
   }
 
   Assert(list.full());
@@ -65,7 +65,7 @@ void test_flat_list_remove()
   Assert(list.empty());
 
   for(int i = 0; i < list.capacity(); ++i) {
-    int32_t at = list.push_back(i);
+    int32_t data = list.push_back(i);
   }
 
   list.remove(1);
@@ -73,10 +73,10 @@ void test_flat_list_remove()
   list.remove(5);
   list.remove(3);
 
-  Assert(list.at(0) == 0);
-  Assert(list.at(2) == 2);
-  Assert(list.at(4) == 4);
-  Assert(list.at(6) == 6);
+  Assert(list.data(0) == 0);
+  Assert(list.data(2) == 2);
+  Assert(list.data(4) == 4);
+  Assert(list.data(6) == 6);
 
   list.remove(0);
   list.remove(4);
@@ -100,8 +100,8 @@ void test_gdb_function()
    * FlatList<int, 32> [ 0, 1, 2, 3, ..., 28, 29, 30, 31 ]
    */
 
-  Assert(list.at(0) == 0);
-  Assert(list.at(31) == 31);
+  Assert(list.data(0) == 0);
+  Assert(list.data(31) == 31);
 }
 
 int main()
