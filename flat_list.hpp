@@ -9,16 +9,19 @@
  */
 
 #include <array>
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <tuple>
 
-#include <functional>
+#include "./assert.hpp"
 
 template<typename TValue, std::size_t Capacity>
 class FlatList
 {
+  static_assert(Capacity > 0);
+  static_assert(std::is_trivially_copyable_v<TValue>);
+
   struct Node
   {
     int32_t next;
@@ -26,22 +29,30 @@ class FlatList
     TValue value;
   };
 
+  constexpr static int32_t None = -1;
+  constexpr static int32_t Free = -2;
+
 public:
   FlatList()
   {
     clear();
   }
 
+  FlatList(FlatList&&) = delete;
+  FlatList(const FlatList&) = delete;
+
+  FlatList& operator=(FlatList&&) = delete;
+  FlatList& operator=(const FlatList&) = delete;
+
+public:
   TValue& front()
   {
-    assert(! empty());
-    return _buffer[_head].value;
+    return _value(_head);
   }
 
   TValue& back()
   {
-    assert(! empty());
-    return _buffer[_tail].value;
+    return _value(_tail);
   }
 
   int32_t push_front(const TValue& value)
@@ -50,9 +61,9 @@ public:
       return -1;
     }
 
-    const int32_t node_id = _push_front(_allocate_node());
-    _buffer[node_id].value = value;
-    return node_id;
+    const int32_t slot = _push_front(_allocate_node());
+    _value(slot) = value;
+    return slot;
   }
 
   int32_t push_back(const TValue& value)
@@ -61,30 +72,23 @@ public:
       return -1;
     }
 
-    const int32_t node_id = _push_back(_allocate_node());
-    _buffer[node_id].value = value;
-    return node_id;
+    const int32_t slot = _push_back(_allocate_node());
+    _value(slot) = value;
+    return slot;
   }
 
   void pop_front()
   {
-    assert(! empty());
-
     _deallocate_node(_pop_front());
   }
 
   void pop_back()
   {
-    assert(! empty());
-
     _deallocate_node(_pop_back());
   }
 
   void remove(int32_t slot)
   {
-    assert(! empty());
-    assert(slot >= 0 && slot < capacity());
-
     _deallocate_node(_remove(slot));
   }
 
@@ -111,136 +115,190 @@ public:
 
     for(std::size_t i = 0; i < Capacity - 1; ++i) {
       _buffer[i].next = i + 1;
-      _buffer[i].prev = -1;
+      _buffer[i].prev = Free;
     }
 
-    _buffer[Capacity - 1].next = -1;
-    _buffer[Capacity - 1].prev = -2;
+    _buffer[Capacity - 1].next = None;
+    _buffer[Capacity - 1].prev = Free;
   }
 
-  const TValue& data(int32_t slot) const
+  const TValue& value(int32_t slot) const
   {
-    assert(! empty());
-    assert(slot >= 0 && slot < capacity());
-
-    return _buffer[slot].value;
+    return _value(slot);
   }
 
-  TValue& data(int32_t slot)
+  TValue& value(int32_t slot)
   {
-    assert(! empty());
-    assert(slot >= 0 && slot < capacity());
+    return _value(slot);
+  }
 
-    return _buffer[slot].value;
+public: /* debug/utests */
+   bool _debug_is_free(int32_t slot) const
+  {
+    return _is_free(slot);
+  }
+
+  bool _debug_validate_links() const
+  {
+    int32_t prev = -1;
+    int32_t cur = _head;
+
+    while(cur != -1) {
+      const auto& node = _buffer[cur];
+      
+      if(node.prev != prev) {
+        return false;
+      }
+
+      prev = cur;
+      cur = node.next;
+    }
+
+    return prev == _tail;
   }
 
 private:
+  bool _validate_slot(int32_t slot) const
+  {
+    return slot >= 0 && slot < capacity();
+  }
+
+  bool _is_free(int32_t slot) const
+  {
+    Assert(_validate_slot(slot));
+    
+    return _is_free(_buffer[slot]);
+  }
+
+  bool _is_free(const Node& node) const
+  {
+    return node.prev == Free;
+  }
+
+  TValue& _value(int32_t slot)
+  {
+    Assert(!_is_free(slot));
+
+    return _buffer[slot].value;
+  }
+
+  const TValue& _value(int32_t slot) const
+  {
+    Assert(!_is_free(slot));
+
+    return _buffer[slot].value;
+  }
+
   int32_t _allocate_node()
   {
-    assert(! full());
+    Assert(! full());
+    Assert(_is_free(_free));
+    
+    const int32_t slot = _free;
+    _free = _buffer[slot].next;
 
-    const int32_t node_id = _free;
-    _free = _buffer[node_id].next;
-
-    return node_id;
+    return slot;
   }
 
-  void _deallocate_node(int32_t node_id)
+  void _deallocate_node(int32_t slot)
   {
-    Node& node = _buffer[node_id];
+    Assert(! _is_free(slot));
+
+    Node& node = _buffer[slot];
     node.next = _free;
-    node.prev = -1;
-    _free = node_id;
+    node.prev = Free;
+    _free = slot;
   }
 
-  int32_t _push_front(int32_t node_id)
+  int32_t _push_front(int32_t slot)
   {
-    Node& node = _buffer[node_id];
+    Assert(_is_free(slot));
+
+    Node& node = _buffer[slot];
     node.next = _head;
-    node.prev = -1;
+    node.prev = None;
 
     if(empty()) {
-      _tail = node_id;
+      _tail = slot;
     } else {
-      _buffer[_head].prev = node_id;
+      _buffer[_head].prev = slot;
     }
 
-    return (_head = node_id);
+    return (_head = slot);
   }
 
-  int32_t _push_back(int32_t node_id)
+  int32_t _push_back(int32_t slot)
   {
-    Node& node = _buffer[node_id];
-    node.next = -1;
+    Assert(_is_free(slot));
+
+    Node& node = _buffer[slot];
+    node.next = None;
     node.prev = _tail;
 
     if(empty()) {
-      _head = node_id;
+      _head = slot;
     } else {
-      _buffer[_tail].next = node_id;
+      _buffer[_tail].next = slot;
     }
 
-    return (_tail = node_id);
+    return (_tail = slot);
   }
 
   int32_t _pop_front()
   {
-    assert(! empty());
+    const int32_t slot = _head;
+    Node& node = _buffer[slot];
 
-    const int32_t index = _head;
-    Node& node = _buffer[index];
+    Assert(! _is_free(node));
 
     _head = node.next;
 
-    if(_head != -1) {
-      _buffer[_head].prev = -1;
+    if(_head != None) {
+      _buffer[_head].prev = None;
     } else {
-      _tail = -1;
+      _tail = None;
     }
 
-    return index;
+    return slot;
   }
 
   int32_t _pop_back()
   {
-    assert(! empty());
-
-    const int32_t index = _tail;
-    Node& node = _buffer[index];
+    const int32_t slot = _tail;
+    Node& node = _buffer[slot];
+    
+    Assert(! _is_free(node));
 
     _tail = node.prev;
 
-    if(_tail != -1) {
-      _buffer[_tail].next = -1;
+    if(_tail != None) {
+      _buffer[_tail].next = None;
     } else {
-      _head = -1;
+      _head = None;
     }
 
-    return index;
+    return slot;
   }
 
-  int32_t _remove(int32_t index)
+  int32_t _remove(int32_t slot)
   {
-    assert(! empty());
+    Assert(! _is_free(slot));
 
-    Node& node = _buffer[index];
+    Node& node = _buffer[slot];
 
-    if(node.prev != -1) {
+    if(node.prev != None) {
       _buffer[node.prev].next = node.next;
     } else {
       _head = node.next;
     }
 
-    if(node.next != -1) {
+    if(node.next != None) {
       _buffer[node.next].prev = node.prev;
     } else {
       _tail = node.prev;
     }
 
-    node.next = -1;
-    node.prev = -1;
-
-    return index;
+    return slot;
   }
 
 private:
