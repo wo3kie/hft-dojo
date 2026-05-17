@@ -196,7 +196,7 @@ private:
 
   Qty trade(OrderId orderId, Price price, Qty qty, PriceLevel& level)
   {
-    while((qty != 0) && (! level.orders().empty())) {
+    while((qty != 0) && (! level.empty())) {
       Order& otherOrder = level.orders().front();
       Qty tradeQty = bl::min(qty, otherOrder.qty);
 
@@ -225,7 +225,7 @@ private:
       PriceLevel& level = _orderBook.buyLevels().index(index);
       qty = trade(orderId, price, qty, level);
 
-      const bool empty = level.orders().empty();
+      const bool empty = level.empty();
       _orderBook.decTopBuyPrice(empty);
 
       shiftOrderBook(price);
@@ -258,7 +258,7 @@ private:
       PriceLevel& level = _orderBook.sellLevels().index(index);
       qty = trade(orderId, price, qty, level);
 
-      const bool empty = level.orders().empty();
+      const bool empty = level.empty();
       _orderBook.incTopSellPrice(empty);
 
       shiftOrderBook(price);

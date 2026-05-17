@@ -38,6 +38,11 @@ public:
     return _orders;
   }
 
+  [[nodiscard]] bool empty() const
+  {
+    return _orders.empty();
+  }
+
   template<std::size_t N>
   void expireOrders(RingBufferSPSC<Event, N>& bufferOut)
   {
