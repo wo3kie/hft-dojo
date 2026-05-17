@@ -11,6 +11,7 @@
 #include "./array.hpp"
 #include "./assert.hpp"
 #include "./branchless.hpp"
+#include "./common.hpp"
 #include "./events.hpp"
 #include "./flat_list.hpp"
 #include "./likely.hpp"
@@ -33,8 +34,8 @@ public:
 
 public:
   OrderBook(RingBufferSPSC<Event, 1024>& bufferOut, Price centerPrice)
-    : _topSellPrice{InvalidPrice}
-    , _topBuyPrice{InvalidPrice}
+    : _topSellPrice{UINT32_MAX}
+    , _topBuyPrice{UINT32_MIN}
     , _buyLevels(centerPrice)
     , _sellLevels(centerPrice)
     , _bufferOut(bufferOut)
@@ -60,7 +61,7 @@ public:
       _mm_pause();
     }
 
-#ifdef NDEBUG
+#ifdef HFT_DOJO_BENCH
     (void)_bufferOut.pop();
 #endif
   }
@@ -171,7 +172,7 @@ public:
        * }
        */
 
-      _topSellPrice = bl::min(_topSellPrice - 1, price - 1) + 1;
+      _topSellPrice = bl::min(_topSellPrice, price);
     }
   }
 
