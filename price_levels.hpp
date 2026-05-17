@@ -8,11 +8,14 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
+#include <immintrin.h>
+
 #include "./array.hpp"
 #include "./assert.hpp"
 #include "./branchless.hpp"
 #include "./flat_list.hpp"
 #include "./order.hpp"
+#include "./ring_buffer_spsc.hpp"
 
 struct PriceLevel
 {
@@ -103,22 +106,54 @@ public:
     return ((Index)price);
   }
 
-  void shiftUp()
+  template<std::size_t N>
+  void shiftUp(RingBufferSPSC<Event, N>& bufferOut)
   {
     Assert(maxPrice() < MaxPrice);
     
+    expireOrders(_levels[_centerIndex - Levels], bufferOut);
+
     _centerPrice += 1;
     _centerIndex += 1;
     _centerIndex &= Mask;
   }
 
-  void shiftDown()
+  template<std::size_t N>
+  void shiftDown(RingBufferSPSC<Event, N>& bufferOut)
   {
     Assert(minPrice() > 1);
     
+    expireOrders(_levels[_centerIndex + Levels], bufferOut);
+
     _centerPrice -= 1;
     _centerIndex -= 1;
     _centerIndex &= Mask;
+  }
+
+private:  
+  template<std::size_t N>
+  void emitEvent(Event event, RingBufferSPSC<Event, N>& bufferOut)
+  {
+    while(bufferOut.push(event) == false) {
+      _mm_pause();
+    }
+
+#ifdef NDEBUG
+    (void)bufferOut.pop();
+#endif
+  }
+
+  template<std::size_t N>
+  void expireOrders(PriceLevel& level, RingBufferSPSC<Event, N>& bufferOut)
+  {
+    while(level.orders.empty() == false) {
+      Order& order = level.orders.front();
+
+      emitEvent(OrderExpired(order.id), bufferOut);
+
+      order.id = InvalidOrderId;
+      level.orders.pop_front();
+    }
   }
 
 private:

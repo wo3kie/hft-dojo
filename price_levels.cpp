@@ -6,8 +6,10 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "./price_levels.hpp"
 #include "./assert.hpp"
+#include "./events.hpp"
+#include "./price_levels.hpp"
+#include "./ring_buffer_spsc.hpp"
 
 void test_price_levels_basic_1()
 {
@@ -44,9 +46,11 @@ void test_price_levels_basic_2()
 void test_price_levels_shift_1()
 {
   PriceLevels<31> pl(100);
+  RingBufferSPSC<Event, 1024> buffer;
+
 
   for(std::size_t i = 0; i < 68; ++i) {
-    pl.shiftDown();
+    pl.shiftDown(buffer);
   }
 
   Assert(pl.centerPrice() == 100 - 68);
@@ -54,7 +58,7 @@ void test_price_levels_shift_1()
   Assert(pl.maxPrice() == 100 + 31 - 68);
 
   for(std::size_t i = 0; i < 68; ++i) {
-    pl.shiftUp();
+    pl.shiftUp(buffer);
   }
 
   Assert(pl.centerPrice() == 100);
@@ -71,9 +75,10 @@ void test_price_levels_shift_1()
 void test_price_levels_shift_2()
 {
   PriceLevels<31> pl(100);
+  RingBufferSPSC<Event, 1024> buffer;
 
   for(std::size_t i = 0; i < 68; ++i) {
-    pl.shiftUp();
+    pl.shiftUp(buffer);
   }
   
   Assert(pl.centerPrice() == 100 + 68);
@@ -81,7 +86,7 @@ void test_price_levels_shift_2()
   Assert(pl.maxPrice() == 100 + 31 + 68);
 
   for(std::size_t i = 0; i < 68; ++i) {
-    pl.shiftDown();
+    pl.shiftDown(buffer);
   }
 
   Assert(pl.centerPrice() == 100);
