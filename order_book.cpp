@@ -13,17 +13,17 @@
 void test_order_book_insert_buy_order()
 {
   RingBufferSPSC<Event, 1024> buffer;
-  OrderBook<31> ob(buffer, 100);
+  OrderBook<31, 32> ob(buffer, 100);
 
   ob.insertBuyOrder(1, 100, 10);
   Assert(ob.topBuyPrice() == 100);
-  Assert(ob.topBuyIndex() == 31);
+  Assert(ob.topBuyIndex() == 32);
 }
 
 void test_order_book_insert_sell_order()
 {
   RingBufferSPSC<Event, 1024> buffer;
-  OrderBook<31> ob(buffer, 100);
+  OrderBook<31, 32> ob(buffer, 100);
 
   ob.insertSellOrder(1, 100, 10);
   Assert(ob.topSellPrice() == 100);
@@ -33,7 +33,7 @@ void test_order_book_insert_sell_order()
 void test_order_book_shift_up()
 {
   RingBufferSPSC<Event, 1024> buffer;
-  OrderBook<31> ob(buffer, 100);
+  OrderBook<31, 32> ob(buffer, 100);
 
   ob.shiftUp();
   Assert(ob.centerPrice() == 101);
@@ -42,7 +42,7 @@ void test_order_book_shift_up()
 void test_order_book_shift_down()
 {
   RingBufferSPSC<Event, 1024> buffer;
-  OrderBook<31> ob(buffer, 100);
+  OrderBook<31, 32> ob(buffer, 100);
 
   ob.shiftDown();
   Assert(ob.centerPrice() == 99);

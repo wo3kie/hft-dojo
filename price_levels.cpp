@@ -13,11 +13,11 @@
 
 void test_price_levels_basic_1()
 {
-  PriceLevels<3> pl(7);
+  PriceLevels<3, 4> pl(7);
 
   Assert(pl.centerPrice() == 7);
   Assert(pl.minPrice() == 4);
-  Assert(pl.maxPrice() == 10);
+  Assert(pl.maxPrice() == 11);
 
   Assert(pl.priceToIndex(4) == 0);
   Assert(pl.priceToIndex(5) == 1);
@@ -26,26 +26,29 @@ void test_price_levels_basic_1()
   Assert(pl.priceToIndex(8) == 4);
   Assert(pl.priceToIndex(9) == 5);
   Assert(pl.priceToIndex(10) == 6);
+  Assert(pl.priceToIndex(11) == 7);
 }
 
 void test_price_levels_basic_2()
 {
-  PriceLevels<31> pl(32);
+  PriceLevels<3, 60> pl(32);
 
   Assert(pl.centerPrice() == 32);
-  Assert(pl.minPrice() == 1);
-  Assert(pl.maxPrice() == 63);
+  Assert(pl.minPrice() == 32 - 3);
+  Assert(pl.maxPrice() == 32 + 60);
 
-  Assert(pl.priceToIndex(1) == 0);
-  Assert(pl.priceToIndex(31) == 30);
-  Assert(pl.priceToIndex(32) == 31);
-  Assert(pl.priceToIndex(33) == 32);
-  Assert(pl.priceToIndex(63) == 62);
+  Assert(pl.priceToIndex(32 - 3) == 0);
+  Assert(pl.priceToIndex(32 - 2) == 1);
+  Assert(pl.priceToIndex(32 - 1) == 2);
+  Assert(pl.priceToIndex(32) == 3);
+  Assert(pl.priceToIndex(33) == 4);
+  Assert(pl.priceToIndex(34) == 5);
+  Assert(pl.priceToIndex(92) == 63);
 }
 
 void test_price_levels_shift_1()
 {
-  PriceLevels<31> pl(100);
+  PriceLevels<3, 60> pl(100);
   RingBufferSPSC<Event, 1024> buffer;
 
 
@@ -54,27 +57,29 @@ void test_price_levels_shift_1()
   }
 
   Assert(pl.centerPrice() == 100 - 68);
-  Assert(pl.minPrice() == 100 - 31 - 68);
-  Assert(pl.maxPrice() == 100 + 31 - 68);
+  Assert(pl.minPrice() == 100 - 3 - 68);
+  Assert(pl.maxPrice() == 100 + 60 - 68);
 
   for(std::size_t i = 0; i < 68; ++i) {
     pl.shiftUp(buffer);
   }
 
   Assert(pl.centerPrice() == 100);
-  Assert(pl.minPrice() == 100 - 31);
-  Assert(pl.maxPrice() == 100 + 31);
+  Assert(pl.minPrice() == 100 - 3);
+  Assert(pl.maxPrice() == 100 + 60);
 
-  Assert(pl.priceToIndex(69) == 0);
-  Assert(pl.priceToIndex(99) == 30);
-  Assert(pl.priceToIndex(100) == 31);
-  Assert(pl.priceToIndex(101) == 32);
-  Assert(pl.priceToIndex(131) == 62);
+  Assert(pl.priceToIndex(100 - 3) == 0);
+  Assert(pl.priceToIndex(100 - 2) == 1);
+  Assert(pl.priceToIndex(100 - 1) == 2);
+  Assert(pl.priceToIndex(100) == 3);
+  Assert(pl.priceToIndex(101) == 4);
+  Assert(pl.priceToIndex(102) == 5);
+  Assert(pl.priceToIndex(160) == 63);
 }
 
 void test_price_levels_shift_2()
 {
-  PriceLevels<31> pl(100);
+  PriceLevels<3, 60> pl(100);
   RingBufferSPSC<Event, 1024> buffer;
 
   for(std::size_t i = 0; i < 68; ++i) {
@@ -82,27 +87,28 @@ void test_price_levels_shift_2()
   }
   
   Assert(pl.centerPrice() == 100 + 68);
-  Assert(pl.minPrice() == 100 - 31 + 68);
-  Assert(pl.maxPrice() == 100 + 31 + 68);
+  Assert(pl.minPrice() == 100 - 3 + 68);
+  Assert(pl.maxPrice() == 100 + 60 + 68);
 
   for(std::size_t i = 0; i < 68; ++i) {
     pl.shiftDown(buffer);
   }
 
   Assert(pl.centerPrice() == 100);
-  Assert(pl.minPrice() == 69);
-  Assert(pl.maxPrice() == 131);
+  Assert(pl.minPrice() == 100 - 3);
+  Assert(pl.maxPrice() == 100 + 60);
 
-  Assert(pl.priceToIndex(69) == 0);
-  Assert(pl.priceToIndex(99) == 30);
-  Assert(pl.priceToIndex(100) == 31);
-  Assert(pl.priceToIndex(101) == 32);
-  Assert(pl.priceToIndex(131) == 62);
+  Assert(pl.priceToIndex(100 - 3) == 0);
+  Assert(pl.priceToIndex(100 - 2) == 1);
+  Assert(pl.priceToIndex(100 - 1) == 2);
+  Assert(pl.priceToIndex(100) == 3);
+  Assert(pl.priceToIndex(101) == 4);
+  Assert(pl.priceToIndex(160) == 63);
 }
 
 void test_price_levels_storage_access()
 {
-  PriceLevels<3> pl(6);
+  PriceLevels<3, 4> pl(6);
   RingBufferSPSC<Event, 1024> buffer;
 
   pl.at_price(3).push_order(3, 33, buffer);

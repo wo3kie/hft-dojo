@@ -118,21 +118,19 @@ private:
   }
 };
 
-template<uint32_t Levels>
+template<uint32_t LevelsBelow, uint32_t LevelsAbove>
 struct PriceLevels
 {
-  static_assert((Levels & (Levels + 1)) == 0);
-
-  constexpr static uint32_t Size = Levels + 1 + Levels + 1;
-  constexpr static uint32_t Mask = Size - 1;
+  constexpr static uint32_t Size = LevelsBelow + LevelsAbove + 1;
+  constexpr static uint32_t Mask = LevelsBelow + LevelsAbove;
 
 public:
   PriceLevels(Price centerPrice)
     : _centerPrice(centerPrice)
-    , _centerIndex(Levels)
+    , _centerIndex(LevelsBelow)
   {
-    Assert(centerPrice > Levels);
-    Assert(centerPrice < MaxPrice - Levels);
+    Assert(centerPrice > LevelsBelow);
+    Assert(centerPrice < MaxPrice - LevelsAbove);
   }
 
   PriceLevels(PriceLevels&&) = default;
@@ -147,19 +145,14 @@ public:
     return _centerPrice;
   }
 
-  uint32_t levels() const
-  {
-    return Levels;
-  }
-
   Price minPrice() const
   {
-    return _centerPrice - Levels;
+    return _centerPrice - LevelsBelow;
   }
 
   Price maxPrice() const
   {
-    return _centerPrice + Levels;
+    return _centerPrice + LevelsAbove;
   }
 
   bool checkPrice(Price price) const
@@ -207,7 +200,8 @@ public:
   {
     Assert(maxPrice() < MaxPrice);
     
-    _levels[_centerIndex - Levels].expireOrders(bufferOut);
+    PriceLevel& level = _levels[_centerIndex - LevelsBelow];
+    level.expireOrders(bufferOut);
 
     _centerPrice += 1;
     _centerIndex += 1;
@@ -219,7 +213,7 @@ public:
   {
     Assert(minPrice() > 1);
     
-    PriceLevel& level = _levels[_centerIndex + Levels];
+    PriceLevel& level = _levels[_centerIndex + LevelsAbove];
     level.expireOrders(bufferOut);
 
     _centerPrice -= 1;

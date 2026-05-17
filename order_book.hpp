@@ -26,12 +26,9 @@
 #include <iostream>
 #include <limits>
 
-template<uint32_t Levels>
+template<uint32_t LevelsBelow, uint32_t LevelsAbove>
 struct OrderBook
 {
-public:
-  static_assert((Levels & (Levels + 1)) == 0);
-
 public:
   OrderBook(RingBufferSPSC<Event, 1024>& bufferOut, Price centerPrice)
     : _topSellPrice{UINT32_MAX}
@@ -142,19 +139,19 @@ public:
     return bl::in_range(price, minPrice, maxPrice);
   }
 
-  PriceLevels<Levels>& sellLevels() {
+  PriceLevels<LevelsBelow, LevelsAbove>& sellLevels() {
     return _sellLevels;
   }
 
-  const PriceLevels<Levels>& sellLevels() const {
+  const PriceLevels<LevelsBelow, LevelsAbove>& sellLevels() const {
     return _sellLevels;
   }
 
-  PriceLevels<Levels>& buyLevels() {
+  PriceLevels<LevelsAbove, LevelsBelow>& buyLevels() {
     return _buyLevels;
   }
 
-  const PriceLevels<Levels>& buyLevels() const {
+  const PriceLevels<LevelsAbove, LevelsBelow>& buyLevels() const {
     return _buyLevels;
   }
 
@@ -224,8 +221,8 @@ private:
   Price _topSellPrice;
   Price _topBuyPrice;
 
-  PriceLevels<Levels> _sellLevels;
-  PriceLevels<Levels> _buyLevels;
+  PriceLevels<LevelsBelow, LevelsAbove> _sellLevels;
+  PriceLevels<LevelsAbove, LevelsBelow> _buyLevels;
 
   RingBufferSPSC<Event, 1024>& _bufferOut;
 };

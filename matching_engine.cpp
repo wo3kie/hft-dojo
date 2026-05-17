@@ -12,7 +12,7 @@
 void test_simple_transaction()
 {
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 200);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -22,7 +22,7 @@ void test_simple_transaction()
   }
 
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 200);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -35,7 +35,7 @@ void test_simple_transaction()
 void test_partial_fill()
 {
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 180);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -45,7 +45,7 @@ void test_partial_fill()
   }
 
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 200);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -58,7 +58,7 @@ void test_partial_fill()
 void test_single_price_level()
 {
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 180);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -72,7 +72,7 @@ void test_single_price_level()
   }
 
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 200);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -88,7 +88,7 @@ void test_single_price_level()
 
 void test_insert_level()
 {
-  MatchingEngine<3> engine(100);
+  MatchingEngine<3, 4> engine(100);
 
   engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
   Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -120,10 +120,13 @@ void test_insert_level()
 
 void test_insert_levels()
 {
-  MatchingEngine<3> engine(100);
+  MatchingEngine<3, 4> engine(100);
+
+  engine.insertBuyOrder_PL(1, /* price */ 95, /* qty */ 100);
+  Assert(engine.bufferOut().pop() == CreateRejected(1, 100));
 
   engine.insertBuyOrder_PL(1, /* price */ 96, /* qty */ 100);
-  Assert(engine.bufferOut().pop() == CreateRejected(1, 100));
+  Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
 
   engine.insertBuyOrder_PL(2, /* price */ 97, /* qty */ 100);
   Assert(engine.bufferOut().pop() == CreateAccepted(2, 0));
@@ -153,7 +156,7 @@ void test_insert_levels()
 void test_insert_market_order()
 {
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -171,7 +174,7 @@ void test_insert_market_order()
   }
 
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -192,7 +195,7 @@ void test_insert_market_order()
 void test_update_buy_order()
 {
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -202,7 +205,7 @@ void test_update_buy_order()
   }
 
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -212,7 +215,7 @@ void test_update_buy_order()
   }
 
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -225,7 +228,7 @@ void test_update_buy_order()
 void test_update_sell_order()
 {
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -235,7 +238,7 @@ void test_update_sell_order()
   }
 
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -245,7 +248,7 @@ void test_update_sell_order()
   }
 
   {
-    MatchingEngine<3> engine(100);
+    MatchingEngine<3, 4> engine(100);
 
     engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
@@ -259,23 +262,47 @@ int I = 0;
 
 void bench(uint32_t iters = 1000)
 {
-  MatchingEngine<3> engine(100);
-
-  uint32_t orderId = 1;
-  uint32_t minPrice = 97;
-  uint32_t maxPrice = 103;
+  I = 0;
   
-  I = iters * (maxPrice - minPrice + 1 /* prices */) * (32 /* orders */) * (2 /* buy/sell */);
+  {
+    MatchingEngine<3, 60> engine(100);
+    
+    uint32_t orderId = 1;
+    uint32_t minPrice = 97;
+    uint32_t maxPrice = 160;
+    
+    I = iters * (maxPrice - minPrice + 1 /* prices */) * (32 /* orders */) * (2 /* buy/sell */);
 
-  for(uint32_t i = 0; i < iters; ++i) {
-    for(uint32_t p = minPrice; p <= maxPrice; ++p) {
-      for(uint32_t o = 0; o < 32; ++o) {
-        engine.insertBuyOrder_PL(orderId++, p, 100);
+    for(uint32_t i = 0; i < iters; ++i) {
+      for(uint32_t p = minPrice; p <= maxPrice; ++p) {
+        for(uint32_t o = 0; o < 32; ++o) {
+          engine.insertBuyOrder_PL(orderId++, p, 100);
+        }
+
+        engine.insertSellOrder_MKT(orderId++, 32 * 100);
       }
-
-      engine.insertSellOrder_MKT(orderId++, 32 * 100);
     }
   }
+
+  // {
+  //   MatchingEngine<3, 60> engine(100);
+
+  //   uint32_t orderId = 1;
+  //   uint32_t minPrice = 40;
+  //   uint32_t maxPrice = 103;
+    
+  //   I += iters * (maxPrice - minPrice + 1 /* prices */) * (32 /* orders */) * (2 /* buy/sell */);
+
+  //   for(uint32_t i = 0; i < iters; ++i) {
+  //     for(uint32_t p = minPrice; p <= maxPrice; ++p) {
+  //       for(uint32_t o = 0; o < 32; ++o) {
+  //         engine.insertSellOrder_PL(orderId++, p, 100);
+  //       }
+
+  //       engine.insertBuyOrder_MKT(orderId++, 32 * 100);
+  //     }
+  //   }
+  // }
 }
 
 #include "./timer.hpp"

@@ -15,11 +15,11 @@
 #include "./order_book.hpp"
 #include "./price_levels.hpp"
 
-template<uint32_t Levels, uint32_t LevelsTolerance = Levels + 1>
+template<uint32_t LevelsBelow, uint32_t LevelsAbove, uint32_t LevelsTolerance = LevelsBelow + LevelsAbove + 1>
 struct MatchingEngine
 {
   RingBufferSPSC<Event, 1024> _bufferOut;
-  OrderBook<Levels> _orderBook;
+  OrderBook<LevelsBelow, LevelsAbove> _orderBook;
 
   MatchingEngine(Price centerPrice)
     : _bufferOut()
@@ -216,7 +216,7 @@ private:
 
   Qty _tradeSell(OrderId orderId, const Price priceLimit, Qty qty)
   {
-    Assert(_orderBook.checkSellPrice(priceLimit));
+    Assert(_orderBook.checkBuyPrice(priceLimit));
 
     Price price = _orderBook.topBuyPrice();
     Index index = _orderBook.topBuyIndex();
@@ -249,7 +249,7 @@ private:
 
   Qty _tradeBuy(OrderId orderId, const Price priceLimit, Qty qty)
   {
-    Assert(_orderBook.checkBuyPrice(priceLimit));
+    Assert(_orderBook.checkSellPrice(priceLimit));
     
     Price price = _orderBook.topSellPrice();
     Index index = _orderBook.topSellIndex();
