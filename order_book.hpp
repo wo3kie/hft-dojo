@@ -21,9 +21,9 @@
 #include <cassert>
 #include <chrono>
 #include <functional>
+#include <immintrin.h>
 #include <iostream>
 #include <limits>
-#include <xmmintrin.h>
 
 template<uint32_t Levels>
 struct OrderBook
@@ -251,48 +251,14 @@ public:
 
   void shiftUp()
   {
-    {
-      const Price minPrice = _buyLevels.minPrice();
-      PriceLevel& level = _buyLevels.price(minPrice);
-      expireOrders(level);
-      _buyLevels.shiftUp();
-    }
-
-    {
-      const Price minPrice = _sellLevels.minPrice();
-      PriceLevel& level = _sellLevels.price(minPrice);
-      expireOrders(level);
-      _sellLevels.shiftUp();
-    }
+    _buyLevels.shiftUp(_bufferOut);
+    _sellLevels.shiftUp(_bufferOut);
   }
 
   void shiftDown()
   {
-    {
-      const Price maxPrice = _buyLevels.maxPrice();
-      PriceLevel& level = _buyLevels.price(maxPrice);
-      expireOrders(level);
-      _buyLevels.shiftDown();
-    }
-
-    {
-      const Price maxPrice = _sellLevels.maxPrice();
-      PriceLevel& level = _sellLevels.price(maxPrice);
-      expireOrders(level);
-      _sellLevels.shiftDown();
-    }
-  }
-
-  void expireOrders(PriceLevel& level)
-  {
-    while(level.orders.empty() == false) {
-      Order& order = level.orders.front();
-
-      emitEvent(OrderExpired(order.id));
-
-      order.id = InvalidOrderId;
-      level.orders.pop_front();
-    }
+    _buyLevels.shiftDown(_bufferOut);
+    _sellLevels.shiftDown(_bufferOut);
   }
 
 private:
