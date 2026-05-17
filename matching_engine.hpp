@@ -8,8 +8,8 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include <xmmintrin.h>
 #include <cstdint>
+#include <immintrin.h>
 
 #include "./events.hpp"
 #include "./order_book.hpp"
