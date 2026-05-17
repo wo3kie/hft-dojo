@@ -23,3 +23,5 @@ constexpr Price MaxPrice = std::numeric_limits<Price>::max();
 
 typedef uint32_t Index;
 constexpr Index InvalidIndex = (Index)-1;
+
+constexpr uint32_t UINT32_MIN = 0;
