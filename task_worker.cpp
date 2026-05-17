@@ -8,7 +8,6 @@
 
 #include <functional>
 #include <iostream>
-#include <xmmintrin.h>
 
 #include "./assert.hpp"
 #include "./task_worker.hpp"

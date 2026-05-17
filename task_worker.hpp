@@ -14,7 +14,7 @@
 #include <optional>
 #include <thread>
 #include <utility>
-#include <xmmintrin.h>
+#include <immintrin.h>
 
 #include <pthread.h>
 
