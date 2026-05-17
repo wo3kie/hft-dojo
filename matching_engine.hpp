@@ -168,7 +168,7 @@ private:
       _mm_pause();
     }
 
-#ifdef NDEBUG
+#ifdef HFT_DOJO_BENCH
     (void)_bufferOut.pop();
 #endif
   }
@@ -239,7 +239,7 @@ private:
 
   Qty tradeSell(OrderId orderId, Price priceLimit, Qty qty)
   {
-    if(UNLIKELY(_orderBook.topBuyPrice() == InvalidPrice)) {
+    if(UNLIKELY(_orderBook.topBuyPrice() == UINT32_MIN)) {
       return qty;
     }
 
@@ -272,7 +272,7 @@ private:
 
   Qty tradeBuy(OrderId orderId, Price priceLimit, Qty qty)
   {
-    if(UNLIKELY(_orderBook.topSellPrice() == InvalidPrice)) {
+    if(UNLIKELY(_orderBook.topSellPrice() == UINT32_MAX)) {
       return qty;
     }
 
