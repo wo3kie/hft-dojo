@@ -112,7 +112,7 @@ private:
       _mm_pause();
     }
 
-#ifdef NDEBUG
+#ifdef HFT_DOJO_BENCH
     (void)bufferOut.pop();
 #endif
   }
