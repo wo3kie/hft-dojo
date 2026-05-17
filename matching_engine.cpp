@@ -167,10 +167,22 @@ void test_insert_market_order()
     engine.insertBuyOrder_PL(3, /* price */ 98, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(3, 0));
 
-    engine.insertSellOrder_MKT(4, /* qty */ 300);
-    Assert(engine.bufferOut().pop() == Trade(100, 100, 4, 1));
-    Assert(engine.bufferOut().pop() == Trade(99, 100, 4, 2));
-    Assert(engine.bufferOut().pop() == Trade(98, 100, 4, 3));
+    engine.insertBuyOrder_PL(4, /* price */ 97, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateAccepted(4, 0));
+
+    engine.insertBuyOrder_PL(5, /* price */ 96, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateAccepted(5, 0));
+
+    engine.insertBuyOrder_PL(6, /* price */ 95, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateRejected(6, 100));
+
+    engine.insertSellOrder_MKT(7, /* qty */ 600);
+    Assert(engine.bufferOut().pop() == Trade(100, 100, 7, 1));
+    Assert(engine.bufferOut().pop() == Trade(99, 100, 7, 2));
+    Assert(engine.bufferOut().pop() == Trade(98, 100, 7, 3));
+    Assert(engine.bufferOut().pop() == Trade(97, 100, 7, 4));
+    Assert(engine.bufferOut().pop() == Trade(96, 100, 7, 5));
+    Assert(engine.bufferOut().pop() == CreateRejected(7, 100));
   }
 
   {
@@ -185,10 +197,22 @@ void test_insert_market_order()
     engine.insertSellOrder_PL(3, /* price */ 102, /* qty */ 100);
     Assert(engine.bufferOut().pop() == CreateAccepted(3, 0));
 
-    engine.insertBuyOrder_MKT(4, /* qty */ 300);
-    Assert(engine.bufferOut().pop() == Trade(100, 100, 4, 1));
-    Assert(engine.bufferOut().pop() == Trade(101, 100, 4, 2));
-    Assert(engine.bufferOut().pop() == Trade(102, 100, 4, 3));
+    engine.insertSellOrder_PL(4, /* price */ 103, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateAccepted(4, 0));
+
+    engine.insertSellOrder_PL(5, /* price */ 104, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateAccepted(5, 0));
+
+    engine.insertSellOrder_PL(6, /* price */ 105, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateRejected(6, 100));
+
+    engine.insertBuyOrder_MKT(7, /* qty */ 600);
+    Assert(engine.bufferOut().pop() == Trade(100, 100, 7, 1));
+    Assert(engine.bufferOut().pop() == Trade(101, 100, 7, 2));
+    Assert(engine.bufferOut().pop() == Trade(102, 100, 7, 3));
+    Assert(engine.bufferOut().pop() == Trade(103, 100, 7, 4));
+    Assert(engine.bufferOut().pop() == Trade(104, 100, 7, 5));
+    Assert(engine.bufferOut().pop() == CreateRejected(7, 100));
   }
 }
 
