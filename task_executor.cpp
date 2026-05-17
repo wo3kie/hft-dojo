@@ -18,7 +18,7 @@
 
 void test_basic()
 {
-  TaskExecutor<4> exec;
+  TaskExecutorSPSC<4> exec;
 
   Channel<int> channel1;
   Channel<int> channel2;

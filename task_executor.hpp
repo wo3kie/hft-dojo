@@ -60,25 +60,25 @@ private:
 };
 
 /*
- * TaskExecutor
+ * TaskExecutorSPSC
  */
 
 template<std::size_t QueueSize, typename IdlePolicy = PauseIdlePolicy>
-class TaskExecutor
+class TaskExecutorSPSC
 {
 public:
-  explicit TaskExecutor(std::size_t cpuAffinity = NoAffinity)
+  explicit TaskExecutorSPSC(std::size_t cpuAffinity = NoAffinity)
     : _worker(cpuAffinity)
   {
   }
 
-  TaskExecutor(TaskExecutor&&) = delete;
-  TaskExecutor(const TaskExecutor&) = delete;
+  TaskExecutorSPSC(TaskExecutorSPSC&&) = delete;
+  TaskExecutorSPSC(const TaskExecutorSPSC&) = delete;
 
-  ~TaskExecutor() = default;
+  ~TaskExecutorSPSC() = default;
 
-  TaskExecutor& operator=(TaskExecutor&&) = delete;
-  TaskExecutor& operator=(const TaskExecutor&) = delete;
+  TaskExecutorSPSC& operator=(TaskExecutorSPSC&&) = delete;
+  TaskExecutorSPSC& operator=(const TaskExecutorSPSC&) = delete;
 
 public:
   template<class F, typename T>
