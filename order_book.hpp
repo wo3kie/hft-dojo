@@ -159,14 +159,8 @@ public:
 
   void insertSellOrder(OrderId orderId, Price price, Qty qty)
   {
-    PriceLevel& level = _sellLevels.price(price);
-    const Index slot = level.orders().push_back({orderId, qty});
-
-    if(UNLIKELY(slot == InvalidIndex)) {
-      return emitEvent(CreateRejected(orderId, qty));
-    }
-
-    emitEvent(CreateAccepted(orderId, slot));
+    PriceLevel& level = _sellLevels.at_price(price);
+    level.push_order(orderId, qty, _bufferOut);
 
     {
       /*
@@ -183,70 +177,34 @@ public:
 
   void insertBuyOrder(OrderId orderId, Price price, Qty qty)
   {
-    PriceLevel& level = _buyLevels.price(price);
-    const Index slot = level.orders().push_back({orderId, qty});
-
-    if(UNLIKELY(slot == InvalidIndex)) {
-      return emitEvent(CreateRejected(orderId, qty));
-    }
-
-    emitEvent(CreateAccepted(orderId, slot));
+    PriceLevel& level = _buyLevels.at_price(price);
+    level.push_order(orderId, qty, _bufferOut);
 
     _topBuyPrice = bl::max(_topBuyPrice, price);
   }
 
   void updateSellOrder(OrderId orderId, Index slot, Price price, Qty qty)
   {
-    PriceLevel& level = _sellLevels.price(price);
-    Order& order = level.orders().value(slot);
-
-    if(UNLIKELY(order.id != orderId)) {
-      return emitEvent(UpdateRejected(orderId, qty));
-    }
-
-    order.qty = qty;
-    emitEvent(UpdateAccepted(orderId));
+    PriceLevel& level = _sellLevels.at_price(price);
+    level.updateOrder(orderId, slot, qty, _bufferOut);
   }
 
   void updateBuyOrder(OrderId orderId, Index slot, Price price, Qty qty)
   {
-    PriceLevel& level = _buyLevels.price(price);
-    Order& order = level.orders().value(slot);
-
-    if(UNLIKELY(order.id != orderId)) {
-      return emitEvent(UpdateRejected(orderId, qty));
-    }
-
-    order.qty = qty;
-    emitEvent(UpdateAccepted(orderId));
+    PriceLevel& level = _buyLevels.at_price(price);
+    level.updateOrder(orderId, slot, qty, _bufferOut);
   }
 
   void cancelSellOrder(OrderId orderId, Index slot, Price price)
   {
-    PriceLevel& level = _sellLevels.price(price);
-    Order& order = level.orders().value(slot);
-
-    if(UNLIKELY(order.id != orderId)) {
-      return emitEvent(CancelRejected(orderId));
-    }
-
-    order.id = InvalidOrderId;
-    level.orders().pop_back();
-    emitEvent(CancelAccepted(orderId));
+    PriceLevel& level = _sellLevels.at_price(price);
+    level.cancelOrder(orderId, slot, _bufferOut);
   }
 
   void cancelBuyOrder(OrderId orderId, Index slot, Price price)
   {
-    PriceLevel& level = _buyLevels.price(price);
-    Order& order = level.orders().value(slot);
-
-    if(UNLIKELY(order.id != orderId)) {
-      return emitEvent(CancelRejected(orderId));
-    }
-
-    order.id = InvalidOrderId;
-    level.orders().pop_back();
-    emitEvent(CancelAccepted(orderId));
+    PriceLevel& level = _buyLevels.at_price(price);
+    level.cancelOrder(orderId, slot, _bufferOut);
   }
 
   void shiftUp()

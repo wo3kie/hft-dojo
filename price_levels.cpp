@@ -103,22 +103,23 @@ void test_price_levels_shift_2()
 void test_price_levels_storage_access()
 {
   PriceLevels<3> pl(6);
+  RingBufferSPSC<Event, 1024> buffer;
 
-  int32_t node3 = pl.price(3).orders().push_back(Order(3, 33));
-  int32_t node4 = pl.price(4).orders().push_back(Order(4, 44));
-  int32_t node5 = pl.price(5).orders().push_back(Order(5, 55));
-  int32_t node6 = pl.price(6).orders().push_back(Order(6, 66));
-  int32_t node7 = pl.price(7).orders().push_back(Order(7, 77));
-  int32_t node8 = pl.price(8).orders().push_back(Order(8, 88));
-  int32_t node9 = pl.price(9).orders().push_back(Order(9, 99));
+  pl.at_price(3).push_order(3, 33, buffer);
+  pl.at_price(4).push_order(4, 44, buffer);
+  pl.at_price(5).push_order(5, 55, buffer);
+  pl.at_price(6).push_order(6, 66, buffer);
+  pl.at_price(7).push_order(7, 77, buffer);
+  pl.at_price(8).push_order(8, 88, buffer);
+  pl.at_price(9).push_order(9, 99, buffer);
 
-  Assert( pl.price(3).orders().front() == Order(3, 33) );
-  Assert(pl.price(4).orders().front() == Order(4, 44));
-  Assert(pl.price(5).orders().front() == Order(5, 55));
-  Assert(pl.price(6).orders().front() == Order(6, 66));
-  Assert(pl.price(7).orders().front() == Order(7, 77));
-  Assert(pl.price(8).orders().front() == Order(8, 88));
-  Assert(pl.price(9).orders().front() == Order(9, 99));
+  Assert(pl.at_price(3).order() == Order(3, 33));
+  Assert(pl.at_price(4).order() == Order(4, 44));
+  Assert(pl.at_price(5).order() == Order(5, 55));
+  Assert(pl.at_price(6).order() == Order(6, 66));
+  Assert(pl.at_price(7).order() == Order(7, 77));
+  Assert(pl.at_price(8).order() == Order(8, 88));
+  Assert(pl.at_price(9).order() == Order(9, 99));
 }
 
 int main()

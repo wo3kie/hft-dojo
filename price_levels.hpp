@@ -14,6 +14,8 @@
 #include "./assert.hpp"
 #include "./branchless.hpp"
 #include "./flat_list.hpp"
+#include "./events.hpp"
+#include "./likely.hpp"
 #include "./order.hpp"
 #include "./ring_buffer_spsc.hpp"
 
@@ -28,14 +30,57 @@ public:
   PriceLevel& operator=(const PriceLevel&) = delete;
 
 public:
-  FlatList<Order, 32>& orders()
+  template<std::size_t N>
+  void push_order(OrderId orderId, Qty qty, RingBufferSPSC<Event, N>& bufferOut)
   {
-    return _orders;
+    const Index slot = _orders.push_back({orderId, qty});
+
+    if(UNLIKELY(slot == InvalidIndex)) {
+      emitEvent(CreateRejected(orderId, qty), bufferOut);
+    } {
+      emitEvent(CreateAccepted(orderId, slot), bufferOut);
+    }
   }
 
-  const FlatList<Order, 32>& orders() const
+  [[nodiscard]] Order& order() {
+    return _orders.front();
+  }
+
+  [[nodiscard]] Order& at_slot(int32_t slot)
   {
-    return _orders;
+    return _orders.at_slot(slot);
+  }
+
+  template<std::size_t N>
+  void updateOrder(OrderId orderId, Index slot, Qty qty, RingBufferSPSC<Event, N>& bufferOut)
+  {
+    Order& order = _orders.at_slot(slot);
+
+    if(UNLIKELY(order.id != orderId)) {
+      return emitEvent(UpdateRejected(orderId, qty), bufferOut);
+    }
+
+    order.qty = qty;
+    emitEvent(UpdateAccepted(orderId), bufferOut);
+  }
+
+  template<std::size_t N>
+  void cancelOrder(OrderId orderId, int32_t slot, RingBufferSPSC<Event, N>& bufferOut)
+  {
+    Order& order = _orders.at_slot(slot);
+
+    if(UNLIKELY(order.id != orderId)) {
+      return emitEvent(CancelRejected(orderId), bufferOut);
+    }
+
+    order.id = InvalidOrderId;
+    _orders.remove(slot);
+    emitEvent(CancelAccepted(orderId), bufferOut);
+  }
+
+  void pop_order()
+  {
+    _orders.pop_front();
   }
 
   [[nodiscard]] bool empty() const
@@ -124,23 +169,23 @@ public:
     return bl::in_range(price, minPrice, maxPrice);
   }
 
-  PriceLevel& index(Index index)
+  PriceLevel& at_index(Index index)
   {
     return _levels[index];
   }
 
-  const PriceLevel& index(Index index) const
+  const PriceLevel& at_index(Index index) const
   {
     return _levels[index];
   }
 
-  PriceLevel& price(Price price)
+  PriceLevel& at_price(Price price)
   {
     const Index index = priceToIndex(price);
     return _levels[index];
   }
 
-  const PriceLevel& price(Price price) const
+  const PriceLevel& at_price(Price price) const
   {
     const Index index = priceToIndex(price);
     return _levels[index];

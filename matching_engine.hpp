@@ -197,7 +197,7 @@ private:
   Qty trade(OrderId orderId, Price price, Qty qty, PriceLevel& level)
   {
     while((qty != 0) && (! level.empty())) {
-      Order& otherOrder = level.orders().front();
+      Order& otherOrder = level.order();
       Qty tradeQty = bl::min(qty, otherOrder.qty);
 
       qty -= tradeQty;
@@ -206,8 +206,8 @@ private:
       emitEvent(Trade(price, tradeQty, orderId, otherOrder.id));
 
       if(otherOrder.qty == 0) {
-        level.orders().front().id = InvalidOrderId;
-        level.orders().pop_front();
+        otherOrder.id = InvalidOrderId;
+        level.pop_order();
       }
     }
 
@@ -222,7 +222,7 @@ private:
     Index index = _orderBook.topBuyIndex();
 
     while((qty != 0) && (price >= priceLimit)) {
-      PriceLevel& level = _orderBook.buyLevels().index(index);
+      PriceLevel& level = _orderBook.buyLevels().at_index(index);
       qty = trade(orderId, price, qty, level);
 
       const bool empty = level.empty();
@@ -255,7 +255,7 @@ private:
     Index index = _orderBook.topSellIndex();
 
     while((qty != 0) && (price <= priceLimit)) {
-      PriceLevel& level = _orderBook.sellLevels().index(index);
+      PriceLevel& level = _orderBook.sellLevels().at_index(index);
       qty = trade(orderId, price, qty, level);
 
       const bool empty = level.empty();

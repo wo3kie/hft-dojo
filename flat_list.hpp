@@ -47,12 +47,12 @@ public:
 public:
   TValue& front()
   {
-    return _value(_head);
+    return _at_slot(_head);
   }
 
   TValue& back()
   {
-    return _value(_tail);
+    return _at_slot(_tail);
   }
 
   int32_t push_front(const TValue& value)
@@ -62,7 +62,7 @@ public:
     }
 
     const int32_t slot = _push_front(_allocate_node());
-    _value(slot) = value;
+    _at_slot(slot) = value;
     return slot;
   }
 
@@ -73,7 +73,7 @@ public:
     }
 
     const int32_t slot = _push_back(_allocate_node());
-    _value(slot) = value;
+    _at_slot(slot) = value;
     return slot;
   }
 
@@ -122,14 +122,14 @@ public:
     _buffer[Capacity - 1].prev = Free;
   }
 
-  const TValue& value(int32_t slot) const
+  const TValue& at_slot(int32_t slot) const
   {
-    return _value(slot);
+    return _at_slot(slot);
   }
 
-  TValue& value(int32_t slot)
+  TValue& at_slot(int32_t slot)
   {
-    return _value(slot);
+    return _at_slot(slot);
   }
 
 public: /* debug/utests */
@@ -175,14 +175,14 @@ private:
     return node.prev == Free;
   }
 
-  TValue& _value(int32_t slot)
+  TValue& _at_slot(int32_t slot)
   {
     Assert(!_is_free(slot));
 
     return _buffer[slot].value;
   }
 
-  const TValue& _value(int32_t slot) const
+  const TValue& _at_slot(int32_t slot) const
   {
     Assert(!_is_free(slot));
 

@@ -21,7 +21,7 @@ void test_flat_list_1()
   for(int i = 0; i < list.capacity(); ++i) {
     int32_t data = list.push_back(i);
     Assert(data != -1);
-    Assert(list.value(data) == i);
+    Assert(list.at_slot(data) == i);
   }
 
   Assert(list.full());
@@ -44,7 +44,7 @@ void test_flat_list_2()
   for(int i = 0; i < list.capacity(); ++i) {
     int32_t data = list.push_front(i);
     Assert(data != -1);
-    Assert(list.value(data) == i);
+    Assert(list.at_slot(data) == i);
   }
 
   Assert(list.full());
@@ -74,10 +74,10 @@ void test_flat_list_remove()
   list.remove(3);
   Assert(list._debug_validate_links());
 
-  Assert(list.value(0) == 0);
-  Assert(list.value(2) == 2);
-  Assert(list.value(4) == 4);
-  Assert(list.value(6) == 6);
+  Assert(list.at_slot(0) == 0);
+  Assert(list.at_slot(2) == 2);
+  Assert(list.at_slot(4) == 4);
+  Assert(list.at_slot(6) == 6);
 
   list.remove(0);
   list.remove(4);
@@ -111,8 +111,8 @@ void test_reuse_slots()
   Assert(x == d);
   Assert(y == b);
 
-  Assert(list.value(x) == 10);
-  Assert(list.value(y) == 20);
+  Assert(list.at_slot(x) == 10);
+  Assert(list.at_slot(y) == 20);
 }
 
 void test_remove_positions()
@@ -230,8 +230,8 @@ void test_gdb_function()
    * FlatList<int, 32> [ 0, 1, 2, 3, ..., 28, 29, 30, 31 ]
    */
 
-  Assert(list.value(0) == 0);
-  Assert(list.value(31) == 31);
+  Assert(list.at_slot(0) == 0);
+  Assert(list.at_slot(31) == 31);
 }
 
 int main()
