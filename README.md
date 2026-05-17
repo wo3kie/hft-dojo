@@ -1,4 +1,4 @@
-### Copyright (C) 2015 Łukasz Czerwiński
+### Copyright (C) 2026 Łukasz Czerwiński
 
 # HFTDojo
 HFT‑Dojo is a compact training ground for low‑latency systems programming. Each module is a self‑contained kata focused on one idea: predictable execution, minimal abstractions, and data structures that behave well under pressure. The repository is not a framework and not a library — it is a collection of precise, inspectable building blocks that illustrate how high‑performance components are designed, reasoned about, and debugged.
@@ -24,7 +24,7 @@ rm -rf build
 
 ## Content
   
-- **array** - Implementation of a fixed-size array with positive/negative/modulo indexing. For the best performance, the size must be a power of two to use bitwise operations.
+- **array** - Fixed‑size array with positive/negative/modulo indexing. For best performance, the size should be a power of two to enable bitwise indexing.
   
   ```{r, engine='cpp'}
   Array<int 8> arr = {0, 1, 2, 3, 4, 5, 6, 7};
@@ -32,7 +32,7 @@ rm -rf build
   assert(arr[-1] == 7);
   ```
 
-- **assert** - Implement an improved `assert` utility that accepts a simple conditional expression (`==`, `!=`, `<=`, `<`, `>=`, `>`) and, upon failure, prints both the _actual_ and _expected_ values.
+- **assert** - Improved assert that accepts simple comparison expressions (`==`, `!=`, `<`, `<=`, `>`, `>=`) and prints both actual and expected values on failure.
   
   ```{r, engine='bash'}
   $ cat assert.cpp
@@ -43,11 +43,21 @@ rm -rf build
     Assert(a == b);
   }
   ```
-- **branchless** - A tiny collection of branchless functions like `min`, `max`, `abs`...
+- **branchless** - A small collection of branchless functions like `min`, `max`, `abs`...
 
-- **flat_list** - A implementation of a double linked flat list with a fixed maximum capacity. All supported operations like `push_front`, `push_back`, `pop_front`, `pop_back`, `remove` run in O(1) time.
+- **flat_list** - A doubly‑linked flat list with fixed maximum capacity. All operations (`push_front`, `push_back`, `pop_front`, `pop_back`, `remove`) run in O(1) time.
 
-- **gdb_utils** - A collection of GDB utilities that can be used to inspect the internal state of the data structures implemented in this repository.
+  ```{r, engine='cpp'}
+  FlatList<int, 8> list;
+  
+  list.push_front(1);
+  assert(list.front() == 1);
+
+  list.push_back(2);
+  assert(list.back() == 2);
+  ```
+
+- **gdb_utils** - GDB helpers for inspecting the internal state of the data structures in this repository.
 
   ```{r, engine='bash'}
   (gdb) source ../gdb_utils.py
@@ -70,22 +80,72 @@ rm -rf build
   }
   ```
   
-- **map_reduce** - A simple implementation of the MapReduce paradigm in C++.
+- **map_reduce** - An implementation of the parallel map and serial reduce paradigm in C++.
   
-- **matching_engine** - A simple implementation of a matching engine for a limit order book. It supports basic order types like limit and market orders, as well as order cancellation and modification.
+- **matching_engine** - Ultra‑fast matching engine example that generates events in nanoseconds. Supports limit orders, market orders, cancellation, and updates. The matching logic is designed to be branchless and cache‑friendly, making it suitable for high‑performance trading systems.
   
-- **order_book** - A simple implementation of a limit order book that supports basic operations like adding, removing, and modifying orders. It also provides a feature of sliding window to follow price trends.
+```{r, engine='cpp'}
+    MatchingEngine</* LevelsBelow */ 3, /* LevelsAbove */ 4> engine(/* initialPrice */ 100);
+
+    engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 200);
+    Assert(engine.bufferOut().pop() == CreateAccepted(/* orderId */ 1, /* slot */ 0));
+
+    engine.insertSellOrder_MKT(2, /* qty */ 200);
+    Assert(engine.bufferOut().pop() == Trade(/* price */ 100, /* qty */ 200, /* maker */ 2, /* taker */ 1));
+```
   
-- **price_levels** - A simple implementation of a price level data structure that can be used to store orders at a specific price level in a limit order book.
+- **order_book** -  Simple limit order book with add/remove/update operations and a sliding‑window mechanism for tracking price trends. The order book is designed to be fast and efficient, with a focus on low latency and high throughput. It supports both buy and sell orders, and can be used as a building block for more complex trading systems.
   
-- **ring_buffer** - A simple implementation of a ring buffer with no synchronization for single-threaded scenarios.
+  ```{r, engine='cpp'}
+
+  OrderBook</* LevelsBelow */ 31, /* LevelsAbove */ 32> ob(buffer, /* initialPrice */ 100);
+
+  ob.insertBuyOrder(/* orderId */ 1, /* price */ 100, /* qty */ 10);
+  Assert(ob.bufferOut().pop() == CreateAccepted(/* orderId */ 1, /* slot */ 0));
   
-- **ring_buffer_mutex** - A simple implementation of a ring buffer that uses mutexes for synchronization. It supports multiple producers and multiple consumers.
+  ob.updateBuyOrder(/* orderId */ 1, /* slot */ 0, /* qty */ 20);
+  Assert(ob.bufferOut().pop() == UpdateAccepted(/* orderId */ 1));
+  ```
+
+- **price_levels** - An implementation of a price level data structure that can be used to store orders at a specific price level in a limit order book.
   
-- **ring_buffer_spsc** - A simple implementation of a ring buffer that is designed for single producer and single consumer scenarios. It uses atomic operations for synchronization.
+- **ring_buffer** - Single‑threaded ring buffer. It is designed for scenarios where only one thread is producing and consuming data, so it does not include any synchronization mechanisms. This makes it very fast and efficient for single‑threaded use cases.
   
-- **ring_buffer_spmc** - A simple implementation of a ring buffer that is designed for single producer and multiple consumer scenarios. It uses atomic operations for synchronization.
+- **ring_buffer_mutex** - Multi‑producer/multi‑consumer ring buffer using mutexes. It is designed for scenarios where multiple threads are producing and consuming data, so it uses mutexes to synchronize access to the buffer. This allows it to be used in multi‑threaded environments, but it may have higher latency compared to the single‑threaded version due to the overhead of locking and unlocking the mutexes.
   
-- **task_executor** - A simple implementation of a function execution in a separate thread (with optional thread affinity). The value can be obtained by `Channel::get` method.
+- **ring_buffer_spsc** - Single‑producer/single‑consumer ring buffer using atomics. It is designed for scenarios where one thread is producing data and another thread is consuming data, so it uses atomic operations to synchronize access to the buffer. This allows it to be used in multi‑threaded environments while still maintaining low latency, as it avoids the overhead of mutexes.
   
-- **task_worker** - A simple implementation of a void procedure execution in a separate thread (with optional thread affinity).
+- **ring_buffer_spmc** - Single‑producer/multiple‑consumer ring buffer using atomics. It is designed for scenarios where one thread is producing data and multiple threads are consuming data, so it uses atomic operations to synchronize access to the buffer. This allows it to be used in multi‑threaded environments while still maintaining low latency, as it avoids the overhead of mutexes.
+  
+- **task_executor** - Executes a function in a separate thread (optional thread affinity). Result retrieved via `Channel::get` (optional thread affinity).
+  
+  ```{r, engine='cpp'}
+  TaskExecutorSPSC<4> exec;
+
+  Channel<int> channel1;
+  Channel<int> channel2;
+  Channel<int> channel3;
+  Channel<int> channel4;
+
+  Assert( exec.try_submit([]( Channel<int>& channel ) noexcept { channel.set(1); }, channel1 ) );
+  Assert( exec.try_submit([]( Channel<int>& channel ) noexcept { channel.set(2); }, channel2 ) );
+  Assert( exec.try_submit([]( Channel<int>& channel ) noexcept { channel.set(3); }, channel3 ) );
+  Assert( exec.try_submit([]( Channel<int>& channel ) noexcept { channel.set(4); }, channel4 ) );
+
+  Assert(channel1.get() == 1);
+  Assert(channel2.get() == 2);
+  Assert(channel3.get() == 3);
+  Assert(channel4.get() == 4);
+
+  ```
+
+- **task_worker** -  Executes a void procedure in a separate thread (optional thread affinity).
+
+```{r, engine='cpp'}
+  TaskWorkerSPSC<4, std::function<void()>> worker;
+
+  Assert(worker.push([]() noexcept { /* do something */ }));
+  Assert(worker.push([]() noexcept { /* do something */ }));
+  Assert(worker.push([]() noexcept { /* do something */ }));
+  Assert(worker.push([]() noexcept { /* do something */ }));
+  ```
