@@ -217,6 +217,11 @@ public:
     _sellLevels.shiftDown(_bufferOut);
   }
 
+  RingBufferSPSC<Event, 1024>& bufferOut()
+  {
+    return _bufferOut;
+  }
+
 private:
   Price _topSellPrice;
   Price _topBuyPrice;
