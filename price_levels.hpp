@@ -19,7 +19,53 @@
 
 struct PriceLevel
 {
-  FlatList<Order, 32> orders;
+public:
+  PriceLevel() = default;
+  PriceLevel(PriceLevel&&) = delete;
+  PriceLevel(const PriceLevel&) = delete;
+
+  PriceLevel& operator=(PriceLevel&&) = delete;
+  PriceLevel& operator=(const PriceLevel&) = delete;
+
+public:
+  FlatList<Order, 32>& orders()
+  {
+    return _orders;
+  }
+
+  const FlatList<Order, 32>& orders() const
+  {
+    return _orders;
+  }
+
+  template<std::size_t N>
+  void expireOrders(RingBufferSPSC<Event, N>& bufferOut)
+  {
+    while(_orders.empty() == false) {
+      Order& order = _orders.front();
+
+      emitEvent(OrderExpired(order.id), bufferOut);
+
+      order.id = InvalidOrderId;
+      _orders.pop_front();
+    }
+  }
+
+private:
+  FlatList<Order, 32> _orders;
+
+private:
+  template<std::size_t N>
+  void emitEvent(Event event, RingBufferSPSC<Event, N>& bufferOut)
+  {
+    while(bufferOut.push(event) == false) {
+      _mm_pause();
+    }
+
+#ifdef NDEBUG
+    (void)bufferOut.pop();
+#endif
+  }
 };
 
 template<uint32_t Levels>
@@ -111,7 +157,7 @@ public:
   {
     Assert(maxPrice() < MaxPrice);
     
-    expireOrders(_levels[_centerIndex - Levels], bufferOut);
+    _levels[_centerIndex - Levels].expireOrders(bufferOut);
 
     _centerPrice += 1;
     _centerIndex += 1;
@@ -123,37 +169,12 @@ public:
   {
     Assert(minPrice() > 1);
     
-    expireOrders(_levels[_centerIndex + Levels], bufferOut);
+    PriceLevel& level = _levels[_centerIndex + Levels];
+    level.expireOrders(bufferOut);
 
     _centerPrice -= 1;
     _centerIndex -= 1;
     _centerIndex &= Mask;
-  }
-
-private:  
-  template<std::size_t N>
-  void emitEvent(Event event, RingBufferSPSC<Event, N>& bufferOut)
-  {
-    while(bufferOut.push(event) == false) {
-      _mm_pause();
-    }
-
-#ifdef NDEBUG
-    (void)bufferOut.pop();
-#endif
-  }
-
-  template<std::size_t N>
-  void expireOrders(PriceLevel& level, RingBufferSPSC<Event, N>& bufferOut)
-  {
-    while(level.orders.empty() == false) {
-      Order& order = level.orders.front();
-
-      emitEvent(OrderExpired(order.id), bufferOut);
-
-      order.id = InvalidOrderId;
-      level.orders.pop_front();
-    }
   }
 
 private:
