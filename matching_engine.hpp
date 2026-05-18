@@ -243,26 +243,6 @@ private:
     }
   }
 
-  Qty trade(OrderId orderId, Price price, Qty qty, PriceLevel<Orders>& level)
-  {
-    while((qty != 0) && (! level.empty())) {
-      Order& otherOrder = level.order();
-      Qty tradeQty = bl::min(qty, otherOrder.qty);
-
-      qty -= tradeQty;
-      otherOrder.qty -= tradeQty;
-
-      emitEvent(Trade(price, tradeQty, orderId, otherOrder.id));
-
-      if(otherOrder.qty == 0) {
-        otherOrder.id = InvalidOrderId;
-        level.pop_order();
-      }
-    }
-
-    return qty;
-  }
-
   Qty _tradeSell(OrderId orderId, const Price priceLimit, Qty qty)
   {
     Assert(_orderBook.checkBuyPrice(priceLimit));
@@ -272,7 +252,7 @@ private:
 
     while((qty != 0) && (price >= priceLimit)) {
       PriceLevel<Orders>& level = _orderBook.buyLevels().at_index(index);
-      qty = trade(orderId, price, qty, level);
+      qty = level.trade(orderId, price, qty, _bufferOut);
 
       const bool empty = level.empty();
       _orderBook.decTopBuyPrice(empty);
@@ -305,7 +285,7 @@ private:
 
     while((qty != 0) && (price <= priceLimit)) {
       PriceLevel<Orders>& level = _orderBook.sellLevels().at_index(index);
-      qty = trade(orderId, price, qty, level);
+      qty = level.trade(orderId, price, qty, _bufferOut);
 
       const bool empty = level.empty();
       _orderBook.incTopSellPrice(empty);
