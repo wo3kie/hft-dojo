@@ -62,12 +62,12 @@ public:
     return true;
   }
 
-  [[nodiscard]] static constexpr std::size_t capacity() noexcept
+  static constexpr std::size_t capacity() noexcept
   {
     return Capacity;
   }
 
-  bool empty() const noexcept
+  [[nodiscard]] bool empty() const noexcept
   {
     std::lock_guard<std::mutex> lock(_mutex);
     return _buffer.empty();
@@ -79,7 +79,7 @@ public:
     return _buffer.full();
   }
 
-  /* extension */ [[nodiscard]] TValue pop()
+  /* extension */ TValue pop()
   {
     TValue out;
 
