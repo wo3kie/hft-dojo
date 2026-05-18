@@ -93,17 +93,17 @@ public:
     _state.store(WorkerState::HardStop, std::memory_order_release);
   }
 
-  /* approximate */ [[nodiscard]] bool running_approx() const noexcept
+  /* approximate */ bool running_approx() const noexcept
   {
     return _state.load(std::memory_order_acquire) == WorkerState::Running;
   }
 
-  /* approximate */ [[nodiscard]] bool empty_approx() const noexcept
+  /* approximate */ bool empty_approx() const noexcept
   {
     return _queue.empty_approx();
   }
 
-  /* approximate */ [[nodiscard]] bool full_approx() const noexcept
+  /* approximate */ bool full_approx() const noexcept
   {
     return _queue.full_approx();
   }
