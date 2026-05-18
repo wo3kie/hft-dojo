@@ -117,10 +117,6 @@ private:
     while(bufferOut.push(event) == false) {
       _mm_pause();
     }
-
-#ifdef HFT_DOJO_BENCH
-    (void)bufferOut.pop();
-#endif
   }
 };
 
