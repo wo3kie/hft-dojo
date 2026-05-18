@@ -38,7 +38,7 @@ public:
     return OutsideLevels;
   }
 
-  constexpr static uint32_t ordersPerLevel() noexcept
+  constexpr static uint32_t orders() noexcept
   {
     return Orders;
   }
@@ -182,10 +182,6 @@ private:
     while(_bufferOut.push(event) == false) {
       _mm_pause();
     }
-
-#ifdef HFT_DOJO_BENCH
-    (void)_bufferOut.pop();
-#endif
   }
 
   void shiftOrderBook(Price price)
