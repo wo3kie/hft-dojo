@@ -55,6 +55,37 @@ void test_partial_fill()
   }
 }
 
+void test_partial_fill_rests_remaining_qty()
+{
+  {
+    MatchingEngine<3, 4> engine(100);
+
+    engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
+
+    engine.insertSellOrder_PL(2, /* price */ 100, /* qty */ 150);
+    Assert(engine.bufferOut().pop() == Trade(100, 100, 2, 1));
+    Assert(engine.bufferOut().pop() == CreateAccepted(2, 0));
+
+    engine.insertBuyOrder_PL(3, /* price */ 100, /* qty */ 50);
+    Assert(engine.bufferOut().pop() == Trade(100, 50, 3, 2));
+  }
+
+  {
+    MatchingEngine<3, 4> engine(100);
+
+    engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
+
+    engine.insertBuyOrder_PL(2, /* price */ 100, /* qty */ 150);
+    Assert(engine.bufferOut().pop() == Trade(100, 100, 2, 1));
+    Assert(engine.bufferOut().pop() == CreateAccepted(2, 0));
+
+    engine.insertSellOrder_PL(3, /* price */ 100, /* qty */ 50);
+    Assert(engine.bufferOut().pop() == Trade(100, 50, 3, 2));
+  }
+}
+
 void test_single_price_level()
 {
   {
@@ -282,6 +313,77 @@ void test_update_sell_order()
   }
 }
 
+void test_cancel_buy_order()
+{
+  {
+    MatchingEngine<3, 4> engine(100);
+
+    engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
+
+    engine.cancelBuyOrder(1, /* slot */ 0, /* price */ 100);
+    Assert(engine.bufferOut().pop() == CancelAccepted(1));
+
+    engine.insertSellOrder_MKT(2, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateRejected(2, 100));
+  }
+
+  {
+    MatchingEngine<3, 4> engine(100);
+
+    engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
+
+    engine.cancelBuyOrder(99, /* slot */ 0, /* price */ 100);
+    Assert(engine.bufferOut().pop() == CancelRejected(99));
+
+    engine.cancelBuyOrder(1, /* slot */ 0, /* price */ 200);
+    Assert(engine.bufferOut().pop() == CancelRejected(1));
+  }
+}
+
+void test_cancel_sell_order()
+{
+  {
+    MatchingEngine<3, 4> engine(100);
+
+    engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
+
+    engine.cancelSellOrder(1, /* slot */ 0, /* price */ 100);
+    Assert(engine.bufferOut().pop() == CancelAccepted(1));
+
+    engine.insertBuyOrder_MKT(2, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateRejected(2, 100));
+  }
+
+  {
+    MatchingEngine<3, 4> engine(100);
+
+    engine.insertSellOrder_PL(1, /* price */ 100, /* qty */ 100);
+    Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
+
+    engine.cancelSellOrder(99, /* slot */ 0, /* price */ 100);
+    Assert(engine.bufferOut().pop() == CancelRejected(99));
+
+    engine.cancelSellOrder(1, /* slot */ 0, /* price */ 200);
+    Assert(engine.bufferOut().pop() == CancelRejected(1));
+  }
+}
+
+void test_shift_order_book_on_trade()
+{
+  MatchingEngine<3, 4, 1> engine(100);
+
+  engine.insertBuyOrder_PL(1, /* price */ 103, /* qty */ 100);
+  Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
+
+  engine.insertSellOrder_PL(2, /* price */ 103, /* qty */ 100);
+  Assert(engine.bufferOut().pop() == Trade(103, 100, 2, 1));
+
+  Assert(engine._orderBook.centerPrice() == 103);
+}
+
 int I = 0;
 
 void bench(uint32_t iters = 1000)
@@ -307,26 +409,6 @@ void bench(uint32_t iters = 1000)
       }
     }
   }
-
-  // {
-  //   MatchingEngine<3, 60> engine(100);
-
-  //   uint32_t orderId = 1;
-  //   uint32_t minPrice = 40;
-  //   uint32_t maxPrice = 103;
-    
-  //   I += iters * (maxPrice - minPrice + 1 /* prices */) * (32 /* orders */) * (2 /* buy/sell */);
-
-  //   for(uint32_t i = 0; i < iters; ++i) {
-  //     for(uint32_t p = minPrice; p <= maxPrice; ++p) {
-  //       for(uint32_t o = 0; o < 32; ++o) {
-  //         engine.insertSellOrder_PL(orderId++, p, 100);
-  //       }
-
-  //       engine.insertBuyOrder_MKT(orderId++, 32 * 100);
-  //     }
-  //   }
-  // }
 }
 
 #include "./timer.hpp"
@@ -342,11 +424,15 @@ int main()
 
   test_simple_transaction();
   test_partial_fill();
+  test_partial_fill_rests_remaining_qty();
   test_single_price_level();
   test_insert_levels();
   test_insert_market_order();
   test_update_buy_order();
   test_update_sell_order();
+  test_cancel_buy_order();
+  test_cancel_sell_order();
+  test_shift_order_book_on_trade();
 #endif
 
   return 0;

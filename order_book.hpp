@@ -76,29 +76,11 @@ public:
 
   void decTopBuyPrice(bool empty = true)
   {
-    /*
-     * branchless version for conditional decrement:
-     *
-     * if (buyOrders.empty()) {
-     *  _topBuyPrice -= 1;
-     * }
-     * 
-     */
-
     _topBuyPrice -= (Price)empty;
   }
 
   void incTopSellPrice(bool empty = true)
   {
-    /*
-     * branchless version for conditional increment:
-     *
-     * if (sellOrders.empty()) {
-     *  _topSellPrice += 1;
-     * }
-     * 
-     */
-
     _topSellPrice += (Price)empty;
   }
 
@@ -159,25 +141,13 @@ public:
   {
     PriceLevel& level = _sellLevels.at_price(price);
     level.push_order(orderId, qty, _bufferOut);
-
-    {
-      /*
-       * if (_topSellPrice == uint32_t(0)) {
-       *   _topSellPrice = price;
-       * } else {
-       *   _topSellPrice = bl::min(_topSellPrice, price);
-       * }
-       */
-
-      _topSellPrice = bl::min(_topSellPrice, price);
-    }
+    _topSellPrice = bl::min(_topSellPrice, price);
   }
 
   void insertBuyOrder(OrderId orderId, Price price, Qty qty)
   {
     PriceLevel& level = _buyLevels.at_price(price);
     level.push_order(orderId, qty, _bufferOut);
-
     _topBuyPrice = bl::max(_topBuyPrice, price);
   }
 

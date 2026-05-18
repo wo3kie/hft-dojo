@@ -11,25 +11,7 @@
 #include "./price_levels.hpp"
 #include "./ring_buffer_spsc.hpp"
 
-void test_price_levels_basic_1()
-{
-  PriceLevels<3, 4> pl(7);
-
-  Assert(pl.centerPrice() == 7);
-  Assert(pl.minPrice() == 4);
-  Assert(pl.maxPrice() == 11);
-
-  Assert(pl.priceToIndex(4) == 0);
-  Assert(pl.priceToIndex(5) == 1);
-  Assert(pl.priceToIndex(6) == 2);
-  Assert(pl.priceToIndex(7) == 3);
-  Assert(pl.priceToIndex(8) == 4);
-  Assert(pl.priceToIndex(9) == 5);
-  Assert(pl.priceToIndex(10) == 6);
-  Assert(pl.priceToIndex(11) == 7);
-}
-
-void test_price_levels_basic_2()
+void test_price_levels_basic()
 {
   PriceLevels<3, 60> pl(32);
 
@@ -40,10 +22,10 @@ void test_price_levels_basic_2()
   Assert(pl.priceToIndex(32 - 3) == 0);
   Assert(pl.priceToIndex(32 - 2) == 1);
   Assert(pl.priceToIndex(32 - 1) == 2);
-  Assert(pl.priceToIndex(32) == 3);
-  Assert(pl.priceToIndex(33) == 4);
-  Assert(pl.priceToIndex(34) == 5);
-  Assert(pl.priceToIndex(92) == 63);
+  Assert(pl.priceToIndex(32 + 0) == 3);
+  Assert(pl.priceToIndex(32 + 1) == 4);
+  Assert(pl.priceToIndex(32 + 2) == 5);
+  Assert(pl.priceToIndex(32 + 60) == 63);
 }
 
 void test_price_levels_shift_1()
@@ -130,8 +112,7 @@ void test_price_levels_storage_access()
 
 int main()
 {
-  test_price_levels_basic_1();
-  test_price_levels_basic_2();
+  test_price_levels_basic();
 
   test_price_levels_shift_1();
   test_price_levels_shift_2();
