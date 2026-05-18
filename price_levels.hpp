@@ -48,10 +48,10 @@ public:
     Assert(centerPrice < MaxPrice - LevelsAbove);
   }
 
-  PriceLevels(PriceLevels&&) = default;
+  PriceLevels(PriceLevels&&) = delete;
   PriceLevels(const PriceLevels&) = delete;
 
-  PriceLevels& operator=(PriceLevels&&) = default;
+  PriceLevels& operator=(PriceLevels&&) = delete;
   PriceLevels& operator=(const PriceLevels&) = delete;
 
 public:
