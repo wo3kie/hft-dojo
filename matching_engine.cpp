@@ -371,31 +371,84 @@ void test_cancel_sell_order()
   }
 }
 
-int I = 0;
-
-void bench(uint32_t iters = 1000)
+template<uint32_t InsideLevels, uint32_t OutsideLevels, uint32_t Orders>
+void micro_bench_insert(std::size_t iters = 1000) 
 {
-  I = 0;
+  uint32_t events = 0;
+  uint32_t orderId = 1;
+  uint32_t minPrice = 100 - InsideLevels + 1;
+  uint32_t maxPrice = 100 + OutsideLevels - 1;
+  MatchingEngine<InsideLevels, OutsideLevels, Orders> engine(100);
   
-  {
-    MatchingEngine<3, 60> engine(100);
-    
-    uint32_t orderId = 1;
-    uint32_t minPrice = 97;
-    uint32_t maxPrice = 160;
-    
-    I = iters * (maxPrice - minPrice + 1 /* prices */) * (32 /* orders */) * (2 /* buy/sell */);
+  const auto task = [&]() {
+    events = 0;
+    orderId = 1;
 
-    for(uint32_t i = 0; i < iters; ++i) {
-      for(uint32_t p = minPrice; p <= maxPrice; ++p) {
-        for(uint32_t o = 0; o < 32; ++o) {
-          engine.insertBuyOrder_PL(orderId++, p, 100);
-        }
+    for(uint32_t p = minPrice; p <= maxPrice; ++p) {
+      for(uint32_t o = 0; o < Orders; ++o) {
+        engine.insertSellOrder_PL(orderId++, p, 100);
 
-        engine.insertSellOrder_MKT(orderId++, 32 * 100);
+#ifdef HFT_DOJO_COUT
+        std::cout << engine.bufferOut().pop() << std::endl;
+#else
+        engine.bufferOut().pop();
+#endif
+
+        events += 1;
       }
     }
-  }
+  };
+  
+  timer([&]() { task(); }, iters).log([&](long int ns, const std::string& /* formatted */) {
+    std::cout << "micro_bench_insert: " << ns << "ns / " << events << " events / " << (1.0 * ns / events) << "ns/event" << std::endl;
+  });
+}
+
+template<uint32_t InsideLevels, uint32_t OutsideLevels, uint32_t Orders>
+void micro_bench_trade(std::size_t iters = 1000) 
+{ 
+  uint32_t events = 0;
+  uint32_t orderId = 1;
+  uint32_t minPrice = 100 - InsideLevels + 1;
+  uint32_t maxPrice = 100 + OutsideLevels - 1;
+  MatchingEngine<InsideLevels, OutsideLevels, Orders> engine(100);
+  
+  const auto task = [&]() {
+    events = 0;
+    orderId = 1;
+
+    for(uint32_t p = minPrice; p <= maxPrice; ++p) {
+      for(uint32_t o = 0; o < Orders; ++o) {
+        engine.insertSellOrder_PL(orderId++, p, 100);
+
+#ifdef HFT_DOJO_COUT
+        std::cout << engine.bufferOut().pop() << std::endl;
+#else        
+        engine.bufferOut().pop();
+#endif
+
+        events += 1;
+      }
+    }
+    
+    for(uint32_t p = minPrice; p <= maxPrice; ++p) {
+      for(uint32_t o = 0; o < Orders; ++o) {
+        engine.insertBuyOrder_PL(orderId++, p, 100);
+
+#ifdef HFT_DOJO_COUT
+        std::cout << engine.bufferOut().pop() << std::endl;
+#else        
+        engine.bufferOut().pop();
+#endif
+
+        events += 1;
+      }
+    }
+  };
+  
+  timer([&]() { task(); }, iters).log([&](long int ns, const std::string& /* formatted */) {
+    std::cout << "micro_bench_trade: " << ns << "ns / " << events << " events / " << (1.0 * ns / events) << "ns/event" << std::endl;
+  });
 }
 
 #include "./timer.hpp"
@@ -404,21 +457,23 @@ int main()
 {
 
 #ifdef NDEBUG
-  timer([]() { bench(); }, 1000).log([&](long int ns, const std::string& formatted) {
-        std::cout << "Bench took " << formatted << " (" << ns << "ns) for " << I << " events" << std::endl;
-      });
+  micro_bench_insert<27, 100, 32>();
+  micro_bench_trade<27, 100, 32>();
 #else
 
-  test_simple_transaction();
-  test_partial_fill();
-  test_partial_fill_rests_remaining_qty();
-  test_single_price_level();
-  test_insert_levels();
-  test_insert_market_order();
-  test_update_buy_order();
-  test_update_sell_order();
-  test_cancel_buy_order();
-  test_cancel_sell_order();
+  // micro_bench_insert<3, 4, 4>(1);
+  micro_bench_trade<3, 4, 4>(2);
+
+  // test_simple_transaction();
+  // test_partial_fill();
+  // test_partial_fill_rests_remaining_qty();
+  // test_single_price_level();
+  // test_insert_levels();
+  // test_insert_market_order();
+  // test_update_buy_order();
+  // test_update_sell_order();
+  // test_cancel_buy_order();
+  // test_cancel_sell_order();
 
   #endif
 
