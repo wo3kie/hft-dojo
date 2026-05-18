@@ -42,13 +42,6 @@ inline T max(T x, T y) noexcept
 }
 
 template<std::signed_integral T>
-T abs(T x) noexcept
-{
-  T result = (x + (x >> (sizeof(T) * 8 - 1))) ^ (x >> (sizeof(T) * 8 - 1));
-  return result;
-}
-
-template<std::signed_integral T>
 bool in_range(T x, T min, T max) noexcept
 {
   bool result = (x >= min) && (x <= max);
