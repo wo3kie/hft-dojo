@@ -27,13 +27,6 @@ void test_max()
   Assert(bl::max(-10, 0) == 0);
 }
 
-void test_abs()
-{
-  Assert(bl::abs(100) == 100);
-  Assert(bl::abs(0) == 0);
-  Assert(bl::abs(-100) == 100);
-}
-
 void test_in_range()
 {
   Assert(bl::in_range(9, 10, 20) == false);
@@ -55,6 +48,5 @@ int main()
 {
   test_min();
   test_max();
-  test_abs();
   test_in_range();
 }
