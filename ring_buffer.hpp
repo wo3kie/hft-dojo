@@ -56,7 +56,7 @@ public:
     return true;
   }
 
-  [[nodiscard]] static constexpr std::size_t capacity() noexcept
+  static constexpr std::size_t capacity() noexcept
   {
     return Capacity;
   }
@@ -66,12 +66,12 @@ public:
     return _head == _tail;
   }
 
-  [[nodiscard]] bool full() const noexcept
+  bool full() const noexcept
   {
     return _index(_tail + 1) == _head;
   }
 
-  /* extension */ [[nodiscard]] TValue pop()
+  /* extension */ TValue pop()
   {
     TValue out;
 
@@ -83,7 +83,7 @@ public:
   }
 
 private:
-  [[nodiscard]] static constexpr std::size_t _index(std::size_t i) noexcept 
+  static constexpr std::size_t _index(std::size_t i) noexcept 
   {
     constexpr bool isPowerOf2 = ((Capacity + 1) & Capacity) == 0;
 
