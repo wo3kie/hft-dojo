@@ -19,6 +19,7 @@
 #include "./order.hpp"
 #include "./ring_buffer_spsc.hpp"
 
+template<uint32_t Orders>
 struct PriceLevel
 {
 public:
@@ -30,6 +31,11 @@ public:
   PriceLevel& operator=(const PriceLevel&) = delete;
 
 public:
+  static constexpr uint32_t capacity() noexcept
+  {
+    return Orders;
+  }
+
   template<std::size_t N>
   void push_order(OrderId orderId, Qty qty, RingBufferSPSC<Event, N>& bufferOut)
   {
@@ -37,16 +43,16 @@ public:
 
     if(UNLIKELY(slot == InvalidIndex)) {
       emitEvent(CreateRejected(orderId, qty), bufferOut);
-    } {
+    } else {
       emitEvent(CreateAccepted(orderId, slot), bufferOut);
     }
   }
 
-  [[nodiscard]] Order& order() {
+  Order& order() {
     return _orders.front();
   }
 
-  [[nodiscard]] Order& at_slot(int32_t slot)
+  Order& at_slot(int32_t slot)
   {
     return _orders.at_slot(slot);
   }
@@ -102,7 +108,7 @@ public:
   }
 
 private:
-  FlatList<Order, 32> _orders;
+  FlatList<Order, Orders> _orders;
 
 private:
   template<std::size_t N>
@@ -118,7 +124,7 @@ private:
   }
 };
 
-template<uint32_t LevelsBelow, uint32_t LevelsAbove>
+template<uint32_t LevelsBelow, uint32_t LevelsAbove, uint32_t Orders = 32>
 struct PriceLevels
 {
   constexpr static uint32_t Size = LevelsBelow + LevelsAbove + 1;
@@ -140,6 +146,21 @@ public:
   PriceLevels& operator=(const PriceLevels&) = delete;
 
 public:
+  static constexpr uint32_t levelsBelow() noexcept
+  {
+    return LevelsBelow;
+  }
+
+  static constexpr uint32_t levelsAbove() noexcept
+  {
+    return LevelsAbove;
+  }
+
+  static constexpr uint32_t orders() noexcept
+  {
+    return Orders;
+  }
+  
   Price centerPrice() const
   {
     return _centerPrice;
@@ -162,23 +183,23 @@ public:
     return bl::in_range(price, minPrice, maxPrice);
   }
 
-  PriceLevel& at_index(Index index)
+  PriceLevel<Orders>& at_index(Index index)
   {
     return _levels[index];
   }
 
-  const PriceLevel& at_index(Index index) const
+  const PriceLevel<Orders>& at_index(Index index) const
   {
     return _levels[index];
   }
 
-  PriceLevel& at_price(Price price)
+  PriceLevel<Orders>& at_price(Price price)
   {
     const Index index = priceToIndex(price);
     return _levels[index];
   }
 
-  const PriceLevel& at_price(Price price) const
+  const PriceLevel<Orders>& at_price(Price price) const
   {
     const Index index = priceToIndex(price);
     return _levels[index];
@@ -200,7 +221,7 @@ public:
   {
     Assert(maxPrice() < MaxPrice);
     
-    PriceLevel& level = _levels[_centerIndex - LevelsBelow];
+    PriceLevel<Orders>& level = _levels[_centerIndex - LevelsBelow];
     level.expireOrders(bufferOut);
 
     _centerPrice += 1;
@@ -213,7 +234,7 @@ public:
   {
     Assert(minPrice() > 1);
     
-    PriceLevel& level = _levels[_centerIndex + LevelsAbove];
+    PriceLevel<Orders>& level = _levels[_centerIndex + LevelsAbove];
     level.expireOrders(bufferOut);
 
     _centerPrice -= 1;
@@ -225,5 +246,5 @@ private:
   Price _centerPrice;
   Index _centerIndex;
 
-  Array<PriceLevel, Size> _levels;
+  Array<PriceLevel<Orders>, Size> _levels;
 };
