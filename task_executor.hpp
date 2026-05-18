@@ -45,7 +45,7 @@ public:
     _ready.store(true, std::memory_order_release);
   }
 
-  [[nodiscard]] TType& get()
+  TType& get()
   {
     while(! _ready.load(std::memory_order_acquire)) {
       IdlePolicy::doIt();
