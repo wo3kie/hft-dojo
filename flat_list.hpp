@@ -97,7 +97,7 @@ public:
     return Capacity;
   }
 
-  bool empty() const
+  [[nodiscard]] bool empty() const
   {
     return _head == -1;
   }
