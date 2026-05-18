@@ -33,8 +33,8 @@ public:
   OrderBook(QueueOut& out, Price centerPrice)
     : _minSellPrice{UINT32_MAX}
     , _maxBuyPrice{UINT32_MIN}
-    , _buyLevels(centerPrice)
     , _sellLevels(centerPrice)
+    , _buyLevels(centerPrice)
     , _queueOut(out)
   {
   }
