@@ -26,7 +26,7 @@
 #include <iostream>
 #include <limits>
 
-template<uint32_t LevelsBelow, uint32_t LevelsAbove>
+template<uint32_t InsideLevels, uint32_t OutsideLevels, uint32_t Orders = 32>
 struct OrderBook
 {
 public:
@@ -46,6 +46,21 @@ public:
   OrderBook& operator=(const OrderBook&) = delete;
 
 public:
+  static constexpr uint32_t insideLevels() noexcept
+  {
+    return InsideLevels;
+  }
+
+  static constexpr uint32_t outsideLevels() noexcept
+  {
+    return OutsideLevels;
+  }
+
+  static constexpr uint32_t ordersPerLevel() noexcept
+  {
+    return Orders;
+  }
+
   Price centerPrice() const
   {
     Assert(_sellLevels.centerPrice() == _buyLevels.centerPrice());
@@ -121,57 +136,57 @@ public:
     return bl::in_range(price, minPrice, maxPrice);
   }
 
-  PriceLevels<LevelsBelow, LevelsAbove>& sellLevels() {
+  PriceLevels<InsideLevels, OutsideLevels>& sellLevels() {
     return _sellLevels;
   }
 
-  const PriceLevels<LevelsBelow, LevelsAbove>& sellLevels() const {
+  const PriceLevels<InsideLevels, OutsideLevels>& sellLevels() const {
     return _sellLevels;
   }
 
-  PriceLevels<LevelsAbove, LevelsBelow>& buyLevels() {
+  PriceLevels<OutsideLevels, InsideLevels, Orders>& buyLevels() {
     return _buyLevels;
   }
 
-  const PriceLevels<LevelsAbove, LevelsBelow>& buyLevels() const {
+  const PriceLevels<OutsideLevels, InsideLevels, Orders>& buyLevels() const {
     return _buyLevels;
   }
 
   void insertSellOrder(OrderId orderId, Price price, Qty qty)
   {
-    PriceLevel& level = _sellLevels.at_price(price);
+    PriceLevel<Orders>& level = _sellLevels.at_price(price);
     level.push_order(orderId, qty, _bufferOut);
     _topSellPrice = bl::min(_topSellPrice, price);
   }
 
   void insertBuyOrder(OrderId orderId, Price price, Qty qty)
   {
-    PriceLevel& level = _buyLevels.at_price(price);
+    PriceLevel<Orders>& level = _buyLevels.at_price(price);
     level.push_order(orderId, qty, _bufferOut);
     _topBuyPrice = bl::max(_topBuyPrice, price);
   }
 
   void updateSellOrder(OrderId orderId, Index slot, Price price, Qty qty)
   {
-    PriceLevel& level = _sellLevels.at_price(price);
+    PriceLevel<Orders>& level = _sellLevels.at_price(price);
     level.updateOrder(orderId, slot, qty, _bufferOut);
   }
 
   void updateBuyOrder(OrderId orderId, Index slot, Price price, Qty qty)
   {
-    PriceLevel& level = _buyLevels.at_price(price);
+    PriceLevel<Orders>& level = _buyLevels.at_price(price);
     level.updateOrder(orderId, slot, qty, _bufferOut);
   }
 
   void cancelSellOrder(OrderId orderId, Index slot, Price price)
   {
-    PriceLevel& level = _sellLevels.at_price(price);
+    PriceLevel<Orders>& level = _sellLevels.at_price(price);
     level.cancelOrder(orderId, slot, _bufferOut);
   }
 
   void cancelBuyOrder(OrderId orderId, Index slot, Price price)
   {
-    PriceLevel& level = _buyLevels.at_price(price);
+    PriceLevel<Orders>& level = _buyLevels.at_price(price);
     level.cancelOrder(orderId, slot, _bufferOut);
   }
 
@@ -196,8 +211,8 @@ private:
   Price _topSellPrice;
   Price _topBuyPrice;
 
-  PriceLevels<LevelsBelow, LevelsAbove> _sellLevels;
-  PriceLevels<LevelsAbove, LevelsBelow> _buyLevels;
+  PriceLevels<InsideLevels, OutsideLevels, Orders> _sellLevels;
+  PriceLevels<OutsideLevels, InsideLevels, Orders> _buyLevels;
 
   RingBufferSPSC<Event, 1024>& _bufferOut;
 };
