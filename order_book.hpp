@@ -56,7 +56,7 @@ public:
     return OutsideLevels;
   }
 
-  static constexpr uint32_t ordersPerLevel() noexcept
+  static constexpr uint32_t orders() noexcept
   {
     return Orders;
   }
@@ -72,10 +72,6 @@ public:
     while(_bufferOut.push(event) == false) {
       _mm_pause();
     }
-
-#ifdef HFT_DOJO_BENCH
-    (void)_bufferOut.pop();
-#endif
   }
 
   Price topBuyPrice() const
@@ -136,11 +132,11 @@ public:
     return bl::in_range(price, minPrice, maxPrice);
   }
 
-  PriceLevels<InsideLevels, OutsideLevels>& sellLevels() {
+  PriceLevels<InsideLevels, OutsideLevels, Orders>& sellLevels() {
     return _sellLevels;
   }
 
-  const PriceLevels<InsideLevels, OutsideLevels>& sellLevels() const {
+  const PriceLevels<InsideLevels, OutsideLevels, Orders>& sellLevels() const {
     return _sellLevels;
   }
 
@@ -211,8 +207,8 @@ private:
   Price _topSellPrice;
   Price _topBuyPrice;
 
-  PriceLevels<InsideLevels, OutsideLevels, Orders> _sellLevels;
-  PriceLevels<OutsideLevels, InsideLevels, Orders> _buyLevels;
+  PriceLevels</* below */ InsideLevels, /* above */ OutsideLevels, Orders> _sellLevels;
+  PriceLevels</* below */ OutsideLevels, /* above */ InsideLevels, Orders> _buyLevels;
 
   RingBufferSPSC<Event, 1024>& _bufferOut;
 };
