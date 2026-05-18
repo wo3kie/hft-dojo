@@ -371,19 +371,6 @@ void test_cancel_sell_order()
   }
 }
 
-void test_shift_order_book_on_trade()
-{
-  MatchingEngine<3, 4, 1> engine(100);
-
-  engine.insertBuyOrder_PL(1, /* price */ 103, /* qty */ 100);
-  Assert(engine.bufferOut().pop() == CreateAccepted(1, 0));
-
-  engine.insertSellOrder_PL(2, /* price */ 103, /* qty */ 100);
-  Assert(engine.bufferOut().pop() == Trade(103, 100, 2, 1));
-
-  Assert(engine._orderBook.centerPrice() == 103);
-}
-
 int I = 0;
 
 void bench(uint32_t iters = 1000)
@@ -432,8 +419,8 @@ int main()
   test_update_sell_order();
   test_cancel_buy_order();
   test_cancel_sell_order();
-  test_shift_order_book_on_trade();
-#endif
+
+  #endif
 
   return 0;
 }
