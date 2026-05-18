@@ -48,6 +48,34 @@ public:
     }
   }
 
+  template<std::size_t N>
+  Qty trade_order(OrderId orderId, Price price, Qty qty, RingBufferSPSC<Event, N>& bufferOut) 
+  {
+    Order& order = _orders.front();
+    const Qty tradeQty = bl::min(qty, order.qty);
+
+    order.qty -= tradeQty;
+    qty -= tradeQty;
+    emitEvent(Trade(price, tradeQty, orderId, order.id), bufferOut);
+
+    if (order.qty == 0) {
+      order.id = InvalidOrderId;
+      _orders.pop_front();
+    }
+
+    return qty;
+  }
+
+  template<std::size_t N>
+  Qty trade(OrderId orderId, Price price, Qty qty, RingBufferSPSC<Event, N>& bufferOut)
+  {
+    while((qty != 0) && (! _orders.empty())) {
+      qty -= trade_order(orderId, price, qty, bufferOut);
+    }
+
+    return qty;
+  }
+
   Order& order() {
     return _orders.front();
   }
