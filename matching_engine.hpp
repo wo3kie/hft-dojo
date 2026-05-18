@@ -76,6 +76,25 @@ public:
     }
   }
 
+  void insertSellOrder_IOC(OrderId orderId, Price price, Qty qty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(price != InvalidPrice);
+      Assert(qty != 0);
+    }
+
+    if(UNLIKELY(_orderBook.checkSellPrice(price) == false)) {
+      return emitEvent(CreateRejected(orderId, qty));
+    }
+
+    qty = tradeSell(orderId, price, qty);
+
+    if(UNLIKELY(qty != 0)) {
+      emitEvent(CreateRejected(orderId, qty));
+    }
+  }
+
   void insertBuyOrder_PL(OrderId orderId, Price price, Qty qty)
   {
     {
@@ -103,6 +122,25 @@ public:
     }
 
     qty = tradeBuy(orderId, MaxPrice, qty);
+
+    if(UNLIKELY(qty != 0)) {
+      emitEvent(CreateRejected(orderId, qty));
+    }
+  }
+
+  void insertBuyOrder_IOC(OrderId orderId, Price price, Qty qty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(price != InvalidPrice);
+      Assert(qty != 0);
+    }
+
+    if(UNLIKELY(_orderBook.checkBuyPrice(price) == false)) {
+      return emitEvent(CreateRejected(orderId, qty));
+    }
+
+    qty = tradeBuy(orderId, price, qty);
 
     if(UNLIKELY(qty != 0)) {
       emitEvent(CreateRejected(orderId, qty));
