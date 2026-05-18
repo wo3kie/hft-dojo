@@ -13,8 +13,8 @@
 #include "./array.hpp"
 #include "./assert.hpp"
 #include "./branchless.hpp"
-#include "./flat_list.hpp"
 #include "./events.hpp"
+#include "./flat_list.hpp"
 #include "./likely.hpp"
 #include "./order.hpp"
 #include "./ring_buffer_spsc.hpp"
@@ -30,122 +30,7 @@ public:
   PriceLevel& operator=(PriceLevel&&) = delete;
   PriceLevel& operator=(const PriceLevel&) = delete;
 
-public:
-  static constexpr uint32_t capacity() noexcept
-  {
-    return Orders;
-  }
-
-  template<std::size_t N>
-  void push_order(OrderId orderId, Qty qty, RingBufferSPSC<Event, N>& bufferOut)
-  {
-    const Index slot = _orders.push_back({orderId, qty});
-
-    if(UNLIKELY(slot == InvalidIndex)) {
-      emitEvent(CreateRejected(orderId, qty), bufferOut);
-    } else {
-      emitEvent(CreateAccepted(orderId, slot), bufferOut);
-    }
-  }
-
-  template<std::size_t N>
-  Qty trade_order(OrderId orderId, Price price, Qty qty, RingBufferSPSC<Event, N>& bufferOut) 
-  {
-    Order& order = _orders.front();
-    const Qty tradeQty = bl::min(qty, order.qty);
-
-    order.qty -= tradeQty;
-    qty -= tradeQty;
-    emitEvent(Trade(price, tradeQty, orderId, order.id), bufferOut);
-
-    if (order.qty == 0) {
-      order.id = InvalidOrderId;
-      _orders.pop_front();
-    }
-
-    return qty;
-  }
-
-  template<std::size_t N>
-  Qty trade(OrderId orderId, Price price, Qty qty, RingBufferSPSC<Event, N>& bufferOut)
-  {
-    while((qty != 0) && (! _orders.empty())) {
-      qty -= trade_order(orderId, price, qty, bufferOut);
-    }
-
-    return qty;
-  }
-
-  Order& order() {
-    return _orders.front();
-  }
-
-  Order& at_slot(int32_t slot)
-  {
-    return _orders.at_slot(slot);
-  }
-
-  template<std::size_t N>
-  void updateOrder(OrderId orderId, Index slot, Qty qty, RingBufferSPSC<Event, N>& bufferOut)
-  {
-    Order& order = _orders.at_slot(slot);
-
-    if(UNLIKELY(order.id != orderId)) {
-      return emitEvent(UpdateRejected(orderId, qty), bufferOut);
-    }
-
-    order.qty = qty;
-    emitEvent(UpdateAccepted(orderId), bufferOut);
-  }
-
-  template<std::size_t N>
-  void cancelOrder(OrderId orderId, int32_t slot, RingBufferSPSC<Event, N>& bufferOut)
-  {
-    Order& order = _orders.at_slot(slot);
-
-    if(UNLIKELY(order.id != orderId)) {
-      return emitEvent(CancelRejected(orderId), bufferOut);
-    }
-
-    order.id = InvalidOrderId;
-    _orders.remove(slot);
-    emitEvent(CancelAccepted(orderId), bufferOut);
-  }
-
-  void pop_order()
-  {
-    _orders.pop_front();
-  }
-
-  [[nodiscard]] bool empty() const
-  {
-    return _orders.empty();
-  }
-
-  template<std::size_t N>
-  void expireOrders(RingBufferSPSC<Event, N>& bufferOut)
-  {
-    while(_orders.empty() == false) {
-      Order& order = _orders.front();
-
-      emitEvent(OrderExpired(order.id), bufferOut);
-
-      order.id = InvalidOrderId;
-      _orders.pop_front();
-    }
-  }
-
-private:
-  FlatList<Order, Orders> _orders;
-
-private:
-  template<std::size_t N>
-  void emitEvent(Event event, RingBufferSPSC<Event, N>& bufferOut)
-  {
-    while(bufferOut.push(event) == false) {
-      _mm_pause();
-    }
-  }
+  FlatList<Order, Orders> orders;
 };
 
 template<uint32_t LevelsBelow, uint32_t LevelsAbove, uint32_t Orders = 32>
@@ -165,17 +50,17 @@ public:
 
   PriceLevels(PriceLevels&&) = default;
   PriceLevels(const PriceLevels&) = delete;
-  
+
   PriceLevels& operator=(PriceLevels&&) = default;
   PriceLevels& operator=(const PriceLevels&) = delete;
 
 public:
-  static constexpr uint32_t levelsBelow() noexcept
+  static constexpr uint32_t levels_below() noexcept
   {
     return LevelsBelow;
   }
 
-  static constexpr uint32_t levelsAbove() noexcept
+  static constexpr uint32_t levels_above() noexcept
   {
     return LevelsAbove;
   }
@@ -184,26 +69,26 @@ public:
   {
     return Orders;
   }
-  
-  Price centerPrice() const
+
+  Price center_price() const
   {
     return _centerPrice;
   }
 
-  Price minPrice() const
+  Price min_price() const
   {
     return _centerPrice - LevelsBelow;
   }
 
-  Price maxPrice() const
+  Price max_price() const
   {
     return _centerPrice + LevelsAbove;
   }
 
-  bool checkPrice(Price price) const
+  bool check_price(Price price) const
   {
-    const Price minPrice = this->minPrice();
-    const Price maxPrice = this->maxPrice();
+    const Price minPrice = this->min_price();
+    const Price maxPrice = this->max_price();
     return bl::in_range(price, minPrice, maxPrice);
   }
 
@@ -219,20 +104,20 @@ public:
 
   PriceLevel<Orders>& at_price(Price price)
   {
-    const Index index = priceToIndex(price);
+    const Index index = price_to_index(price);
     return _levels[index];
   }
 
   const PriceLevel<Orders>& at_price(Price price) const
   {
-    const Index index = priceToIndex(price);
+    const Index index = price_to_index(price);
     return _levels[index];
   }
 
-  Index priceToIndex(Price price) const
+  Index price_to_index(Price price) const
   {
-    Assert(checkPrice(price));
-    
+    Assert(check_price(price));
+
     price -= _centerPrice;
     price += _centerIndex;
     price &= Mask;
@@ -240,26 +125,18 @@ public:
     return ((Index)price);
   }
 
-  template<std::size_t N>
-  void shiftUp(RingBufferSPSC<Event, N>& bufferOut)
+  void shift_up(QueueOut& out)
   {
-    Assert(maxPrice() < MaxPrice);
-    
-    PriceLevel<Orders>& level = _levels[_centerIndex - LevelsBelow];
-    level.expireOrders(bufferOut);
+    Assert(max_price() < MaxPrice);
 
     _centerPrice += 1;
     _centerIndex += 1;
     _centerIndex &= Mask;
   }
 
-  template<std::size_t N>
-  void shiftDown(RingBufferSPSC<Event, N>& bufferOut)
+  void shift_down(QueueOut& out)
   {
-    Assert(minPrice() > 1);
-    
-    PriceLevel<Orders>& level = _levels[_centerIndex + LevelsAbove];
-    level.expireOrders(bufferOut);
+    Assert(min_price() > 1);
 
     _centerPrice -= 1;
     _centerIndex -= 1;
