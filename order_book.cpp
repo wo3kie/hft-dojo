@@ -12,157 +12,157 @@
 
 void test_order_book_insert_buy_order()
 {
-  RingBufferSPSC<Event, 1024> buffer;
+  QueueOut buffer;
   OrderBook<31, 32> ob(buffer, 100);
 
-  ob.insertBuyOrder(1, 100, 10);
-  Assert(ob.topBuyPrice() == 100);
-  Assert(ob.topBuyIndex() == 32);
+  ob.insert_buy_order(1, 100, 10);
+  Assert(ob.buy_price_from() == 100);
+  Assert(ob.buy_index_from() == 32);
 }
 
 void test_order_book_insert_sell_order()
 {
-  RingBufferSPSC<Event, 1024> buffer;
+  QueueOut buffer;
   OrderBook<31, 32> ob(buffer, 100);
 
-  ob.insertSellOrder(1, 100, 10);
-  Assert(ob.topSellPrice() == 100);
-  Assert(ob.topSellIndex() == 31);
+  ob.insert_sell_order(1, 100, 10);
+  Assert(ob.sell_price_from() == 100);
+  Assert(ob.sell_index_from() == 31);
 }
 
 void test_order_book_tracks_best_prices_across_levels()
 {
-  RingBufferSPSC<Event, 1024> buffer;
+  QueueOut buffer;
   OrderBook<31, 32> ob(buffer, 100);
 
-  ob.insertBuyOrder(1, 99, 10);
+  ob.insert_buy_order(1, 99, 10);
   Assert(buffer.pop() == CreateAccepted(1, 0));
 
-  ob.insertBuyOrder(2, 101, 20);
+  ob.insert_buy_order(2, 101, 20);
   Assert(buffer.pop() == CreateAccepted(2, 0));
 
-  ob.insertBuyOrder(3, 100, 30);
+  ob.insert_buy_order(3, 100, 30);
   Assert(buffer.pop() == CreateAccepted(3, 0));
 
-  ob.insertSellOrder(4, 101, 10);
+  ob.insert_sell_order(4, 101, 10);
   Assert(buffer.pop() == CreateAccepted(4, 0));
 
-  ob.insertSellOrder(5, 99, 20);
+  ob.insert_sell_order(5, 99, 20);
   Assert(buffer.pop() == CreateAccepted(5, 0));
 
-  ob.insertSellOrder(6, 100, 30);
+  ob.insert_sell_order(6, 100, 30);
   Assert(buffer.pop() == CreateAccepted(6, 0));
 
-  Assert(ob.topBuyPrice() == 101);
-  Assert(ob.topBuyIndex() == 33);
+  Assert(ob.buy_price_from() == 101);
+  Assert(ob.buy_index_from() == 33);
 
-  Assert(ob.topSellPrice() == 99);
-  Assert(ob.topSellIndex() == 30);
+  Assert(ob.sell_price_from() == 99);
+  Assert(ob.sell_index_from() == 30);
 }
 
 void test_order_book_price_limits_and_range_checks()
 {
-  RingBufferSPSC<Event, 1024> buffer;
+  QueueOut buffer;
   OrderBook<31, 32> ob(buffer, 100);
 
-  Assert(ob.buyPriceLimit() == 68);
-  Assert(ob.buyPriceLimit(90) == 90);
-  Assert(ob.buyPriceLimit(67) == 68);
+  Assert(ob.buy_price_to() == 68);
+  Assert(ob.buy_price_to(90) == 90);
+  Assert(ob.buy_price_to(67) == 68);
 
-  Assert(ob.sellPriceLimit() == 132);
-  Assert(ob.sellPriceLimit(120) == 120);
-  Assert(ob.sellPriceLimit(133) == 132);
+  Assert(ob.sell_price_to() == 132);
+  Assert(ob.sell_price_to(120) == 120);
+  Assert(ob.sell_price_to(133) == 132);
 
-  Assert(ob.checkBuyPrice(68) == true);
-  Assert(ob.checkBuyPrice(131) == true);
-  Assert(ob.checkBuyPrice(67) == false);
-  Assert(ob.checkBuyPrice(132) == false);
+  Assert(ob.check_buy_price(68) == true);
+  Assert(ob.check_buy_price(131) == true);
+  Assert(ob.check_buy_price(67) == false);
+  Assert(ob.check_buy_price(132) == false);
 
-  Assert(ob.checkSellPrice(69) == true);
-  Assert(ob.checkSellPrice(132) == true);
-  Assert(ob.checkSellPrice(68) == false);
-  Assert(ob.checkSellPrice(133) == false);
+  Assert(ob.check_sell_price(69) == true);
+  Assert(ob.check_sell_price(132) == true);
+  Assert(ob.check_sell_price(68) == false);
+  Assert(ob.check_sell_price(133) == false);
 }
 
 void test_order_book_update_and_cancel_orders()
 {
-  RingBufferSPSC<Event, 1024> buffer;
+  QueueOut buffer;
   OrderBook<31, 32> ob(buffer, 100);
 
-  ob.insertBuyOrder(1, 100, 10);
+  ob.insert_buy_order(1, 100, 10);
   Assert(buffer.pop() == CreateAccepted(1, 0));
 
-  ob.updateBuyOrder(1, 0, 100, 15);
+  ob.update_buy_order(1, 0, 100, 15);
   Assert(buffer.pop() == UpdateAccepted(1));
 
-  ob.updateBuyOrder(99, 0, 100, 15);
+  ob.update_buy_order(99, 0, 100, 15);
   Assert(buffer.pop() == UpdateRejected(99, 15));
 
-  ob.cancelBuyOrder(99, 0, 100);
+  ob.cancel_buy_order(99, 0, 100);
   Assert(buffer.pop() == CancelRejected(99));
 
-  ob.cancelBuyOrder(1, 0, 100);
+  ob.cancel_buy_order(1, 0, 100);
   Assert(buffer.pop() == CancelAccepted(1));
 
-  ob.insertSellOrder(2, 100, 20);
+  ob.insert_sell_order(2, 100, 20);
   Assert(buffer.pop() == CreateAccepted(2, 0));
 
-  ob.updateSellOrder(2, 0, 100, 25);
+  ob.update_sell_order(2, 0, 100, 25);
   Assert(buffer.pop() == UpdateAccepted(2));
 
-  ob.updateSellOrder(98, 0, 100, 25);
+  ob.update_sell_order(98, 0, 100, 25);
   Assert(buffer.pop() == UpdateRejected(98, 25));
 
-  ob.cancelSellOrder(98, 0, 100);
+  ob.cancel_sell_order(98, 0, 100);
   Assert(buffer.pop() == CancelRejected(98));
 
-  ob.cancelSellOrder(2, 0, 100);
+  ob.cancel_sell_order(2, 0, 100);
   Assert(buffer.pop() == CancelAccepted(2));
 }
 
 void test_order_book_shift_expires_out_of_range_orders()
 {
   {
-    RingBufferSPSC<Event, 1024> buffer;
+    QueueOut buffer;
     OrderBook<31, 32> ob(buffer, 100);
 
-    ob.insertSellOrder(1, 69, 10);
+    ob.insert_sell_order(1, 69, 10);
     Assert(buffer.pop() == CreateAccepted(1, 0));
 
-    ob.shiftUp();
+    ob.shift_up();
     Assert(buffer.pop() == OrderExpired(1));
-    Assert(ob.centerPrice() == 101);
+    Assert(ob.center_price() == 101);
   }
 
   {
-    RingBufferSPSC<Event, 1024> buffer;
+    QueueOut buffer;
     OrderBook<31, 32> ob(buffer, 100);
 
-    ob.insertBuyOrder(2, 131, 10);
+    ob.insert_buy_order(2, 131, 10);
     Assert(buffer.pop() == CreateAccepted(2, 0));
 
-    ob.shiftDown();
+    ob.shift_down();
     Assert(buffer.pop() == OrderExpired(2));
-    Assert(ob.centerPrice() == 99);
+    Assert(ob.center_price() == 99);
   }
 }
 
 void test_order_book_shift_up()
 {
-  RingBufferSPSC<Event, 1024> buffer;
+  QueueOut buffer;
   OrderBook<31, 32> ob(buffer, 100);
 
-  ob.shiftUp();
-  Assert(ob.centerPrice() == 101);
+  ob.shift_up();
+  Assert(ob.center_price() == 101);
 }
 
 void test_order_book_shift_down()
 {
-  RingBufferSPSC<Event, 1024> buffer;
+  QueueOut buffer;
   OrderBook<31, 32> ob(buffer, 100);
 
-  ob.shiftDown();
-  Assert(ob.centerPrice() == 99);
+  ob.shift_down();
+  Assert(ob.center_price() == 99);
 }
 
 int main()
