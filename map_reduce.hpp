@@ -49,7 +49,7 @@ struct MapReduce
 
   template<typename TIn, typename... TIns>
     requires(! detail::is_std_array_v<std::remove_cvref_t<TIn>>)
-  [[nodiscard]] auto run(TIn&& value, TIns&&... values)
+  auto run(TIn&& value, TIns&&... values)
   {
     auto task = [&](auto&& val) {
       return std::async(std::launch::async, [this, v = std::forward<decltype(val)>(val)]() mutable {
@@ -69,7 +69,7 @@ struct MapReduce
   }
 
   template<typename TIn, std::size_t N>
-  [[nodiscard]] auto run(const std::array<TIn, N>& arr)
+  auto run(const std::array<TIn, N>& arr)
   {
     return std::apply(
         [&](auto&&... elems) {
@@ -80,7 +80,7 @@ struct MapReduce
 
   template<typename TOut, typename TIn, typename... TIns>
     requires(! detail::is_std_array_v<std::remove_cvref_t<TIn>>)
-  [[nodiscard]] auto run_with_init(TOut&& init, TIn&& value, TIns&&... values)
+  auto run_with_init(TOut&& init, TIn&& value, TIns&&... values)
   {
     auto task = [&](auto&& val) {
       return std::async(std::launch::async, [this, v = std::forward<decltype(val)>(val)]() mutable {
