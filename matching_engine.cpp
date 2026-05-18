@@ -461,19 +461,19 @@ int main()
   micro_bench_trade<27, 100, 32>();
 #else
 
-  // micro_bench_insert<3, 4, 4>(1);
+  micro_bench_insert<3, 4, 4>(1);
   micro_bench_trade<3, 4, 4>(2);
 
-  // test_simple_transaction();
-  // test_partial_fill();
-  // test_partial_fill_rests_remaining_qty();
-  // test_single_price_level();
-  // test_insert_levels();
-  // test_insert_market_order();
-  // test_update_buy_order();
-  // test_update_sell_order();
-  // test_cancel_buy_order();
-  // test_cancel_sell_order();
+  test_simple_transaction();
+  test_partial_fill();
+  test_partial_fill_rests_remaining_qty();
+  test_single_price_level();
+  test_insert_levels();
+  test_insert_market_order();
+  test_update_buy_order();
+  test_update_sell_order();
+  test_cancel_buy_order();
+  test_cancel_sell_order();
 
   #endif
 
