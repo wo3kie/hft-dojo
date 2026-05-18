@@ -15,11 +15,11 @@
 #include "./order_book.hpp"
 #include "./price_levels.hpp"
 
-template<uint32_t LevelsBelow, uint32_t LevelsAbove, uint32_t LevelsTolerance = LevelsBelow + LevelsAbove + 1>
+template<uint32_t InsideLevels, uint32_t OutsideLevels, uint32_t Orders = 32>
 struct MatchingEngine
 {
   RingBufferSPSC<Event, 1024> _bufferOut;
-  OrderBook<LevelsBelow, LevelsAbove> _orderBook;
+  OrderBook<InsideLevels, OutsideLevels, Orders> _orderBook;
 
   MatchingEngine(Price centerPrice)
     : _bufferOut()
@@ -28,6 +28,21 @@ struct MatchingEngine
   }
 
 public:
+  constexpr static uint32_t insideLevels() noexcept
+  {
+    return InsideLevels;
+  }
+
+  constexpr static uint32_t outsideLevels() noexcept
+  {
+    return OutsideLevels;
+  }
+
+  constexpr static uint32_t ordersPerLevel() noexcept
+  {
+    return Orders;
+  }
+
   void insertSellOrder_PL(OrderId orderId, Price price, Qty qty)
   {
     {
@@ -180,7 +195,7 @@ private:
       Price minPrice = bl::min(centerPrice, price);
       Price maxPrice = bl::max(centerPrice, price);
       
-      if(maxPrice - minPrice <= LevelsTolerance) {
+      if(maxPrice - minPrice <= 4) {
         return;
       }
     }
@@ -194,7 +209,7 @@ private:
     }
   }
 
-  Qty trade(OrderId orderId, Price price, Qty qty, PriceLevel& level)
+  Qty trade(OrderId orderId, Price price, Qty qty, PriceLevel<Orders>& level)
   {
     while((qty != 0) && (! level.empty())) {
       Order& otherOrder = level.order();
@@ -222,7 +237,7 @@ private:
     Index index = _orderBook.topBuyIndex();
 
     while((qty != 0) && (price >= priceLimit)) {
-      PriceLevel& level = _orderBook.buyLevels().at_index(index);
+      PriceLevel<Orders>& level = _orderBook.buyLevels().at_index(index);
       qty = trade(orderId, price, qty, level);
 
       const bool empty = level.empty();
@@ -255,7 +270,7 @@ private:
     Index index = _orderBook.topSellIndex();
 
     while((qty != 0) && (price <= priceLimit)) {
-      PriceLevel& level = _orderBook.sellLevels().at_index(index);
+      PriceLevel<Orders>& level = _orderBook.sellLevels().at_index(index);
       qty = trade(orderId, price, qty, level);
 
       const bool empty = level.empty();
