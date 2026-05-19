@@ -146,39 +146,39 @@ public:
     }
   }
   
-  void update_buy_order(OrderId orderId, Index slot, Price price, Qty qty)
+  void update_buy_order(OrderId orderId, Price price, Index slot, Qty newQty)
   {
     {
       Assert(orderId != InvalidOrderId);
       Assert(slot != InvalidIndex);
       Assert(price != InvalidPrice);
-      Assert(qty != 0);
+      Assert(newQty != 0);
     }
 
     if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
-      return _emit_event(UpdateRejected(orderId, qty));
+      return _emit_event(UpdateRejected(orderId, newQty));
     }
 
-    _orderBook.update_buy_order(orderId, slot, price, qty);
+    _orderBook.update_buy_order(orderId, slot, price, newQty);
   }
 
-  void update_sell_order(OrderId orderId, Index slot, Price price, Qty qty)
+  void update_sell_order(OrderId orderId, Price price, Index slot, Qty newQty)
   {
     {
       Assert(orderId != InvalidOrderId);
       Assert(slot != InvalidIndex);
       Assert(price != InvalidPrice);
-      Assert(qty != 0);
+      Assert(newQty != 0);
     }
 
     if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
-      return _emit_event(UpdateRejected(orderId, qty));
+      return _emit_event(UpdateRejected(orderId, newQty));
     }
 
-    _orderBook.update_sell_order(orderId, slot, price, qty);
+    _orderBook.update_sell_order(orderId, slot, price, newQty);
   }
 
-  void cancel_buy_order(OrderId orderId, Index slot, Price price)
+  void cancel_buy_order(OrderId orderId, Price price, Index slot)
   {
     {
       Assert(orderId != InvalidOrderId);
@@ -193,7 +193,7 @@ public:
     _orderBook.cancel_buy_order(orderId, slot, price);
   }
 
-  void cancel_sell_order(OrderId orderId, Index slot, Price price)
+  void cancel_sell_order(OrderId orderId, Price price, Index slot)
   {
     {
       Assert(orderId != InvalidOrderId);
@@ -275,7 +275,10 @@ private:
 
     while((qty != 0) && (price >= priceLimit)) {
       PriceLevel<Orders>& level = _orderBook.buy_levels().at_index(index);
-      qty = _trade_level(orderId, price, qty, level);
+      const Qty newQty = _trade_level(orderId, price, qty, level);
+
+      level.balance += (qty - newQty);
+      qty = newQty;
 
       const bool empty = level.orders.empty();
       _orderBook.dec_max_buy_price(empty);
@@ -302,7 +305,10 @@ private:
 
     while((qty != 0) && (price <= priceLimit)) {
       PriceLevel<Orders>& level = _orderBook.sell_levels().at_index(index);
-      qty = _trade_level(orderId, price, qty, level);
+      const Qty newQty = _trade_level(orderId, price, qty, level);
+
+      level.balance -= (qty - newQty);
+      qty = newQty;
 
       const bool empty = level.orders.empty();
       _orderBook.inc_sell_min_price(empty);
