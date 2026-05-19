@@ -160,39 +160,87 @@ public:
   void insert_sell_order(OrderId orderId, Price price, Qty qty)
   {
     PriceLevel<Orders>& level = _sellLevels.at_price(price);
-    _insert_order(level, orderId, price, qty);
+    const Index slot = level.orders.push_back({orderId, qty});
+
+    if(UNLIKELY(slot == InvalidIndex)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    level.balance -= qty;
     _minSellPrice = bl::min(_minSellPrice, price);
+    _emit_event(CreateAccepted(orderId, slot));
   }
 
   void insert_buy_order(OrderId orderId, Price price, Qty qty)
   {
     PriceLevel<Orders>& level = _buyLevels.at_price(price);
-    _insert_order(level, orderId, price, qty);
+    const Index slot = level.orders.push_back({orderId, qty});
+
+    if(UNLIKELY(slot == InvalidIndex)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    level.balance += qty;
     _maxBuyPrice = bl::max(_maxBuyPrice, price);
+    _emit_event(CreateAccepted(orderId, slot));
   }
 
   void update_sell_order(OrderId orderId, Index slot, Price price, Qty qty)
   {
     PriceLevel<Orders>& level = _sellLevels.at_price(price);
-    _update_order(level, orderId, slot, price, qty);
+    Order& order = level.orders.at_slot(slot);
+
+    if(UNLIKELY(order.id != orderId)) {
+      return _emit_event(UpdateRejected(orderId, qty));
+    }
+
+    level.balance += (qty - order.qty);
+    order.qty = qty;
+    _emit_event(UpdateAccepted(orderId));
   }
 
   void update_buy_order(OrderId orderId, Index slot, Price price, Qty qty)
   {
     PriceLevel<Orders>& level = _buyLevels.at_price(price);
-    _update_order(level, orderId, slot, price, qty);
+    Order& order = level.orders.at_slot(slot);
+
+    if(UNLIKELY(order.id != orderId)) {
+      return _emit_event(UpdateRejected(orderId, qty));
+    }
+
+    level.balance -= (qty - order.qty);
+    order.qty = qty;
+    _emit_event(UpdateAccepted(orderId));
   }
 
   void cancel_sell_order(OrderId orderId, Index slot, Price price)
   {
     PriceLevel<Orders>& level = _sellLevels.at_price(price);
-    _cancel_order(level, orderId, slot);
+    Order& order = level.orders.at_slot(slot);
+
+    if(UNLIKELY(order.id != orderId)) {
+      return _emit_event(CancelRejected(orderId));
+    }
+
+    order.id = InvalidOrderId;
+    level.balance += order.qty;
+    level.orders.remove(slot);
+    _emit_event(CancelAccepted(orderId));
   }
 
   void cancel_buy_order(OrderId orderId, Index slot, Price price)
   {
     PriceLevel<Orders>& level = _buyLevels.at_price(price);
-    _cancel_order(level, orderId, slot);
+    Order& order = level.orders.at_slot(slot);
+
+    if(UNLIKELY(order.id != orderId)) {
+      return _emit_event(CancelRejected(orderId));
+    }
+
+    order.id = InvalidOrderId;
+    level.balance -= order.qty;
+    level.orders.remove(slot);
+    _emit_event(CancelAccepted(orderId));
   }
 
   void shift_up()
@@ -219,42 +267,6 @@ public:
   }
 
 private:
-  void _insert_order(PriceLevel<Orders>& level, OrderId orderId, Price price, Qty qty)
-  {
-    const Index slot = level.orders.push_back({orderId, qty});
-
-    if(UNLIKELY(slot == InvalidIndex) ) {
-       return _emit_event(CreateRejected(orderId, qty));
-    }
-
-    _emit_event(CreateAccepted(orderId, slot));
-  }
-
-  void _update_order(PriceLevel<Orders>& level, OrderId orderId, Index slot, Price price, Qty qty)
-  {
-    Order& order = level.orders.at_slot(slot);
-
-    if(UNLIKELY(order.id != orderId)) {
-      return _emit_event(UpdateRejected(orderId, qty));
-    }
-
-    order.qty = qty;
-    _emit_event(UpdateAccepted(orderId));
-  }
-
-  void _cancel_order(PriceLevel<Orders>& level, OrderId orderId, Index slot)
-  {
-    Order& order = level.orders.at_slot(slot);
-
-    if(UNLIKELY(order.id != orderId)) {
-      return _emit_event(CancelRejected(orderId));
-    }
-
-    _emit_event(CancelAccepted(orderId));
-    order.id = InvalidOrderId;
-    level.orders.remove(slot);
-  }
-
   void _expire_order(Order& order)
   {
     _emit_event(OrderExpired(order.id));
@@ -268,6 +280,8 @@ private:
       _expire_order(order);
       level.orders.pop_front();
     }
+
+    level.balance = 0;
   }
 
   void _emit_event(Event event)
