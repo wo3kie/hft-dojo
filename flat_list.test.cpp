@@ -61,28 +61,29 @@ void test_flat_list_2()
 void test_flat_list_remove()
 {
   FlatList<int, 8> list;
+  std::array<int32_t, 8> slots;
 
   Assert(list.empty());
 
   for(int i = 0; i < list.capacity(); ++i) {
-    int32_t data = list.push_back(i);
+    slots[i] = list.push_back(i);
   }
 
-  list.remove(1);
-  list.remove(7);
-  list.remove(5);
-  list.remove(3);
+  list.remove(slots[1]);
+  list.remove(slots[7]);
+  list.remove(slots[5]);
+  list.remove(slots[3]);
   Assert(list._debug_validate_links());
 
-  Assert(list.at_slot(0) == 0);
-  Assert(list.at_slot(2) == 2);
-  Assert(list.at_slot(4) == 4);
-  Assert(list.at_slot(6) == 6);
+  Assert(list.at_slot(slots[0]) == 0);
+  Assert(list.at_slot(slots[2]) == 2);
+  Assert(list.at_slot(slots[4]) == 4);
+  Assert(list.at_slot(slots[6]) == 6);
 
-  list.remove(0);
-  list.remove(4);
-  list.remove(6);
-  list.remove(2);
+  list.remove(slots[0]);
+  list.remove(slots[4]);
+  list.remove(slots[6]);
+  list.remove(slots[2]);
   Assert(list._debug_validate_links());
 
   Assert(list.empty());
