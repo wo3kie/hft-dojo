@@ -43,13 +43,13 @@ void test_buy_side_flow_with_update_cancel_and_resting_sell_remainder()
   TestTradeEngine engine(100);
 
   engine.insert_buy_order_PL(1, /* price */ 100, /* qty */ 150);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.update_buy_order(1, /* price */ 100, /* slot */ 0, /* qty */ 200);
   Assert(engine.out().pop() == UpdateAccepted(1));
 
   engine.insert_buy_order_PL(2, /* price */ 100, /* qty */ 200);
-  Assert(engine.out().pop() == CreateAccepted(2, 1));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 2, /* slot */ 1));
 
   engine.update_buy_order(2, /* price */ 100, /* slot */ 1, /* newQty */ 150);
   Assert(engine.out().pop() == UpdateAccepted(2));
@@ -59,7 +59,7 @@ void test_buy_side_flow_with_update_cancel_and_resting_sell_remainder()
 
   engine.insert_sell_order_PL(3, /* price */ 100, /* qty */ 200);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 150, /* maker */ 3, /* taker */ 2));
-  Assert(engine.out().pop() == CreateAccepted(3, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 3, /* slot */ 0));
 
   engine.insert_buy_order_PL(4, /* price */ 100, /* qty */ 50);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 50, /* maker */ 4, /* taker */ 3));
@@ -70,7 +70,7 @@ void test_sell_side_resting_order_matches_incoming_buy()
   TestTradeEngine engine(100);
 
   engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 200);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.insert_buy_order_PL(2, /* price */ 100, /* qty */ 200);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 200, /* maker */ 2, /* taker */ 1));
@@ -81,7 +81,7 @@ void test_partial_fill_incoming_sell_larger_than_resting_buy()
   TestTradeEngine engine(100);
 
   engine.insert_buy_order_PL(1, /* price */ 100, /* qty */ 180);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.insert_sell_order_PL(2, /* price */ 100, /* qty */ 200);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 180, /* maker */ 2, /* taker */ 1));
@@ -92,7 +92,7 @@ void test_partial_fill_incoming_buy_larger_than_resting_sell()
   TestTradeEngine engine(100);
 
   engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 200);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.insert_buy_order_PL(2, /* price */ 100, /* qty */ 180);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 180, /* maker */ 2, /* taker */ 1));
@@ -103,11 +103,11 @@ void test_partial_fill_rests_remaining_sell_qty()
   TestTradeEngine engine(100);
 
   engine.insert_buy_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.insert_sell_order_PL(2, /* price */ 100, /* qty */ 150);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 2, /* taker */ 1));
-  Assert(engine.out().pop() == CreateAccepted(2, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 2, /* slot */ 0));
 
   engine.insert_buy_order_PL(3, /* price */ 100, /* qty */ 50);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 50, /* maker */ 3, /* taker */ 2));
@@ -118,11 +118,11 @@ void test_partial_fill_rests_remaining_buy_qty()
   TestTradeEngine engine(100);
 
   engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.insert_buy_order_PL(2, /* price */ 100, /* qty */ 150);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 2, /* taker */ 1));
-  Assert(engine.out().pop() == CreateAccepted(2, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 2, /* slot */ 0));
 
   engine.insert_sell_order_PL(3, /* price */ 100, /* qty */ 50);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 50, /* maker */ 3, /* taker */ 2));
@@ -133,10 +133,10 @@ void test_multiple_buy_orders_match_fifo_within_single_price_level()
   TestTradeEngine engine(100);
 
   engine.insert_buy_order_PL(1, /* price */ 100, /* qty */ 180);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.insert_buy_order_PL(2, /* price */ 100, /* qty */ 20);
-  Assert(engine.out().pop() == CreateAccepted(2, 1));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 2, /* slot */ 1));
 
   engine.insert_sell_order_PL(3, /* price */ 100, /* qty */ 200);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 180, /* maker */ 3, /* taker */ 1));
@@ -148,10 +148,10 @@ void test_multiple_sell_orders_match_fifo_within_single_price_level()
   TestTradeEngine engine(100);
 
   engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 200);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.insert_sell_order_PL(2, /* price */ 100, /* qty */ 20);
-  Assert(engine.out().pop() == CreateAccepted(2, 1));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 2, /* slot */ 1));
 
   engine.insert_buy_order_PL(3, /* price */ 100, /* qty */ 220);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 200, /* maker */ 3, /* taker */ 1));
@@ -163,34 +163,34 @@ void test_rejects_buy_order_outside_supported_price_window()
   TestTradeEngine engine(100);
 
   engine.insert_buy_order_PL(1, /* price */ 95, /* qty */ 100);
-  Assert(engine.out().pop() == CreateRejected(1, 100));
+  Assert(engine.out().pop() == CreateRejected(/* id */ 1, /* qty */ 100));
 
   engine.insert_buy_order_PL(1, /* price */ 96, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.insert_buy_order_PL(2, /* price */ 97, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(2, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 2, /* slot */ 0));
 
   engine.insert_buy_order_PL(3, /* price */ 98, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(3, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 3, /* slot */ 0));
 
   engine.insert_buy_order_PL(4, /* price */ 99, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(4, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 4, /* slot */ 0));
 
   engine.insert_buy_order_PL(5, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(5, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 5, /* slot */ 0));
 
   engine.insert_buy_order_PL(6, /* price */ 101, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(6, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 6, /* slot */ 0));
 
   engine.insert_buy_order_PL(7, /* price */ 102, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(7, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 7, /* slot */ 0));
 
   engine.insert_buy_order_PL(8, /* price */ 103, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(8, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 8, /* slot */ 0));
 
   engine.insert_buy_order_PL(9, /* price */ 104, /* qty */ 100);
-  Assert(engine.out().pop() == CreateRejected(9, 100));
+  Assert(engine.out().pop() == CreateRejected(/* id */ 9, /* qty */ 100));
 }
 
 void test_sell_market_order_consumes_buy_book_and_rejects_remainder()
@@ -198,22 +198,22 @@ void test_sell_market_order_consumes_buy_book_and_rejects_remainder()
   TestTradeEngine engine(100);
 
   engine.insert_buy_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.insert_buy_order_PL(2, /* price */ 99, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(2, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 2, /* slot */ 0));
 
   engine.insert_buy_order_PL(3, /* price */ 98, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(3, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 3, /* slot */ 0));
 
   engine.insert_buy_order_PL(4, /* price */ 97, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(4, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 4, /* slot */ 0));
 
   engine.insert_buy_order_PL(5, /* price */ 96, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(5, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 5, /* slot */ 0));
 
   engine.insert_buy_order_PL(6, /* price */ 95, /* qty */ 100);
-  Assert(engine.out().pop() == CreateRejected(6, 100));
+  Assert(engine.out().pop() == CreateRejected(/* id */ 6, /* qty */ 100));
 
   engine.insert_sell_order_MKT(7, /* qty */ 600);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 7, /* taker */ 1));
@@ -221,7 +221,7 @@ void test_sell_market_order_consumes_buy_book_and_rejects_remainder()
   Assert(engine.out().pop() == Trade(/* price */ 98, /* qty */ 100, /* maker */ 7, /* taker */ 3));
   Assert(engine.out().pop() == Trade(/* price */ 97, /* qty */ 100, /* maker */ 7, /* taker */ 4));
   Assert(engine.out().pop() == Trade(/* price */ 96, /* qty */ 100, /* maker */ 7, /* taker */ 5));
-  Assert(engine.out().pop() == CreateRejected(7, 100));
+  Assert(engine.out().pop() == CreateRejected(/* id */ 7, /* qty */ 100));
 }
 
 void test_buy_market_order_consumes_sell_book_and_rejects_remainder()
@@ -229,22 +229,22 @@ void test_buy_market_order_consumes_sell_book_and_rejects_remainder()
   TestTradeEngine engine(100);
 
   engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.insert_sell_order_PL(2, /* price */ 101, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(2, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 2, /* slot */ 0));
 
   engine.insert_sell_order_PL(3, /* price */ 102, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(3, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 3, /* slot */ 0));
 
   engine.insert_sell_order_PL(4, /* price */ 103, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(4, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 4, /* slot */ 0));
 
   engine.insert_sell_order_PL(5, /* price */ 104, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(5, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 5, /* slot */ 0));
 
   engine.insert_sell_order_PL(6, /* price */ 105, /* qty */ 100);
-  Assert(engine.out().pop() == CreateRejected(6, 100));
+  Assert(engine.out().pop() == CreateRejected(/* id */ 6, /* qty */ 100));
 
   engine.insert_buy_order_MKT(7, /* qty */ 600);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 7, /* taker */ 1));
@@ -252,7 +252,7 @@ void test_buy_market_order_consumes_sell_book_and_rejects_remainder()
   Assert(engine.out().pop() == Trade(/* price */ 102, /* qty */ 100, /* maker */ 7, /* taker */ 3));
   Assert(engine.out().pop() == Trade(/* price */ 103, /* qty */ 100, /* maker */ 7, /* taker */ 4));
   Assert(engine.out().pop() == Trade(/* price */ 104, /* qty */ 100, /* maker */ 7, /* taker */ 5));
-  Assert(engine.out().pop() == CreateRejected(7, 100));
+  Assert(engine.out().pop() == CreateRejected(/* id */ 7, /* qty */ 100));
 }
 
 void test_update_buy_order_accepts_existing_order()
@@ -260,10 +260,10 @@ void test_update_buy_order_accepts_existing_order()
   TestTradeEngine engine(100);
 
   engine.insert_buy_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.update_buy_order(1, /* price */ 100, /* slot */ 0, /* qty */ 50);
-  Assert(engine.out().pop() == UpdateAccepted(1));
+  Assert(engine.out().pop() == UpdateAccepted(/* id */ 1));
 }
 
 void test_update_buy_order_rejects_unknown_order_id()
@@ -271,10 +271,10 @@ void test_update_buy_order_rejects_unknown_order_id()
   TestTradeEngine engine(100);
 
   engine.insert_buy_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.update_buy_order(99, /* price */ 100, /* slot */ 0, /* qty */ 50);
-  Assert(engine.out().pop() == UpdateRejected(99, 50));
+  Assert(engine.out().pop() == UpdateRejected(/* id */ 99, /* qty */ 50));
 }
 
 void test_update_buy_order_rejects_wrong_price()
@@ -282,10 +282,10 @@ void test_update_buy_order_rejects_wrong_price()
   TestTradeEngine engine(100);
 
   engine.insert_buy_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.update_buy_order(1, /* price */ 200, /* slot */ 0, /* qty */ 50);
-  Assert(engine.out().pop() == UpdateRejected(1, 50));
+  Assert(engine.out().pop() == UpdateRejected(/* id */ 1, /* qty */ 50));
 }
 
 void test_update_sell_order_accepts_existing_order()
@@ -293,7 +293,7 @@ void test_update_sell_order_accepts_existing_order()
   TestTradeEngine engine(100);
 
   engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.update_sell_order(1, /* price */ 100, /* slot */ 0, /* qty */ 50);
   Assert(engine.out().pop() == UpdateAccepted(1));
@@ -304,10 +304,10 @@ void test_update_sell_order_rejects_unknown_order_id()
   TestTradeEngine engine(100);
 
   engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.update_sell_order(99, /* price */ 100, /* slot */ 0, /* qty */ 50);
-  Assert(engine.out().pop() == UpdateRejected(99, 50));
+  Assert(engine.out().pop() == UpdateRejected(/* id */ 99, /* qty */ 50));
 }
 
 void test_update_sell_order_rejects_wrong_price()
@@ -315,10 +315,10 @@ void test_update_sell_order_rejects_wrong_price()
   TestTradeEngine engine(100);
 
   engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.update_sell_order(1, /* price */ 200, /* slot */ 0, /* qty */ 50);
-  Assert(engine.out().pop() == UpdateRejected(1, 50));
+  Assert(engine.out().pop() == UpdateRejected(/* id */ 1, /* qty */ 50));
 }
 
 void test_cancel_buy_order_removes_resting_liquidity()
@@ -326,13 +326,13 @@ void test_cancel_buy_order_removes_resting_liquidity()
   TestTradeEngine engine(100);
 
   engine.insert_buy_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.cancel_buy_order(1, /* price */ 100, /* slot */ 0);
   Assert(engine.out().pop() == CancelAccepted(1));
 
   engine.insert_sell_order_MKT(2, /* qty */ 100);
-  Assert(engine.out().pop() == CreateRejected(2, 100));
+  Assert(engine.out().pop() == CreateRejected(/* id */ 2, /* qty */ 100));
 }
 
 void test_cancel_buy_order_rejects_unknown_order_id()
@@ -340,7 +340,7 @@ void test_cancel_buy_order_rejects_unknown_order_id()
   TestTradeEngine engine(100);
 
   engine.insert_buy_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.cancel_buy_order(99, /* price */ 100, /* slot */ 0);
   Assert(engine.out().pop() == CancelRejected(99));
@@ -351,7 +351,7 @@ void test_cancel_buy_order_rejects_wrong_price()
   TestTradeEngine engine(100);
 
   engine.insert_buy_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.cancel_buy_order(1, /* price */ 200, /* slot */ 0);
   Assert(engine.out().pop() == CancelRejected(1));
@@ -362,13 +362,13 @@ void test_cancel_sell_order_removes_resting_liquidity()
   TestTradeEngine engine(100);
 
   engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.cancel_sell_order(1, /* price */ 100, /* slot */ 0);
   Assert(engine.out().pop() == CancelAccepted(1));
 
   engine.insert_buy_order_MKT(2, /* qty */ 100);
-  Assert(engine.out().pop() == CreateRejected(2, 100));
+  Assert(engine.out().pop() == CreateRejected(/* id */ 2, /* qty */ 100));
 }
 
 void test_cancel_sell_order_rejects_unknown_order_id()
@@ -376,7 +376,7 @@ void test_cancel_sell_order_rejects_unknown_order_id()
   TestTradeEngine engine(100);
 
   engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.cancel_sell_order(99, /* price */ 100, /* slot */ 0);
   Assert(engine.out().pop() == CancelRejected(99));
@@ -387,10 +387,57 @@ void test_cancel_sell_order_rejects_wrong_price()
   TestTradeEngine engine(100);
 
   engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0));
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
 
   engine.cancel_sell_order(1, /* price */ 200, /* slot */ 0);
   Assert(engine.out().pop() == CancelRejected(1));
+}
+
+void test_trade_IOC_order_matches_and_rejects_remainder()
+{  
+  {    
+    TestTradeEngine engine(100);
+
+    engine.insert_buy_order_PL(1, /* price */ 100, /* qty */ 100);
+    Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
+    
+    engine.insert_sell_order_IOC(2, /* price */ 100, /* qty */ 150);
+    Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 2, /* taker */ 1));
+    Assert(engine.out().pop() == CreateRejected(/* id */ 2, /* qty */ 50));
+  }
+
+  {    
+    TestTradeEngine engine(100);
+    
+    engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 100);
+    Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
+    
+    engine.insert_buy_order_IOC(2, /* price */ 100, /* qty */ 150);
+    Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 2, /* taker */ 1));
+    Assert(engine.out().pop() == CreateRejected(/* id */ 2, /* qty */ 50));
+  }
+}
+
+void test_trade_FOK_order_does_not_match_partial()
+{
+  TestTradeEngine engine(100);
+
+  engine.insert_buy_order_PL(1, /* price */ 100, /* qty */ 100);
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
+
+  engine.insert_buy_order_PL(2, /* price */ 100, /* qty */ 100);
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 2, /* slot */ 1));
+
+  engine.insert_sell_order_FOK(3, /* price */ 100, /* qty */ 300);
+  Assert(engine.out().pop() == CreateRejected(/* id */ 3, /* qty */ 300));
+
+  engine.insert_buy_order_PL(4, /* price */ 100, /* qty */ 100);
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 4, /* slot */ 2));
+
+  engine.insert_sell_order_FOK(5, /* price */ 100, /* qty */ 300);
+  Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 5, /* taker */ 1));
+  Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 5, /* taker */ 2));
+  Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 5, /* taker */ 4));
 }
 
 int event = 0;
@@ -457,6 +504,8 @@ int main()
   test_cancel_sell_order_removes_resting_liquidity();
   test_cancel_sell_order_rejects_unknown_order_id();
   test_cancel_sell_order_rejects_wrong_price();
+  test_trade_IOC_order_matches_and_rejects_remainder();
+  test_trade_FOK_order_does_not_match_partial();
 
   #endif
 
