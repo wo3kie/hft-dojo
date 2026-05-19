@@ -3,7 +3,7 @@
 # HFTDojo
 HFT‑Dojo is a compact training ground for low‑latency systems programming. Each module is a self‑contained kata focused on one idea: predictable execution, minimal abstractions, and data structures that behave well under pressure. The repository is not a framework and not a library — it is a collection of precise, inspectable building blocks that illustrate how high‑performance components are designed, reasoned about, and debugged.
 
-The exercises cover the full spectrum of latency‑sensitive techniques: branchless logic, fixed‑capacity containers, atomic ring buffers, cache‑aware layouts, and the foundations of a matching engine. Every piece is intentionally small, deterministic, and easy to explore in GDB. The goal is clarity, not completeness; understanding, not abstraction.
+The exercises cover the full spectrum of latency‑sensitive techniques: branchless logic, fixed‑capacity containers, atomic ring buffers, cache‑aware layouts, and the foundations of a trade engine. Every piece is intentionally small, deterministic, and easy to explore in GDB. The goal is clarity, not completeness; understanding, not abstraction.
 
 HFT‑Dojo is a place to practice the craft: to read code that does exactly what it says, to experiment with micro‑optimizations, and to build intuition for how real‑time systems behave at the machine level. It’s a sandbox for learning how to write code that runs predictably fast, even under the most demanding conditions.
   
@@ -82,10 +82,10 @@ rm -rf build
   
 - **map_reduce** - An implementation of the parallel map and serial reduce paradigm in C++.
   
-- **matching_engine** - Ultra‑fast matching engine example that generates events in nanoseconds. Supports limit orders, market orders, cancellation, and updates. The matching logic is designed to be branchless and cache‑friendly, making it suitable for high‑performance trading systems.
+- **trade_engine** - Ultra‑fast trade engine example that generates events in nanoseconds. Supports limit orders, market orders, cancellation, and updates. The trade logic is designed to be branchless and cache‑friendly, making it suitable for high‑performance trading systems.
   
 ```{r, engine='cpp'}
-    MatchingEngine</* LevelsBelow */ 3, /* LevelsAbove */ 4> engine(/* initialPrice */ 100);
+    TradeEngine</* LevelsBelow */ 3, /* LevelsAbove */ 4> engine(/* initialPrice */ 100);
 
     engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 200);
     Assert(engine.bufferOut().pop() == CreateAccepted(/* orderId */ 1, /* slot */ 0));
