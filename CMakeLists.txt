@@ -8,6 +8,8 @@ cmake_minimum_required(VERSION 3.10)
 # Set the project name
 project(HFTDojo)
 
+enable_testing()
+
 # debug information
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
@@ -19,22 +21,25 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Collect all .cpp files in the root directory into the DOJOS variable
-file(GLOB DOJOS "${CMAKE_SOURCE_DIR}/*.cpp")
+# Collect all test translation units in the root directory.
+file(GLOB TEST_DOJOS CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/*.test.cpp")
 
 # Find Boost libraries (iostreams and filesystem) and make them required
 find_package(Boost REQUIRED COMPONENTS iostreams filesystem)
 
-# For each .cpp file, create a separate executable and link Boost libraries
-foreach(DOJO ${DOJOS})
-  # Get the filename without extension to use as the executable name
-  get_filename_component(EXE_NAME ${DOJO} NAME_WE)
+# For each test file, create a separate executable and link Boost libraries.
+foreach(DOJO ${TEST_DOJOS})
+  # Strip only the .test suffix so target names stay stable.
+  get_filename_component(TEST_NAME ${DOJO} NAME_WE)
+  string(REGEX REPLACE "\\.test$" "" EXE_NAME "${TEST_NAME}")
 
   # Create an executable for this lesson
   add_executable(${EXE_NAME} ${DOJO})
   
   # Link Boost::iostreams and Boost::filesystem to the executable
   target_link_libraries(${EXE_NAME} PRIVATE Boost::iostreams Boost::filesystem)
+
+  add_test(NAME ${EXE_NAME} COMMAND $<TARGET_FILE:${EXE_NAME}>)
 endforeach()
 
 # Add gsl subdirectory to the build (processes CMakeLists.txt in gsl/)
