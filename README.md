@@ -19,6 +19,13 @@ cd build
 cmake ..  
 cmake --build .  
 
+## How to run tests?
+cd build
+ctest --output-on-failure
+
+To run a single test binary through CTest:
+ctest -R trade_engine --output-on-failure
+
 ## How to clean it?
 rm -rf build
 
