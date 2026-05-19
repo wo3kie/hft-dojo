@@ -51,7 +51,7 @@ public:
     }
 
     if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
-      return _emit_events(CreateRejected(orderId, qty));
+      return _emit_event(CreateRejected(orderId, qty));
     }
 
     qty = _trade_sell(orderId, price, qty);
@@ -71,7 +71,7 @@ public:
     qty = _trade_sell(orderId, MinPrice, qty);
 
     if(UNLIKELY(qty != 0)) {
-      _emit_events(CreateRejected(orderId, qty));
+      _emit_event(CreateRejected(orderId, qty));
     }
   }
 
@@ -84,13 +84,13 @@ public:
     }
 
     if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
-      return _emit_events(CreateRejected(orderId, qty));
+      return _emit_event(CreateRejected(orderId, qty));
     }
 
     qty = _trade_sell(orderId, price, qty);
 
     if(UNLIKELY(qty != 0)) {
-      _emit_events(CreateRejected(orderId, qty));
+      _emit_event(CreateRejected(orderId, qty));
     }
   }
 
@@ -103,7 +103,7 @@ public:
     }
 
     if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
-      return _emit_events(CreateRejected(orderId, qty));
+      return _emit_event(CreateRejected(orderId, qty));
     }
 
     qty = _tradeBuy(orderId, price, qty);
@@ -123,7 +123,7 @@ public:
     qty = _tradeBuy(orderId, MaxPrice, qty);
 
     if(UNLIKELY(qty != 0)) {
-      _emit_events(CreateRejected(orderId, qty));
+      _emit_event(CreateRejected(orderId, qty));
     }
   }
 
@@ -136,13 +136,13 @@ public:
     }
 
     if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
-      return _emit_events(CreateRejected(orderId, qty));
+      return _emit_event(CreateRejected(orderId, qty));
     }
 
     qty = _tradeBuy(orderId, price, qty);
 
     if(UNLIKELY(qty != 0)) {
-      _emit_events(CreateRejected(orderId, qty));
+      _emit_event(CreateRejected(orderId, qty));
     }
   }
   
@@ -156,7 +156,7 @@ public:
     }
 
     if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
-      return _emit_events(UpdateRejected(orderId, qty));
+      return _emit_event(UpdateRejected(orderId, qty));
     }
 
     _orderBook.update_buy_order(orderId, slot, price, qty);
@@ -172,7 +172,7 @@ public:
     }
 
     if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
-      return _emit_events(UpdateRejected(orderId, qty));
+      return _emit_event(UpdateRejected(orderId, qty));
     }
 
     _orderBook.update_sell_order(orderId, slot, price, qty);
@@ -187,7 +187,7 @@ public:
     }
 
     if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
-      return _emit_events(CancelRejected(orderId));
+      return _emit_event(CancelRejected(orderId));
     }
 
     _orderBook.cancel_buy_order(orderId, slot, price);
@@ -202,7 +202,7 @@ public:
     }
 
     if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
-      return _emit_events(CancelRejected(orderId));
+      return _emit_event(CancelRejected(orderId));
     }
 
     _orderBook.cancel_sell_order(orderId, slot, price);
@@ -214,7 +214,7 @@ public:
   }
 
 private:
-  void _emit_events(Event event)
+  void _emit_event(Event event)
   {
     while(_queueOut.push(event) == false) {
       _mm_pause();
@@ -251,7 +251,7 @@ private:
       qty -= tradeQty;
       otherOrder.qty -= tradeQty;
 
-      _emit_events(Trade(price, tradeQty, orderId, otherOrder.id));
+      _emit_event(Trade(price, tradeQty, orderId, otherOrder.id));
 
       if(otherOrder.qty == 0) {
         otherOrder.id = InvalidOrderId;
