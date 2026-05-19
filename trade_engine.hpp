@@ -393,17 +393,18 @@ private:
     Price price = _orderBook.sell_price_from();
     Price index = _orderBook.sell_index_from();
 
-    while(price >= priceLimit) {
+    while(price <= priceLimit) {
       const PriceLevel<Orders>& sellLevel = _orderBook.sell_levels().at_index(index);
 
       if(UNLIKELY(sellLevel.balance != 0)) {
         return false;
       }
 
-      price -= 1;
-      index -= 1;
+      price += 1;
+      index += 1;
     }
 
     return true;
   }
+  
 };
