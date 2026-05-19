@@ -109,6 +109,32 @@ void test_price_levels_storage_access()
   Assert(pl.at_price(9).orders.front() == Order(9, 99));
 }
 
+void test_price_levels_preserve_storage_for_in_range_prices_after_shifts()
+{
+  PriceLevels<3, 4> pl(10);
+  QueueOut buffer;
+
+  pl.at_price(9).orders.push_back({9, 90});
+  pl.at_price(10).orders.push_back({10, 100});
+  pl.at_price(11).orders.push_back({11, 110});
+
+  pl.shift_up(buffer);
+  pl.shift_up(buffer);
+
+  Assert(pl.center_price() == 12);
+  Assert(pl.at_price(9).orders.front() == Order(9, 90));
+  Assert(pl.at_price(10).orders.front() == Order(10, 100));
+  Assert(pl.at_price(11).orders.front() == Order(11, 110));
+
+  pl.shift_down(buffer);
+  pl.shift_down(buffer);
+
+  Assert(pl.center_price() == 10);
+  Assert(pl.at_price(9).orders.front() == Order(9, 90));
+  Assert(pl.at_price(10).orders.front() == Order(10, 100));
+  Assert(pl.at_price(11).orders.front() == Order(11, 110));
+}
+
 int main()
 {
   test_price_levels_basic();
@@ -117,4 +143,5 @@ int main()
   test_price_levels_shift_2();
 
   test_price_levels_storage_access();
+  test_price_levels_preserve_storage_for_in_range_prices_after_shifts();
 }
