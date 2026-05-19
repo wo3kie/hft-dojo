@@ -185,31 +185,31 @@ public:
     _emit_event(CreateAccepted(orderId, slot));
   }
 
-  void update_sell_order(OrderId orderId, Index slot, Price price, Qty qty)
+  void update_sell_order(OrderId orderId, Index slot, Price price, Qty newQty)
   {
     PriceLevel<Orders>& level = _sellLevels.at_price(price);
     Order& order = level.orders.at_slot(slot);
 
     if(UNLIKELY(order.id != orderId)) {
-      return _emit_event(UpdateRejected(orderId, qty));
+      return _emit_event(UpdateRejected(orderId, newQty));
     }
 
-    level.balance += (qty - order.qty);
-    order.qty = qty;
+    level.balance -= (newQty - order.qty);
+    order.qty = newQty;
     _emit_event(UpdateAccepted(orderId));
   }
 
-  void update_buy_order(OrderId orderId, Index slot, Price price, Qty qty)
+  void update_buy_order(OrderId orderId, Index slot, Price price, Qty newQty)
   {
     PriceLevel<Orders>& level = _buyLevels.at_price(price);
     Order& order = level.orders.at_slot(slot);
 
     if(UNLIKELY(order.id != orderId)) {
-      return _emit_event(UpdateRejected(orderId, qty));
+      return _emit_event(UpdateRejected(orderId, newQty));
     }
 
-    level.balance -= (qty - order.qty);
-    order.qty = qty;
+    level.balance += (newQty - order.qty);
+    order.qty = newQty;
     _emit_event(UpdateAccepted(orderId));
   }
 
