@@ -30,6 +30,7 @@ public:
   PriceLevel& operator=(PriceLevel&&) = delete;
   PriceLevel& operator=(const PriceLevel&) = delete;
 
+  int32_t balance{0};
   FlatList<Order, Orders> orders;
 };
 
