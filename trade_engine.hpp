@@ -348,7 +348,7 @@ private:
 
     {
       if(UNLIKELY(_orderBook.buy_price_from() == UINT32_MIN)) {
-        return (oldQty - qty);
+        return 0;
       }
 
       priceLimit = _orderBook.buy_price_to(priceLimit);
@@ -384,7 +384,7 @@ private:
 
     {
       if(UNLIKELY(_orderBook.sell_price_from() == UINT32_MAX)) {
-        return (oldQty - qty);
+        return 0;
       }
 
       priceLimit = _orderBook.sell_price_to(priceLimit);
