@@ -29,17 +29,18 @@ find_package(Boost REQUIRED COMPONENTS iostreams filesystem)
 
 # For each test file, create a separate executable and link Boost libraries.
 foreach(DOJO ${TEST_DOJOS})
-  # Strip only the .test suffix so target names stay stable.
-  get_filename_component(TEST_NAME ${DOJO} NAME_WE)
-  string(REGEX REPLACE "\\.test$" "" EXE_NAME "${TEST_NAME}")
+  get_filename_component(FILE_NAME ${DOJO} NAME)
+  string(REGEX REPLACE "\\.cpp$" "" TEST_NAME "${FILE_NAME}")
+  string(REGEX REPLACE "\\.test$" "" TARGET_NAME "${TEST_NAME}")
 
   # Create an executable for this lesson
-  add_executable(${EXE_NAME} ${DOJO})
+  add_executable(${TARGET_NAME} ${DOJO})
+  set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME "${TEST_NAME}")
   
   # Link Boost::iostreams and Boost::filesystem to the executable
-  target_link_libraries(${EXE_NAME} PRIVATE Boost::iostreams Boost::filesystem)
+  target_link_libraries(${TARGET_NAME} PRIVATE Boost::iostreams Boost::filesystem)
 
-  add_test(NAME ${EXE_NAME} COMMAND $<TARGET_FILE:${EXE_NAME}>)
+  add_test(NAME ${TEST_NAME} COMMAND $<TARGET_FILE:${TARGET_NAME}>)
 endforeach()
 
 # Add gsl subdirectory to the build (processes CMakeLists.txt in gsl/)
