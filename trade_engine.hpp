@@ -1,0 +1,409 @@
+#pragma once
+
+/*
+ * Project:
+ *      HFTDojo (https://github.com/wo3kie/hft-dojo)
+ *
+ * Author:
+ *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
+ */
+
+#include <cstdint>
+#include <immintrin.h>
+
+#include "./events.hpp"
+#include "./order_book.hpp"
+#include "./price_levels.hpp"
+
+template<uint32_t InsideLevels, uint32_t OutsideLevels, uint32_t Orders = 32>
+struct TradeEngine
+{
+  QueueOut _queueOut;
+  OrderBook<InsideLevels, OutsideLevels, Orders> _orderBook;
+
+  TradeEngine(Price centerPrice)
+    : _orderBook(_queueOut, centerPrice)
+  {
+  }
+
+public:
+  constexpr static uint32_t inside_levels() noexcept
+  {
+    return InsideLevels;
+  }
+
+  constexpr static uint32_t outside_levels() noexcept
+  {
+    return OutsideLevels;
+  }
+
+  constexpr static uint32_t orders() noexcept
+  {
+    return Orders;
+  }
+
+  void insert_sell_order_PL(OrderId orderId, Price price, Qty qty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(price != InvalidPrice);
+      Assert(qty != 0);
+    }
+
+    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    qty = _trade_sell(orderId, price, qty);
+
+    if(UNLIKELY(qty != 0)) {
+      _orderBook.insert_sell_order(orderId, price, qty);
+    }
+  }
+
+  void insert_buy_order_PL(OrderId orderId, Price price, Qty qty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(price != InvalidPrice);
+      Assert(qty != 0);
+    }
+
+    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    qty = _trade_buy(orderId, price, qty);
+
+    if(UNLIKELY(qty != 0)) {
+      _orderBook.insert_buy_order(orderId, price, qty);
+    }
+  }
+
+  void insert_sell_order_MKT(OrderId orderId, Qty qty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(qty != 0);
+    }
+
+    qty = _trade_sell(orderId, MinPrice, qty);
+
+    if(UNLIKELY(qty != 0)) {
+      _emit_event(CreateRejected(orderId, qty));
+    }
+  }
+
+  void insert_buy_order_MKT(OrderId orderId, Qty qty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(qty != 0);
+    }
+
+    qty = _trade_buy(orderId, MaxPrice, qty);
+
+    if(UNLIKELY(qty != 0)) {
+      _emit_event(CreateRejected(orderId, qty));
+    }
+  }
+
+  void insert_sell_order_IOC(OrderId orderId, Price price, Qty qty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(price != InvalidPrice);
+      Assert(qty != 0);
+    }
+
+    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    qty = _trade_sell(orderId, price, qty);
+
+    if(UNLIKELY(qty != 0)) {
+      _emit_event(CreateRejected(orderId, qty));
+    }
+  }
+
+  void insert_buy_order_IOC(OrderId orderId, Price price, Qty qty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(price != InvalidPrice);
+      Assert(qty != 0);
+    }
+
+    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    qty = _trade_buy(orderId, price, qty);
+
+    if(UNLIKELY(qty != 0)) {
+      _emit_event(CreateRejected(orderId, qty));
+    }
+  }
+
+  void insert_sell_order_PO(OrderId orderId, Price price, Qty qty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(price != InvalidPrice);
+      Assert(qty != 0);
+    }
+
+    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    if(UNLIKELY(_check_sell_post_only(price) == false)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    _orderBook.insert_sell_order(orderId, price, qty);
+  }
+  
+  void insert_buy_order_PO(OrderId orderId, Price price, Qty qty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(price != InvalidPrice);
+      Assert(qty != 0);
+    }
+
+    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    if(UNLIKELY(_check_buy_post_only(price) == false)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    _orderBook.insert_buy_order(orderId, price, qty);
+  }
+
+  void update_buy_order(OrderId orderId, Price price, Index slot, Qty newQty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(slot != InvalidIndex);
+      Assert(price != InvalidPrice);
+      Assert(newQty != 0);
+    }
+
+    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
+      return _emit_event(UpdateRejected(orderId, newQty));
+    }
+
+    _orderBook.update_buy_order(orderId, slot, price, newQty);
+  }
+
+  void update_sell_order(OrderId orderId, Price price, Index slot, Qty newQty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(slot != InvalidIndex);
+      Assert(price != InvalidPrice);
+      Assert(newQty != 0);
+    }
+
+    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
+      return _emit_event(UpdateRejected(orderId, newQty));
+    }
+
+    _orderBook.update_sell_order(orderId, slot, price, newQty);
+  }
+
+  void cancel_buy_order(OrderId orderId, Price price, Index slot)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(slot != InvalidIndex);
+      Assert(price != InvalidPrice);
+    }
+
+    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
+      return _emit_event(CancelRejected(orderId));
+    }
+
+    _orderBook.cancel_buy_order(orderId, slot, price);
+  }
+
+  void cancel_sell_order(OrderId orderId, Price price, Index slot)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(slot != InvalidIndex);
+      Assert(price != InvalidPrice);
+    }
+
+    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
+      return _emit_event(CancelRejected(orderId));
+    }
+
+    _orderBook.cancel_sell_order(orderId, slot, price);
+  }
+
+  QueueOut& out()
+  {
+    return _queueOut;
+  }
+
+private:
+  void _emit_event(Event event)
+  {
+    while(_queueOut.push(event) == false) {
+      _mm_pause();
+    }
+  }
+
+  void _shift_order_book(Price price)
+  {
+    {
+      Price centerPrice = _orderBook.center_price();
+      Price minPrice = bl::min(centerPrice, price);
+      Price maxPrice = bl::max(centerPrice, price);
+
+      if(maxPrice - minPrice <= 4) {
+        return;
+      }
+    }
+
+    while(_orderBook.center_price() < price) {
+      _orderBook.shift_up();
+    }
+
+    while(_orderBook.center_price() > price) {
+      _orderBook.shift_down();
+    }
+  }
+
+  Qty _trade_level(OrderId orderId, Price price, Qty qty, PriceLevel<Orders>& level)
+  {
+    const Qty oldQty = qty;
+
+    while((qty != 0) && (! level.orders.empty())) {
+      Order& otherOrder = level.orders.front();
+      Qty tradeQty = bl::min(qty, otherOrder.qty);
+
+      qty -= tradeQty;
+      otherOrder.qty -= tradeQty;
+
+      _emit_event(Trade(price, tradeQty, orderId, otherOrder.id));
+
+      if(otherOrder.qty == 0) {
+        otherOrder.id = InvalidOrderId;
+        level.orders.pop_front();
+      }
+    }
+
+    return oldQty - qty;
+  }
+
+  Qty _trade_sell(OrderId orderId, Price priceLimit, Qty qty)
+  {
+    if(UNLIKELY(_orderBook.buy_price_from() == UINT32_MIN)) {
+      return qty;
+    }
+
+    priceLimit = _orderBook.buy_price_to(priceLimit);
+
+    Price price = _orderBook.buy_price_from();
+    Index index = _orderBook.buy_index_from();
+
+    while((qty != 0) && (price >= priceLimit)) {
+      PriceLevel<Orders>& buyLevel = _orderBook.buy_levels().at_index(index);
+      
+      const Qty traded = _trade_level(orderId, price, qty, buyLevel);
+
+      buyLevel.balance -= traded;
+      qty -= traded;
+
+      const bool empty = buyLevel.orders.empty();
+      assert((!empty) || (buyLevel.balance == 0));
+      
+      _orderBook.dec_max_buy_price(empty);
+      _shift_order_book(price);
+
+      price -= 1;
+      index -= 1;
+    }
+
+    return qty;
+  }
+
+  Qty _trade_buy(OrderId orderId, Price priceLimit, Qty qty)
+  {
+    if(UNLIKELY(_orderBook.sell_price_from() == UINT32_MAX)) {
+      return qty;
+    }
+
+    priceLimit = _orderBook.sell_price_to(priceLimit);
+
+    Price price = _orderBook.sell_price_from();
+    Index index = _orderBook.sell_index_from();
+
+    while((qty != 0) && (price <= priceLimit)) {
+      PriceLevel<Orders>& sellLevel = _orderBook.sell_levels().at_index(index);
+      const Qty traded = _trade_level(orderId, price, qty, sellLevel);
+
+      sellLevel.balance += traded;
+      qty -= traded;
+
+      const bool empty = sellLevel.orders.empty();
+      assert((!empty) || (sellLevel.balance == 0));
+      
+      _orderBook.inc_sell_min_price(empty);
+      _shift_order_book(price);
+
+      price += 1;
+      index += 1;
+    }
+
+    return qty;
+  }
+
+  bool _check_sell_post_only(Price priceLimit) const
+  {
+    priceLimit = _orderBook.buy_price_to(priceLimit);
+
+    Price price = _orderBook.buy_price_from();
+    Price index = _orderBook.buy_index_from();
+
+    while(price >= priceLimit) {
+      const PriceLevel<Orders>& buyLevel = _orderBook.buy_levels().at_index(index);
+
+      if(UNLIKELY(buyLevel.balance != 0)) {
+        return false;
+      }
+
+      price -= 1;
+      index -= 1;
+    }
+
+    return true;
+  }
+
+  bool _check_buy_post_only(Price priceLimit) const
+  {
+    priceLimit = _orderBook.sell_price_to(priceLimit);
+
+    Price price = _orderBook.sell_price_from();
+    Price index = _orderBook.sell_index_from();
+
+    while(price >= priceLimit) {
+      const PriceLevel<Orders>& sellLevel = _orderBook.sell_levels().at_index(index);
+
+      if(UNLIKELY(sellLevel.balance != 0)) {
+        return false;
+      }
+
+      price -= 1;
+      index -= 1;
+    }
+
+    return true;
+  }
+};
