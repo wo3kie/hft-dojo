@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <immintrin.h>
+#include <thread>
 
 #include "./events.hpp"
 #include "./order_book.hpp"
@@ -294,8 +295,14 @@ public:
 private:
   void _emit_event(Event event)
   {
+    int spins = 0;
+
     while(_queueOut.push(event) == false) {
-      _mm_pause();
+      if(spins++ < 16) {
+        _mm_pause();
+      } else {
+        std::this_thread::yield();
+      }
     }
   }
 
@@ -333,8 +340,10 @@ private:
 
       _emit_event(Trade(price, tradeQty, orderId, otherOrder.id));
 
-      if(otherOrder.qty == 0) {
-        otherOrder.id = InvalidOrderId;
+      const Qty mask = (otherOrder.qty == 0);
+      otherOrder.id = otherOrder.id & ~mask;
+
+      if(mask != 0) {
         level.orders.pop_front();
       }
     }
