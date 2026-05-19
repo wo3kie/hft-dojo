@@ -224,10 +224,10 @@ private:
     const Index slot = level.orders.push_back({orderId, qty});
 
     if(UNLIKELY(slot == InvalidIndex) ) {
-       return _emit_events(CreateRejected(orderId, qty));
+       return _emit_event(CreateRejected(orderId, qty));
     }
 
-    _emit_events(CreateAccepted(orderId, slot));
+    _emit_event(CreateAccepted(orderId, slot));
   }
 
   void _update_order(PriceLevel<Orders>& level, OrderId orderId, Index slot, Price price, Qty qty)
@@ -235,11 +235,11 @@ private:
     Order& order = level.orders.at_slot(slot);
 
     if(UNLIKELY(order.id != orderId)) {
-      return _emit_events(UpdateRejected(orderId, qty));
+      return _emit_event(UpdateRejected(orderId, qty));
     }
 
     order.qty = qty;
-    _emit_events(UpdateAccepted(orderId));
+    _emit_event(UpdateAccepted(orderId));
   }
 
   void _cancel_order(PriceLevel<Orders>& level, OrderId orderId, Index slot)
@@ -247,17 +247,17 @@ private:
     Order& order = level.orders.at_slot(slot);
 
     if(UNLIKELY(order.id != orderId)) {
-      return _emit_events(CancelRejected(orderId));
+      return _emit_event(CancelRejected(orderId));
     }
 
-    _emit_events(CancelAccepted(orderId));
+    _emit_event(CancelAccepted(orderId));
     order.id = InvalidOrderId;
     level.orders.remove(slot);
   }
 
   void _expire_order(Order& order)
   {
-    _emit_events(OrderExpired(order.id));
+    _emit_event(OrderExpired(order.id));
     order.id = InvalidOrderId;
   }
 
@@ -270,7 +270,7 @@ private:
     }
   }
 
-  void _emit_events(Event event)
+  void _emit_event(Event event)
   {
     while(_queueOut.push(event) == false) {
       _mm_pause();
