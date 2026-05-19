@@ -371,28 +371,30 @@ void test_cancel_sell_order()
   }
 }
 
-int I = 0;
+int event = 0;
 
 void bench(uint32_t iters = 1000)
 {
-  I = 0;
+  event = 0;
   
   {
     MatchingEngine<3, 60> engine(100);
     
     uint32_t orderId = 1;
-    uint32_t minPrice = 97;
-    uint32_t maxPrice = 160;
+    uint32_t minPrice = 97 + 1;
+    uint32_t maxPrice = 160 - 1;
     
-    I = iters * (maxPrice - minPrice + 1 /* prices */) * (32 /* orders */) * (2 /* buy/sell */);
-
     for(uint32_t i = 0; i < iters; ++i) {
       for(uint32_t p = minPrice; p <= maxPrice; ++p) {
         for(uint32_t o = 0; o < 32; ++o) {
           engine.insert_buy_order_PL(orderId++, p, 100);
+          engine.out().pop();
+          event += 1;
         }
-
+        
         engine.insert_sell_order_MKT(orderId++, 32 * 100);
+        engine.out().pop();
+        event += 1;
       }
     }
   }
@@ -405,7 +407,7 @@ int main()
 
 #ifdef NDEBUG
   timer([]() { bench(); }, 1000).log([&](long int ns, const std::string& formatted) {
-        std::cout << "Bench took " << formatted << " (" << ns << "ns) for " << I << " events" << std::endl;
+        std::cout << "Bench took " << formatted << " (" << ns << "ns) for " << event << " events" << std::endl;
       });
 #else
 
