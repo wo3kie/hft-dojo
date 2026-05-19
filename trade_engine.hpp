@@ -54,10 +54,10 @@ public:
       return _emit_event(CreateRejected(orderId, qty));
     }
 
-    qty = _trade_sell(orderId, price, qty);
+    const Qty traded = _trade_sell(orderId, price, qty);
 
-    if(UNLIKELY(qty != 0)) {
-      _orderBook.insert_sell_order(orderId, price, qty);
+    if(UNLIKELY(traded != qty)) {
+      _orderBook.insert_sell_order(orderId, price, (qty - traded));
     }
   }
 
@@ -73,10 +73,10 @@ public:
       return _emit_event(CreateRejected(orderId, qty));
     }
 
-    qty = _trade_buy(orderId, price, qty);
+    const Qty traded = _trade_buy(orderId, price, qty);
 
-    if(UNLIKELY(qty != 0)) {
-      _orderBook.insert_buy_order(orderId, price, qty);
+    if(UNLIKELY(traded != qty)) {
+      _orderBook.insert_buy_order(orderId, price, (qty - traded));
     }
   }
 
@@ -87,10 +87,10 @@ public:
       Assert(qty != 0);
     }
 
-    qty = _trade_sell(orderId, MinPrice, qty);
+    const Qty traded = _trade_sell(orderId, MinPrice, qty);
 
-    if(UNLIKELY(qty != 0)) {
-      _emit_event(CreateRejected(orderId, qty));
+    if(UNLIKELY(traded != qty)) {
+      _emit_event(CreateRejected(orderId, (qty - traded)));
     }
   }
 
@@ -101,10 +101,10 @@ public:
       Assert(qty != 0);
     }
 
-    qty = _trade_buy(orderId, MaxPrice, qty);
+    const Qty traded = _trade_buy(orderId, MaxPrice, qty);
 
-    if(UNLIKELY(qty != 0)) {
-      _emit_event(CreateRejected(orderId, qty));
+    if(UNLIKELY(traded != qty)) {
+      _emit_event(CreateRejected(orderId, (qty - traded)));
     }
   }
 
@@ -120,10 +120,10 @@ public:
       return _emit_event(CreateRejected(orderId, qty));
     }
 
-    qty = _trade_sell(orderId, price, qty);
+    const Qty traded = _trade_sell(orderId, price, qty);
 
-    if(UNLIKELY(qty != 0)) {
-      _emit_event(CreateRejected(orderId, qty));
+    if(UNLIKELY(traded != qty)) {
+      _emit_event(CreateRejected(orderId, (qty - traded)));
     }
   }
 
@@ -139,10 +139,10 @@ public:
       return _emit_event(CreateRejected(orderId, qty));
     }
 
-    qty = _trade_buy(orderId, price, qty);
+    const Qty traded = _trade_buy(orderId, price, qty);
 
-    if(UNLIKELY(qty != 0)) {
-      _emit_event(CreateRejected(orderId, qty));
+    if(UNLIKELY(traded != qty)) {
+      _emit_event(CreateRejected(orderId, (qty - traded)));
     }
   }
 
@@ -158,7 +158,7 @@ public:
       return _emit_event(CreateRejected(orderId, qty));
     }
 
-    if(UNLIKELY(_check_sell_post_only(price) == false)) {
+    if(UNLIKELY(_check_sell_PO(price) == false)) {
       return _emit_event(CreateRejected(orderId, qty));
     }
 
@@ -177,11 +177,51 @@ public:
       return _emit_event(CreateRejected(orderId, qty));
     }
 
-    if(UNLIKELY(_check_buy_post_only(price) == false)) {
+    if(UNLIKELY(_check_buy_PO(price) == false)) {
       return _emit_event(CreateRejected(orderId, qty));
     }
 
     _orderBook.insert_buy_order(orderId, price, qty);
+  }
+
+  void insert_sell_order_FOK(OrderId orderId, Price price, Qty qty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(price != InvalidPrice);
+      Assert(qty != 0);
+    }
+
+    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    if(UNLIKELY(_check_sell_FOK(price, qty) == false)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    const Qty traded = _trade_sell(orderId, price, qty);
+    Assert(traded == qty);
+  }
+  
+  void insert_buy_order_FOK(OrderId orderId, Price price, Qty qty)
+  {
+    {
+      Assert(orderId != InvalidOrderId);
+      Assert(price != InvalidPrice);
+      Assert(qty != 0);
+    }
+
+    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    if(UNLIKELY(_check_buy_FOK(price, qty) == false)) {
+      return _emit_event(CreateRejected(orderId, qty));
+    }
+
+    const Qty traded = _trade_buy(orderId, price, qty);
+    Assert(traded == qty);
   }
 
   void update_buy_order(OrderId orderId, Price price, Index slot, Qty newQty)
@@ -304,68 +344,76 @@ private:
 
   Qty _trade_sell(OrderId orderId, Price priceLimit, Qty qty)
   {
-    if(UNLIKELY(_orderBook.buy_price_from() == UINT32_MIN)) {
-      return qty;
+    const Qty oldQty = qty;
+
+    {
+      if(UNLIKELY(_orderBook.buy_price_from() == UINT32_MIN)) {
+        return (oldQty - qty);
+      }
+
+      priceLimit = _orderBook.buy_price_to(priceLimit);
+
+      Price price = _orderBook.buy_price_from();
+      Index index = _orderBook.buy_index_from();
+
+      while((qty != 0) && (price >= priceLimit)) {
+        PriceLevel<Orders>& buyLevel = _orderBook.buy_levels().at_index(index);
+        
+        const Qty traded = _trade_level(orderId, price, qty, buyLevel);
+
+        buyLevel.balance -= traded;
+        qty -= traded;
+
+        const bool empty = buyLevel.orders.empty();
+        assert((!empty) || (buyLevel.balance == 0));
+        
+        _orderBook.dec_max_buy_price(empty);
+        _shift_order_book(price);
+
+        price -= 1;
+        index -= 1;
+      }
     }
 
-    priceLimit = _orderBook.buy_price_to(priceLimit);
-
-    Price price = _orderBook.buy_price_from();
-    Index index = _orderBook.buy_index_from();
-
-    while((qty != 0) && (price >= priceLimit)) {
-      PriceLevel<Orders>& buyLevel = _orderBook.buy_levels().at_index(index);
-      
-      const Qty traded = _trade_level(orderId, price, qty, buyLevel);
-
-      buyLevel.balance -= traded;
-      qty -= traded;
-
-      const bool empty = buyLevel.orders.empty();
-      assert((!empty) || (buyLevel.balance == 0));
-      
-      _orderBook.dec_max_buy_price(empty);
-      _shift_order_book(price);
-
-      price -= 1;
-      index -= 1;
-    }
-
-    return qty;
+    return (oldQty - qty);
   }
 
   Qty _trade_buy(OrderId orderId, Price priceLimit, Qty qty)
   {
-    if(UNLIKELY(_orderBook.sell_price_from() == UINT32_MAX)) {
-      return qty;
+    const Qty oldQty = qty;
+
+    {
+      if(UNLIKELY(_orderBook.sell_price_from() == UINT32_MAX)) {
+        return (oldQty - qty);
+      }
+
+      priceLimit = _orderBook.sell_price_to(priceLimit);
+
+      Price price = _orderBook.sell_price_from();
+      Index index = _orderBook.sell_index_from();
+
+      while((qty != 0) && (price <= priceLimit)) {
+        PriceLevel<Orders>& sellLevel = _orderBook.sell_levels().at_index(index);
+        const Qty traded = _trade_level(orderId, price, qty, sellLevel);
+
+        sellLevel.balance += traded;
+        qty -= traded;
+
+        const bool empty = sellLevel.orders.empty();
+        assert((!empty) || (sellLevel.balance == 0));
+        
+        _orderBook.inc_sell_min_price(empty);
+        _shift_order_book(price);
+
+        price += 1;
+        index += 1;
+      }
     }
 
-    priceLimit = _orderBook.sell_price_to(priceLimit);
-
-    Price price = _orderBook.sell_price_from();
-    Index index = _orderBook.sell_index_from();
-
-    while((qty != 0) && (price <= priceLimit)) {
-      PriceLevel<Orders>& sellLevel = _orderBook.sell_levels().at_index(index);
-      const Qty traded = _trade_level(orderId, price, qty, sellLevel);
-
-      sellLevel.balance += traded;
-      qty -= traded;
-
-      const bool empty = sellLevel.orders.empty();
-      assert((!empty) || (sellLevel.balance == 0));
-      
-      _orderBook.inc_sell_min_price(empty);
-      _shift_order_book(price);
-
-      price += 1;
-      index += 1;
-    }
-
-    return qty;
+    return (oldQty - qty);
   }
 
-  bool _check_sell_post_only(Price priceLimit) const
+  bool _check_sell_PO(Price priceLimit) const
   {
     priceLimit = _orderBook.buy_price_to(priceLimit);
 
@@ -386,7 +434,7 @@ private:
     return true;
   }
 
-  bool _check_buy_post_only(Price priceLimit) const
+  bool _check_buy_PO(Price priceLimit) const
   {
     priceLimit = _orderBook.sell_price_to(priceLimit);
 
@@ -407,4 +455,39 @@ private:
     return true;
   }
   
+  bool _check_sell_FOK(Price priceLimit, Qty qty) const
+  {
+    priceLimit = _orderBook.buy_price_to(priceLimit);
+
+    Price price = _orderBook.buy_price_from();
+    Price index = _orderBook.buy_index_from();
+
+    while((qty != 0) && (price >= priceLimit)) {
+      const PriceLevel<Orders>& buyLevel = _orderBook.buy_levels().at_index(index);
+      qty -= bl::min(qty, buyLevel.balance);
+
+      price -= 1;
+      index -= 1;
+    }
+
+    return (qty == 0);
+  }
+
+  bool _check_buy_FOK(Price priceLimit, Qty qty) const
+  {
+    priceLimit = _orderBook.sell_price_to(priceLimit);
+
+    Price price = _orderBook.sell_price_from();
+    Price index = _orderBook.sell_index_from();
+
+    while((qty != 0) && (price <= priceLimit)) {
+      const PriceLevel<Orders>& sellLevel = _orderBook.sell_levels().at_index(index);
+      qty -= bl::min(qty, sellLevel.balance);
+
+      price += 1;
+      index += 1;
+    }
+
+    return (qty == 0);
+  }
 };
