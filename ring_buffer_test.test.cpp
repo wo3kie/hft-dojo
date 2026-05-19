@@ -25,7 +25,7 @@
  */
 
 template<std::size_t P /* Producers */, std::size_t C /* Consumers */, typename TRBuffer>
-void test_ring_buffer()
+void test_ring_buffer_correctness()
 {
   static_assert(P > 0 && C > 0);
 
@@ -36,6 +36,13 @@ void test_ring_buffer()
 
   std::atomic<std::size_t> produced_total{0};
   std::atomic<std::size_t> consumed_total{0};
+  std::atomic<std::size_t> duplicate_total{0};
+  std::atomic<std::size_t> out_of_range_total{0};
+  std::vector<std::atomic<std::size_t>> seen(TOTAL);
+
+  for(auto& count : seen) {
+    count.store(0, std::memory_order_relaxed);
+  }
 
   std::vector<std::thread> producers;
   producers.reserve(P);
@@ -67,6 +74,14 @@ void test_ring_buffer()
         }
 
         if(rBuffer.pop(v)) {
+          const std::size_t index = static_cast<std::size_t>(v);
+
+          if(index >= TOTAL) {
+            out_of_range_total.fetch_add(1, std::memory_order_relaxed);
+          } else if(seen[index].fetch_add(1, std::memory_order_relaxed) != 0) {
+            duplicate_total.fetch_add(1, std::memory_order_relaxed);
+          }
+
           consumed_total.fetch_add(1, std::memory_order_relaxed);
           continue;
         }
@@ -84,12 +99,42 @@ void test_ring_buffer()
     t.join();
   }
 
+  Assert(produced_total.load(std::memory_order_relaxed) == TOTAL)
+      .on_error([](const char* file, int line, const char* op, const auto& actual, const auto& expected) {
+        std::cerr << "Assertion failed: actual: " << actual << ", "
+                  << "expected: " << expected << " "
+                  << "on " << demangle(typeid(TRBuffer).name()) << std::endl;
+      });
+
   Assert(consumed_total.load(std::memory_order_relaxed) == TOTAL)
       .on_error([](const char* file, int line, const char* op, const auto& actual, const auto& expected) {
         std::cerr << "Assertion failed: actual: " << actual << ", "
                   << "expected: " << expected  << " "
                   << "on " << demangle(typeid(TRBuffer).name()) << std::endl;
       });
+
+  Assert(out_of_range_total.load(std::memory_order_relaxed) == 0)
+      .on_error([](const char* file, int line, const char* op, const auto& actual, const auto& expected) {
+        std::cerr << "Assertion failed: actual: " << actual << ", "
+                  << "expected: " << expected << " "
+                  << "on " << demangle(typeid(TRBuffer).name()) << std::endl;
+      });
+
+  Assert(duplicate_total.load(std::memory_order_relaxed) == 0)
+      .on_error([](const char* file, int line, const char* op, const auto& actual, const auto& expected) {
+        std::cerr << "Assertion failed: actual: " << actual << ", "
+                  << "expected: " << expected << " "
+                  << "on " << demangle(typeid(TRBuffer).name()) << std::endl;
+      });
+
+  for(const auto& count : seen) {
+    Assert(count.load(std::memory_order_relaxed) == 1)
+        .on_error([](const char* file, int line, const char* op, const auto& actual, const auto& expected) {
+          std::cerr << "Assertion failed: actual: " << actual << ", "
+                    << "expected: " << expected << " "
+                    << "on " << demangle(typeid(TRBuffer).name()) << std::endl;
+        });
+  }
 }
 
 template< template<typename, std::size_t> class TBuffer>
@@ -117,61 +162,45 @@ void test_ring_buffer_gdb()
   Assert(rBuffer.capacity() == 128);
 };
 
+template<std::size_t P /* Producers */, std::size_t C /* Consumers */, typename TRBuffer>
+void bench_ring_buffer(const char* label)
+{
+  timer([]() {
+    test_ring_buffer_correctness<P, C, TRBuffer>();
+  }).log([&](long int /* ns */, const std::string& fmt) {
+    std::cout << label << ": " << fmt << std::endl;
+  });
+}
+
 /*
  * main
  */
 
 int main()
 {
+#ifdef NDEBUG
+  bench_ring_buffer<1, 1, RingBuffer<int, 2>>("RingBuffer<int, 2>");
+  bench_ring_buffer<1, 1, RingBufferSPSC<int, 2>>("RingBufferSPSC<int, 2>");
+  bench_ring_buffer<1, 4, RingBufferSPMC<int, 2>>("RingBufferSPMC<int, 2>");
+  bench_ring_buffer<4, 1, RingBufferMT<int, 2>>("RingBufferMT<int, 2>");
+
+  bench_ring_buffer<1, 1, RingBuffer<int, 1023>>("RingBuffer<int, 1023>");
+  bench_ring_buffer<1, 1, RingBufferSPSC<int, 1023>>("RingBufferSPSC<int, 1023>");
+  bench_ring_buffer<1, 4, RingBufferSPMC<int, 1023>>("RingBufferSPMC<int, 1023>");
+  bench_ring_buffer<4, 1, RingBufferMT<int, 1023>>("RingBufferMT<int, 1023>");
+#else
   test_ring_buffer_gdb<RingBuffer>();
   test_ring_buffer_gdb<RingBufferSPSC>();
   test_ring_buffer_gdb<RingBufferSPMC>();
 
-  timer([]() {
-    test_ring_buffer<1, 1, RingBuffer<int, 2>>();
-  }).log([](long int /* ns */, const std::string& fmt) {
-    std::cout << "RingBuffer<int, 2>: " << fmt << std::endl;
-  });
+  test_ring_buffer_correctness<1, 1, RingBuffer<int, 2>>();
+  test_ring_buffer_correctness<1, 1, RingBufferSPSC<int, 2>>();
+  test_ring_buffer_correctness<1, 4, RingBufferSPMC<int, 2>>();
+  test_ring_buffer_correctness<4, 1, RingBufferMT<int, 2>>();
 
-  timer([]() {
-    test_ring_buffer<1, 1, RingBufferSPSC<int, 2>>();
-  }).log([](long int /* ns */, const std::string& fmt) {
-    std::cout << "RingBufferSPSC<int, 2>: " << fmt << std::endl;
-  });
-
-  timer([]() {
-    test_ring_buffer<1, 4, RingBufferSPMC<int, 2>>();
-  }).log([](long int /* ns */, const std::string& fmt) {
-    std::cout << "RingBufferSPMC<int, 2>: " << fmt << std::endl;
-  });
-
-  timer([]() {
-    test_ring_buffer<4, 1, RingBufferMT<int, 2>>();
-  }).log([](long int /* ns */, const std::string& fmt) {
-    std::cout << "RingBufferMT<int, 2>: " << fmt << std::endl << std::endl;
-  });
-
-  timer([]() {
-    test_ring_buffer<1, 1, RingBuffer<int, 1023>>();
-  }).log([](long int /* ns */, const std::string& fmt) {
-    std::cout << "RingBuffer<int, 1023>: " << fmt << std::endl;
-  });
-
-  timer([]() {
-    test_ring_buffer<1, 1, RingBufferSPSC<int, 1023>>();
-  }).log([](long int /* ns */, const std::string& fmt) {
-    std::cout << "RingBufferSPSC<int, 1023>: " << fmt << std::endl;
-  });
-
-  timer([]() {
-    test_ring_buffer<1, 4, RingBufferSPMC<int, 1023>>();
-  }).log([](long int /* ns */, const std::string& fmt) {
-    std::cout << "RingBufferSPMC<int, 1023>: " << fmt << std::endl;
-  });
-
-  timer([]() {
-    test_ring_buffer<4, 1, RingBufferMT<int, 1023>>();
-  }).log([](long int /* ns */, const std::string& fmt) {
-    std::cout << "RingBufferMT<int, 1023>: " << fmt << std::endl;
-  });
+  test_ring_buffer_correctness<1, 1, RingBuffer<int, 1023>>();
+  test_ring_buffer_correctness<1, 1, RingBufferSPSC<int, 1023>>();
+  test_ring_buffer_correctness<1, 4, RingBufferSPMC<int, 1023>>();
+  test_ring_buffer_correctness<4, 1, RingBufferMT<int, 1023>>();
+#endif
 }
