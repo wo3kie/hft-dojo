@@ -8,9 +8,7 @@
 template<unsigned Iters, typename F>
 struct LoopUnroll {
     static void run(const F& f) {
-        asm volatile("" ::: "memory");
         f();
-        asm volatile("" ::: "memory");
 
         LoopUnroll<Iters - 1, F>::run(f);
     }
@@ -30,6 +28,11 @@ struct Duration
   Duration(const duration& d)
     : _d(d)
   {
+  }
+
+  operator long int() const
+  {
+    return ns();
   }
 
   long int ns() const
@@ -73,7 +76,7 @@ struct Duration
   duration _d;
 };
 
-template<unsigned Iters = 10>
+template<unsigned Iters = 16>
 struct _Timer
 {
   template<typename F>
@@ -82,7 +85,7 @@ struct _Timer
       /*
        * Warmup
        */
-      LoopUnroll<4, F>::run(f);
+      LoopUnroll<8, F>::run(f);
     }
   
     const auto start = std::chrono::high_resolution_clock::now();
@@ -97,7 +100,7 @@ struct _Timer
 template<unsigned Iters>
 inline static _Timer<Iters> Timer;
 
-template <unsigned Iters = 10>
+template <unsigned Iters = 16>
 struct _Cycles
 {
     template<typename F>
@@ -106,7 +109,7 @@ struct _Cycles
             /*
              * Warmup
              */
-            LoopUnroll<4, F>::run(f);
+            LoopUnroll<8, F>::run(f);
         }
 
         const std::uint64_t start = __rdtscp(&aux);
