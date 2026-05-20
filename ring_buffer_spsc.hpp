@@ -57,12 +57,12 @@ public:
     return true;
   }
 
-  static constexpr std::size_t capacity() noexcept
+  static constexpr std::size_t capacity()
   {
     return Capacity;
   }
 
-  /* approximate */ bool empty_approx() const noexcept
+  /* approximate */ bool empty_approx() const
   {
     const std::size_t head = _head.load(std::memory_order_acquire);
     const std::size_t tail = _tail.load(std::memory_order_acquire);
@@ -70,7 +70,7 @@ public:
     return head == tail;
   }
 
-  /* approximate */ bool full_approx() const noexcept
+  /* approximate */ bool full_approx() const
   {
     const std::size_t head = _head.load(std::memory_order_acquire);
     const std::size_t tail = _tail.load(std::memory_order_acquire);
@@ -90,7 +90,7 @@ public:
   }
 
 private:
-  static constexpr std::size_t _index(std::size_t i) noexcept
+  static constexpr std::size_t _index(std::size_t i)
   {
     constexpr bool isPowerOf2 = ((Capacity + 1) & Capacity) == 0;
 
