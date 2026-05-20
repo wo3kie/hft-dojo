@@ -28,17 +28,17 @@ struct TradeEngine
   }
 
 public:
-  constexpr static uint32_t inside_levels() noexcept
+  constexpr static uint32_t inside_levels()
   {
     return InsideLevels;
   }
 
-  constexpr static uint32_t outside_levels() noexcept
+  constexpr static uint32_t outside_levels()
   {
     return OutsideLevels;
   }
 
-  constexpr static uint32_t orders() noexcept
+  constexpr static uint32_t orders()
   {
     return Orders;
   }
