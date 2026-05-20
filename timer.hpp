@@ -5,6 +5,24 @@
 #include <iostream>
 #include <string>
 
+template<unsigned Iters, typename F>
+struct LoopUnroll {
+    static void run(const F& f) {
+        asm volatile("" ::: "memory");
+        f();
+        asm volatile("" ::: "memory");
+
+        LoopUnroll<Iters - 1, F>::run(f);
+    }
+};
+
+template<typename F>
+struct LoopUnroll<1, F> {
+    static void run(const F& f) {
+        f();
+    }
+};
+
 struct Duration
 {
   using duration = std::chrono::duration<long int, std::nano>;
@@ -55,49 +73,49 @@ struct Duration
   duration _d;
 };
 
-template<typename T>
-Duration timer(const T& t, int rep = 1)
+template<unsigned Iters = 10>
+struct _Timer
 {
-  // typedef ratio< 1,  1000000000000000000 > atto;
-  // typedef ratio< 1,     1000000000000000 > femto;
-  // typedef ratio< 1,        1000000000000 > pico;
-  // typedef ratio< 1,           1000000000 > nano;
-  // typedef ratio< 1,              1000000 > micro;
-  // typedef ratio< 1,                 1000 > milli;
-  // typedef ratio< 1,                  100 > centi;
-  // typedef ratio< 1,                   10 > deci;
-  //
-  // typedef ratio< 10,                   1 > deca;
-  // typedef ratio< 100,                  1 > hecto;
-  // typedef ratio< 1000,                 1 > kilo;
-  // typedef ratio< 1000000,              1 > mega;
-  // typedef ratio< 1000000000,           1 > giga;
-  // typedef ratio< 1000000000000,        1 > tera;
-  // typedef ratio< 1000000000000000,     1 > peta;
-  // typedef ratio< 1000000000000000000,  1 > exa;
-
-  // typedef duration<int64_t, nano       > nanoseconds;
-  // typedef duration<int64_t, micro      > microseconds;
-  // typedef duration<int64_t, milli      > milliseconds;
-  // typedef duration<int64_t             > seconds;
-  // typedef duration<int64_t, ratio<  60>> minutes;
-  // typedef duration<int64_t, ratio<3600>> hours;
-
-  using duration = std::chrono::duration<long int, std::nano>;
-  using time_point = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
-
-  duration bestTime = duration::zero();
-
-  for(int i = 0; i < rep; ++i) {
-    const time_point& start = std::chrono::high_resolution_clock::now();
-    t();
-    const time_point& end = std::chrono::high_resolution_clock::now();
-    const duration& diff = end - start;
-
-    if(bestTime == duration::zero() || bestTime > diff) {
-      bestTime = diff;
+  template<typename F>
+  Duration operator()(const F& f) noexcept {
+    {
+      /*
+       * Warmup
+       */
+      LoopUnroll<4, F>::run(f);
     }
-  }
+  
+    const auto start = std::chrono::high_resolution_clock::now();
+    LoopUnroll<Iters, F>::run(f);
+    const auto end = std::chrono::high_resolution_clock::now();
 
-  return Duration(bestTime);
-}
+    return Duration((end - start) / Iters);
+
+  }
+};
+
+template<unsigned Iters>
+inline static _Timer<Iters> Timer;
+
+template <unsigned Iters = 10>
+struct _Cycles
+{
+    template<typename F>
+    std::uint64_t operator()(const F& f, unsigned aux = 0u) noexcept {
+        {
+            /*
+             * Warmup
+             */
+            LoopUnroll<4, F>::run(f);
+        }
+
+        const std::uint64_t start = __rdtscp(&aux);
+        LoopUnroll<Iters, F>::run(f);
+        const std::uint64_t end = __rdtscp(&aux);
+
+        return (end - start) / Iters;
+    }
+};
+
+template<unsigned Iters>
+inline static _Cycles<Iters> Cycles;
