@@ -17,14 +17,12 @@ void micro_bench_insert()
   
   auto insert_sell_order = [&engine1]() {
     engine1.insert_sell_order_PL(1, /* price */ 100, /* qty */ 1);
-    engine1.out().pop();
   };
 
   TradeEngine<3, 4> engine2(100);
 
   auto insert_buy_order = [&engine2]() {
     engine2.insert_buy_order_PL(2, /* price */ 100, /* qty */ 1);
-    engine2.out().pop();
   };
   
   std::cout << "Micro benchmark - Insert sell order PL: " << Cycles<8>(insert_sell_order) << " cycles" << std::endl;
@@ -37,18 +35,14 @@ void micro_bench_trade()
 
   auto trade_sell_order = [&engine1]() {
     engine1.insert_sell_order_PL(1, /* price */ 100, /* qty */ 1);
-    engine1.out().pop();
     engine1.insert_buy_order_PL(2, /* price */ 100, /* qty */ 1);
-    engine1.out().pop();
   };
 
   TradeEngine<3, 4> engine2(100);
 
   auto trade_buy_order = [&engine2]() {
     engine2.insert_buy_order_PL(2, /* price */ 100, /* qty */ 1);
-    engine2.out().pop();
     engine2.insert_sell_order_PL(1, /* price */ 100, /* qty */ 1);
-    engine2.out().pop();
   };
 
   std::cout << "Micro benchmark - Trade sell order PL: " << Cycles<8>(trade_sell_order) << " cycles" << std::endl;
