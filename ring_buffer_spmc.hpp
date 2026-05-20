@@ -20,7 +20,7 @@ public:
   using value_type = TValue;
 
 public:
-  RingBufferSPMC() noexcept
+  RingBufferSPMC()
     : _pushed(0)
     , _popped(0)
     , _claim(0)
@@ -37,7 +37,7 @@ public:
 
 public:
   template<typename TT>
-  bool push(TT&& value) noexcept
+  bool push(TT&& value)
   {
     const std::size_t popped = _popped.load(std::memory_order_acquire);
     const std::size_t pushed = _pushed.load(std::memory_order_relaxed);
@@ -53,7 +53,7 @@ public:
     return true;
   }
 
-  bool pop(TValue& out) noexcept
+  bool pop(TValue& out)
   {
     std::size_t claim;
 
@@ -91,19 +91,19 @@ public:
     return true;
   }
 
-  static constexpr std::size_t capacity() noexcept
+  static constexpr std::size_t capacity()
   {
     return Capacity;
   }
 
-  /* approximate */ bool empty_approx() const noexcept
+  /* approximate */ bool empty_approx() const
   {
     const std::size_t pushed = _pushed.load(std::memory_order_acquire);
     const std::size_t popped = _popped.load(std::memory_order_acquire);
     return _empty(pushed, popped);
   }
 
-  /* approximate */ bool full_approx() const noexcept
+  /* approximate */ bool full_approx() const
   {
     const std::size_t pushed = _pushed.load(std::memory_order_acquire);
     const std::size_t popped = _popped.load(std::memory_order_acquire);
@@ -122,17 +122,17 @@ public:
   }
 
 private:
-  /* approximate */ bool _empty(std::size_t pushed, std::size_t popped) const noexcept
+  /* approximate */ bool _empty(std::size_t pushed, std::size_t popped) const
   {
     return popped >= pushed;
   }
 
-  /* approximate */ bool _full(std::size_t pushed, std::size_t popped) const noexcept
+  /* approximate */ bool _full(std::size_t pushed, std::size_t popped) const
   {
     return (pushed - popped) >= Capacity;
   }
 
-  static constexpr std::size_t _index(std::size_t i) noexcept
+  static constexpr std::size_t _index(std::size_t i)
   {
     constexpr bool isPowerOf2 = ((Capacity) & (Capacity - 1)) == 0;
 
