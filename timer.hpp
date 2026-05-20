@@ -76,7 +76,7 @@ struct Duration
   duration _d;
 };
 
-template<unsigned Iters = 16>
+template<unsigned Iters = 8>
 struct _Timer
 {
   template<typename F>
@@ -85,14 +85,20 @@ struct _Timer
       /*
        * Warmup
        */
-      LoopUnroll<8, F>::run(f);
+      LoopUnroll<Iters, F>::run(f);
     }
   
-    const auto start = std::chrono::high_resolution_clock::now();
-    LoopUnroll<Iters, F>::run(f);
-    const auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<long int, std::nano> best = std::chrono::duration<long int, std::nano>::max();
 
-    return Duration((end - start) / Iters);
+    for(int i = 0; i < Iters; ++i) {
+      const auto start = std::chrono::high_resolution_clock::now();
+      LoopUnroll<Iters, F>::run(f);
+      const auto end = std::chrono::high_resolution_clock::now();
+
+      best = std::min(best, end - start);
+    }
+
+    return Duration(best / Iters);
 
   }
 };
@@ -100,7 +106,7 @@ struct _Timer
 template<unsigned Iters>
 inline static _Timer<Iters> Timer;
 
-template <unsigned Iters = 16>
+template <unsigned Iters = 8>
 struct _Cycles
 {
     template<typename F>
@@ -109,14 +115,20 @@ struct _Cycles
             /*
              * Warmup
              */
-            LoopUnroll<8, F>::run(f);
+            LoopUnroll<Iters, F>::run(f);
         }
 
-        const std::uint64_t start = __rdtscp(&aux);
-        LoopUnroll<Iters, F>::run(f);
-        const std::uint64_t end = __rdtscp(&aux);
+        std::uint64_t best = std::numeric_limits<std::uint64_t>::max();
 
-        return (end - start) / Iters;
+        for(int i = 0; i < Iters; ++i) {
+          const std::uint64_t start = __rdtscp(&aux);
+          LoopUnroll<Iters, F>::run(f);
+          const std::uint64_t end = __rdtscp(&aux);
+
+          best = std::min(best, end - start);
+        }
+
+        return best / Iters;
     }
 };
 
