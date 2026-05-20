@@ -205,6 +205,18 @@ _ExpressionDecomposerUnary<Actual> operator<<(const _ExpressionDecomposerStart& 
 }
 
 /*
+ * _AssertNoOp
+ */
+
+struct _AssertNoOp
+{
+  template<typename TFunction>
+  constexpr void on_error(TFunction&&) const
+  {
+  }
+};
+
+/*
  * operator<<
  */
 
@@ -215,7 +227,7 @@ _ExpressionDecomposerUnary<Actual> operator<<(const _ExpressionDecomposerStart& 
  */
 
 #ifdef NDEBUG
-#define Assert(__expression__) (static_cast<void>(0))
+#define Assert(__expression__) (impl::_AssertNoOp())
 #else
 #define Assert(__expression__) (impl::_ExpressionDecomposerStart(__FILE__, __LINE__) << __expression__)
 #endif
