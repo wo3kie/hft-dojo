@@ -18,9 +18,13 @@ cd hft-dojo
 cmake --preset debug
 cmake --build --preset debug
 
+This builds unit tests under `build/debug/bin/`.
+
 For an optimized build:
 cmake --preset release
 cmake --build --preset release
+
+This builds benchmarks under `build/release/bin/`.
 
 ## How to run tests?
 ctest --preset debug
@@ -33,6 +37,11 @@ ctest --preset debug -R trade_engine
 
 You can pass extra CTest arguments through the wrapper, for example:
 ./test -R trade_engine
+
+## How to run benchmarks?
+cmake --preset release
+cmake --build --preset release
+./build/release/bin/trade_engine_bench
 
 ## How to clean it?
 rm -rf build
