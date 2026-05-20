@@ -57,7 +57,7 @@ public:
   {
   }
 
-  ~TaskWorkerSPSC() noexcept
+  ~TaskWorkerSPSC()
   {
     if(_state.load(std::memory_order_relaxed) == WorkerState::Running) {
       _state.store(WorkerState::Stopping, std::memory_order_release);
@@ -93,23 +93,23 @@ public:
     _state.store(WorkerState::HardStop, std::memory_order_release);
   }
 
-  /* approximate */ bool running_approx() const noexcept
+  /* approximate */ bool running_approx() const
   {
     return _state.load(std::memory_order_acquire) == WorkerState::Running;
   }
 
-  /* approximate */ bool empty_approx() const noexcept
+  /* approximate */ bool empty_approx() const
   {
     return _queue.empty_approx();
   }
 
-  /* approximate */ bool full_approx() const noexcept
+  /* approximate */ bool full_approx() const
   {
     return _queue.full_approx();
   }
 
 private:
-  void _setThreadAffinity(std::size_t cpuAffinity) const noexcept
+  void _setThreadAffinity(std::size_t cpuAffinity) const
   {
     if(cpuAffinity == NoAffinity) {
       return;
