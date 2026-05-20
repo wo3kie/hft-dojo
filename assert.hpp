@@ -63,7 +63,7 @@ struct _ExpressionDecomposerBinary
     });
   }
 
-  ~_ExpressionDecomposerBinary() noexcept
+  ~_ExpressionDecomposerBinary()
   {
     if(*this) {
       // empty
@@ -82,7 +82,7 @@ struct _ExpressionDecomposerBinary
                     int /* line */,
                     const char* /* op */,
                     const Actual& /* actual */,
-                    const Expected& /* expected */)> f) noexcept
+                    const Expected& /* expected */)> f)
   {
     _f = f;
   }
