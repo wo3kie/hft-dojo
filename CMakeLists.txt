@@ -6,10 +6,6 @@ project(HFTDojo)
 
 enable_testing()
 
-# debug information
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
-
 # Set output directory for all executables
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
@@ -26,18 +22,8 @@ function(add_dojo_test source_file)
   add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${target_name}>)
 endfunction()
 
-set(DOJO_TEST_SOURCES
-  ${CMAKE_SOURCE_DIR}/tests/array_test.cpp
-  ${CMAKE_SOURCE_DIR}/tests/branchless_test.cpp
-  ${CMAKE_SOURCE_DIR}/tests/flat_list_test.cpp
-  ${CMAKE_SOURCE_DIR}/tests/map_reduce_test.cpp
-  ${CMAKE_SOURCE_DIR}/tests/order_book_test.cpp
-  ${CMAKE_SOURCE_DIR}/tests/price_levels_test.cpp
-  ${CMAKE_SOURCE_DIR}/tests/ring_buffer_test.cpp
-  ${CMAKE_SOURCE_DIR}/tests/task_executor_test.cpp
-  ${CMAKE_SOURCE_DIR}/tests/task_worker_test.cpp
-  ${CMAKE_SOURCE_DIR}/tests/trade_engine_test.cpp
-)
+# Discover all test translation units under tests/.
+file(GLOB DOJO_TEST_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/tests/*_test.cpp")
 
 foreach(dojo_test ${DOJO_TEST_SOURCES})
   add_dojo_test(${dojo_test})
