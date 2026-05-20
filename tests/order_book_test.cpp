@@ -6,9 +6,9 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "./order_book.hpp"
-#include "./assert.hpp"
-#include "./ring_buffer_spsc.hpp"
+#include "order_book.hpp"
+#include "assert.hpp"
+#include "ring_buffer_spsc.hpp"
 
 using TestOrderBook = OrderBook<31, 32>;
 

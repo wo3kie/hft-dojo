@@ -9,8 +9,8 @@
 #include <cstdint>
 #include <vector>
 
-#include "./assert.hpp"
-#include "./task_executor.hpp"
+#include "assert.hpp"
+#include "task_executor.hpp"
 
 #include <cassert>
 #include <chrono>

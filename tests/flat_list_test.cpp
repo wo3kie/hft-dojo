@@ -9,8 +9,8 @@
 #include <cassert>
 #include <iostream>
 
-#include "./assert.hpp"
-#include "./flat_list.hpp"
+#include "assert.hpp"
+#include "flat_list.hpp"
 
 void test_flat_list_1()
 {

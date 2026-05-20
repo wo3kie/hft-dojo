@@ -10,8 +10,8 @@
 #include <iostream>
 #include <thread>
 
-#include "./assert.hpp"
-#include "./task_worker.hpp"
+#include "assert.hpp"
+#include "task_worker.hpp"
 
 void test_stop_drains_all_queued_tasks()
 {

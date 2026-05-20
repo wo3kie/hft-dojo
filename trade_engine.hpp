@@ -310,8 +310,8 @@ private:
   {
     {
       Price centerPrice = _orderBook.center_price();
-      Price minPrice = bl::min(centerPrice, price);
-      Price maxPrice = bl::max(centerPrice, price);
+      Price minPrice = std::min(centerPrice, price);
+      Price maxPrice = std::max(centerPrice, price);
 
       if(maxPrice - minPrice <= 4) {
         return;
@@ -333,7 +333,7 @@ private:
 
     while((qty != 0) && (! level.orders.empty())) {
       Order& otherOrder = level.orders.front();
-      Qty tradeQty = bl::min(qty, otherOrder.qty);
+      Qty tradeQty = std::min(qty, otherOrder.qty);
 
       qty -= tradeQty;
       otherOrder.qty -= tradeQty;
@@ -473,7 +473,7 @@ private:
 
     while((qty != 0) && (price >= priceLimit)) {
       const PriceLevel<Orders>& buyLevel = _orderBook.buy_levels().at_index(index);
-      qty -= bl::min<Qty>(qty, buyLevel.balance);
+      qty -= std::min<Qty>(qty, buyLevel.balance);
 
       price -= 1;
       index -= 1;
@@ -491,7 +491,7 @@ private:
 
     while((qty != 0) && (price <= priceLimit)) {
       const PriceLevel<Orders>& sellLevel = _orderBook.sell_levels().at_index(index);
-      qty -= bl::min<Qty>(qty, sellLevel.balance);
+      qty -= std::min<Qty>(qty, sellLevel.balance);
 
       price += 1;
       index += 1;

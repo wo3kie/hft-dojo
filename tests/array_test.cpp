@@ -6,8 +6,8 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "./array.hpp"
-#include "./assert.hpp"
+#include "array.hpp"
+#include "assert.hpp"
 
 void test_array()
 {

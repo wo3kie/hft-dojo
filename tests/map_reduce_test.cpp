@@ -6,8 +6,8 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "./map_reduce.hpp"
-#include "./assert.hpp"
+#include "map_reduce.hpp"
+#include "assert.hpp"
 
 using Trivial = int;
 

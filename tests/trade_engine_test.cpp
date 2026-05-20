@@ -6,8 +6,8 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "./trade_engine.hpp"
-#include "./assert.hpp"
+#include "trade_engine.hpp"
+#include "assert.hpp"
 
 using TestTradeEngine = TradeEngine<3, 4>;
 

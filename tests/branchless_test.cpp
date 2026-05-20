@@ -6,8 +6,8 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "./branchless.hpp"
-#include "./assert.hpp"
+#include "branchless.hpp"
+#include "assert.hpp"
 
 void test_min()
 {

@@ -6,10 +6,10 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "./assert.hpp"
-#include "./events.hpp"
-#include "./price_levels.hpp"
-#include "./ring_buffer_spsc.hpp"
+#include "assert.hpp"
+#include "events.hpp"
+#include "price_levels.hpp"
+#include "ring_buffer_spsc.hpp"
 
 void test_price_levels_basic()
 {

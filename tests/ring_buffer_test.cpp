@@ -7,13 +7,13 @@
  *
  */
 
-#include "./assert.hpp"
-#include "./demangle.hpp"
+#include "assert.hpp"
+#include "demangle.hpp"
 
-#include "./ring_buffer.hpp"
-#include "./ring_buffer_mutex.hpp"
-#include "./ring_buffer_spmc.hpp"
-#include "./ring_buffer_spsc.hpp"
+#include "ring_buffer.hpp"
+#include "ring_buffer_mutex.hpp"
+#include "ring_buffer_spmc.hpp"
+#include "ring_buffer_spsc.hpp"
 
 #include <iostream>
 #include <numeric>
