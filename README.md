@@ -14,20 +14,30 @@ https://github.com/wo3kie/hft-dojo
 C++20  
   
 ## How to build it?
-mkdir build  
-cd build
-cmake ..  
-cmake --build .  
+cd hft-dojo
+cmake --preset debug
+cmake --build --preset debug
+
+For an optimized build:
+cmake --preset release
+cmake --build --preset release
 
 ## How to run tests?
-cd build
-ctest --output-on-failure
+ctest --preset debug
+
+From the project root you can also run everything with one command:
+./test
 
 To run a single test binary through CTest:
-ctest -R trade_engine --output-on-failure
+ctest --preset debug -R trade_engine
+
+You can pass extra CTest arguments through the wrapper, for example:
+./test -R trade_engine
 
 ## How to clean it?
 rm -rf build
+
+Debug artifacts are generated under `build/debug/` and release artifacts under `build/release/`.
 
 ## Content
   
