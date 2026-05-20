@@ -37,7 +37,6 @@ public:
 template<uint32_t LevelsBelow, uint32_t LevelsAbove, uint32_t Orders = 32>
 struct PriceLevels
 {
-  constexpr static uint32_t Size = LevelsBelow + LevelsAbove + 1;
   constexpr static uint32_t Mask = LevelsBelow + LevelsAbove;
 
 public:
@@ -56,17 +55,17 @@ public:
   PriceLevels& operator=(const PriceLevels&) = delete;
 
 public:
-  static constexpr uint32_t levels_below() noexcept
+  static constexpr uint32_t levels_below()
   {
     return LevelsBelow;
   }
 
-  static constexpr uint32_t levels_above() noexcept
+  static constexpr uint32_t levels_above()
   {
     return LevelsAbove;
   }
 
-  static constexpr uint32_t orders() noexcept
+  static constexpr uint32_t orders()
   {
     return Orders;
   }
@@ -148,5 +147,5 @@ private:
   Price _centerPrice;
   Index _centerIndex;
 
-  Array<PriceLevel<Orders>, Size> _levels;
+  Array<PriceLevel<Orders>, LevelsBelow + LevelsAbove + 1> _levels;
 };
