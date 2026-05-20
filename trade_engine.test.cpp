@@ -440,46 +440,8 @@ void test_trade_FOK_order_does_not_match_partial()
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 5, /* taker */ 4));
 }
 
-int event = 0;
-
-void bench(uint32_t iters = 1000)
-{
-  event = 0;
-  
-  {
-    TradeEngine<3, 60> engine(100);
-    
-    uint32_t orderId = 1;
-    uint32_t minPrice = 97 + 1;
-    uint32_t maxPrice = 160 - 1;
-    
-    for(uint32_t i = 0; i < iters; ++i) {
-      for(uint32_t p = minPrice; p <= maxPrice; ++p) {
-        for(uint32_t o = 0; o < 32; ++o) {
-          engine.insert_buy_order_PL(orderId++, p, 100);
-          engine.out().pop();
-          event += 1;
-        }
-        
-        engine.insert_sell_order_MKT(orderId++, 32 * 100);
-        engine.out().pop();
-        event += 1;
-      }
-    }
-  }
-}
-
-#include "./timer.hpp"
-
 int main()
 {
-
-#ifdef NDEBUG
-  timer([]() { bench(); }, 1000).log([&](long int ns, const std::string& formatted) {
-        std::cout << "Bench took " << formatted << " (" << ns << "ns) for " << event << " events" << std::endl;
-      });
-#else
-
   test_matches_across_multiple_price_levels();
   test_buy_side_flow_with_update_cancel_and_resting_sell_remainder();
   test_sell_side_resting_order_matches_incoming_buy();
@@ -506,8 +468,6 @@ int main()
   test_cancel_sell_order_rejects_wrong_price();
   test_trade_IOC_order_matches_and_rejects_remainder();
   test_trade_FOK_order_does_not_match_partial();
-
-  #endif
 
   return 0;
 }
