@@ -9,7 +9,6 @@
 
 #include "./assert.hpp"
 #include "./demangle.hpp"
-#include "./timer.hpp"
 
 #include "./ring_buffer.hpp"
 #include "./ring_buffer_mutex.hpp"
@@ -162,15 +161,6 @@ void test_ring_buffer_gdb()
   Assert(rBuffer.capacity() == 128);
 };
 
-template<std::size_t P /* Producers */, std::size_t C /* Consumers */, typename TRBuffer>
-void bench_ring_buffer(const char* label)
-{
-  timer([]() {
-    test_ring_buffer_correctness<P, C, TRBuffer>();
-  }).log([&](long int /* ns */, const std::string& fmt) {
-    std::cout << label << ": " << fmt << std::endl;
-  });
-}
 
 /*
  * main
@@ -178,17 +168,6 @@ void bench_ring_buffer(const char* label)
 
 int main()
 {
-#ifdef NDEBUG
-  bench_ring_buffer<1, 1, RingBuffer<int, 2>>("RingBuffer<int, 2>");
-  bench_ring_buffer<1, 1, RingBufferSPSC<int, 2>>("RingBufferSPSC<int, 2>");
-  bench_ring_buffer<1, 4, RingBufferSPMC<int, 2>>("RingBufferSPMC<int, 2>");
-  bench_ring_buffer<4, 1, RingBufferMT<int, 2>>("RingBufferMT<int, 2>");
-
-  bench_ring_buffer<1, 1, RingBuffer<int, 1023>>("RingBuffer<int, 1023>");
-  bench_ring_buffer<1, 1, RingBufferSPSC<int, 1023>>("RingBufferSPSC<int, 1023>");
-  bench_ring_buffer<1, 4, RingBufferSPMC<int, 1023>>("RingBufferSPMC<int, 1023>");
-  bench_ring_buffer<4, 1, RingBufferMT<int, 1023>>("RingBufferMT<int, 1023>");
-#else
   test_ring_buffer_gdb<RingBuffer>();
   test_ring_buffer_gdb<RingBufferSPSC>();
   test_ring_buffer_gdb<RingBufferSPMC>();
@@ -202,5 +181,4 @@ int main()
   test_ring_buffer_correctness<1, 1, RingBufferSPSC<int, 1023>>();
   test_ring_buffer_correctness<1, 4, RingBufferSPMC<int, 1023>>();
   test_ring_buffer_correctness<4, 1, RingBufferMT<int, 1023>>();
-#endif
 }
