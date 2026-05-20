@@ -45,9 +45,9 @@ void micro_bench_trade()
   TradeEngine<3, 4> engine2(100);
 
   auto trade_buy_order = [&engine2]() {
-    engine2.insert_sell_order_PL(1, /* price */ 100, /* qty */ 1);
-    engine2.out().pop();
     engine2.insert_buy_order_PL(2, /* price */ 100, /* qty */ 1);
+    engine2.out().pop();
+    engine2.insert_sell_order_PL(1, /* price */ 100, /* qty */ 1);
     engine2.out().pop();
   };
 
