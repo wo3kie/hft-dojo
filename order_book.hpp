@@ -102,7 +102,7 @@ public:
   Price buy_price_to(Price price = MinPrice) const
   {
     const Price min_price = _buyLevels.min_price();
-    return bl::max(price, min_price);
+    return std::max(price, min_price);
   }
 
   Index buy_index_from() const
@@ -167,7 +167,7 @@ public:
     }
 
     level.balance -= qty;
-    _minSellPrice = bl::min(_minSellPrice, price);
+    _minSellPrice = std::min(_minSellPrice, price);
     _emit_event(CreateAccepted(orderId, slot));
   }
 
@@ -181,7 +181,7 @@ public:
     }
 
     level.balance += qty;
-    _maxBuyPrice = bl::max(_maxBuyPrice, price);
+    _maxBuyPrice = std::max(_maxBuyPrice, price);
     _emit_event(CreateAccepted(orderId, slot));
   }
 
