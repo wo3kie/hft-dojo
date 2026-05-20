@@ -62,18 +62,18 @@ public:
     return true;
   }
 
-  static constexpr std::size_t capacity() noexcept
+  static constexpr std::size_t capacity()
   {
     return Capacity;
   }
 
-  [[nodiscard]] bool empty() const noexcept
+  [[nodiscard]] bool empty() const
   {
     std::lock_guard<std::mutex> lock(_mutex);
     return _buffer.empty();
   }
 
-  bool full() const noexcept
+  bool full() const
   {
     std::lock_guard<std::mutex> lock(_mutex);
     return _buffer.full();
