@@ -27,8 +27,8 @@ void micro_bench_insert()
     engine2.out().pop();
   };
   
-  std::cout << "Micro benchmark - Insert sell order PL: " << Cycles<32>(insert_sell_order) << " cycles" << std::endl;
-  std::cout << "Micro benchmark - Insert buy order PL: " << Cycles<32>(insert_buy_order) << " cycles" << std::endl << std::endl;
+  std::cout << "Micro benchmark - Insert sell order PL: " << Cycles<8>(insert_sell_order) << " cycles" << std::endl;
+  std::cout << "Micro benchmark - Insert buy order PL: " << Cycles<8>(insert_buy_order) << " cycles" << std::endl << std::endl;
 }
 
 void micro_bench_trade()
@@ -51,8 +51,8 @@ void micro_bench_trade()
     engine2.out().pop();
   };
 
-  std::cout << "Micro benchmark - Trade sell order PL: " << Cycles<32>(trade_sell_order) << " cycles" << std::endl;
-  std::cout << "Micro benchmark - Trade buy order PL: " << Cycles<32>(trade_buy_order) << " cycles" << std::endl << std::endl;
+  std::cout << "Micro benchmark - Trade sell order PL: " << Cycles<8>(trade_sell_order) << " cycles" << std::endl;
+  std::cout << "Micro benchmark - Trade buy order PL: " << Cycles<8>(trade_buy_order) << " cycles" << std::endl << std::endl;
 }
 
 int main()
