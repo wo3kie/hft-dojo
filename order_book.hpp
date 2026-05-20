@@ -46,17 +46,17 @@ public:
   OrderBook& operator=(const OrderBook&) = delete;
 
 public:
-  static constexpr uint32_t inside_levels() noexcept
+  static constexpr uint32_t inside_levels()
   {
     return InsideLevels;
   }
 
-  static constexpr uint32_t outside_levels() noexcept
+  static constexpr uint32_t outside_levels()
   {
     return OutsideLevels;
   }
 
-  static constexpr uint32_t orders() noexcept
+  static constexpr uint32_t orders()
   {
     return Orders;
   }
