@@ -77,7 +77,7 @@ template<unsigned Iters = 10>
 struct _Timer
 {
   template<typename F>
-  Duration operator()(const F& f) noexcept {
+  Duration operator()(const F& f) {
     {
       /*
        * Warmup
@@ -101,7 +101,7 @@ template <unsigned Iters = 10>
 struct _Cycles
 {
     template<typename F>
-    std::uint64_t operator()(const F& f, unsigned aux = 0u) noexcept {
+    std::uint64_t operator()(const F& f, unsigned aux = 0u) {
         {
             /*
              * Warmup
