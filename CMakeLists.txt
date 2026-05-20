@@ -6,6 +6,9 @@ project(HFTDojo)
 
 enable_testing()
 
+option(BUILD_DOJO_TESTS "Build unit tests" ON)
+option(BUILD_DOJO_BENCHMARKS "Build benchmarks" OFF)
+
 # Set output directory for all executables
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
@@ -22,9 +25,26 @@ function(add_dojo_test source_file)
   add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${target_name}>)
 endfunction()
 
-# Discover all test translation units under tests/.
-file(GLOB DOJO_TEST_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/tests/*_test.cpp")
+function(add_dojo_benchmark source_file)
+  get_filename_component(target_name ${source_file} NAME_WE)
 
-foreach(dojo_test ${DOJO_TEST_SOURCES})
-  add_dojo_test(${dojo_test})
-endforeach()
+  add_executable(${target_name} ${source_file})
+  target_include_directories(${target_name} PRIVATE ${CMAKE_SOURCE_DIR})
+endfunction()
+
+if(BUILD_DOJO_TESTS)
+  # Discover all test translation units under tests/.
+  file(GLOB DOJO_TEST_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/tests/*_test.cpp")
+
+  foreach(dojo_test ${DOJO_TEST_SOURCES})
+    add_dojo_test(${dojo_test})
+  endforeach()
+endif()
+
+if(BUILD_DOJO_BENCHMARKS)
+  file(GLOB DOJO_BENCHMARK_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/benchmarks/*_bench.cpp")
+
+  foreach(dojo_benchmark ${DOJO_BENCHMARK_SOURCES})
+    add_dojo_benchmark(${dojo_benchmark})
+  endforeach()
+endif()
