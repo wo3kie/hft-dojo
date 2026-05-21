@@ -15,8 +15,12 @@
 struct Order
 {
   static constexpr OrderId InvalidId = 0;
+
   static constexpr Qty MinQty = 1;
   static constexpr Qty MaxQty = 128 * 1024 * 1024;
+
+  static constexpr Price MinPrice = 1;
+  static constexpr Price MaxPrice = 1'000'000'000;
 
   Order()
   {
@@ -32,9 +36,6 @@ struct Order
     Assert(qty <= MaxQty);
   }
 
-  OrderId _id;
-  Qty _qty;
-
   OrderId id() const
   {
     return _id;
@@ -49,6 +50,8 @@ struct Order
   {
     Assert(newQty >= MinQty);
     Assert(newQty <= MaxQty);
+    Assert(_id != InvalidId);
+    Assert(_qty != 0);
 
     _qty = newQty;
   }
@@ -58,6 +61,8 @@ struct Order
     Assert(qty >= MinQty);
     Assert(qty <= MaxQty);
     Assert(qty <= _qty);
+    Assert(_id != InvalidId);
+    Assert(_qty != 0);
 
     _qty -= qty;
   }
@@ -67,6 +72,10 @@ struct Order
     _id = InvalidId;
     _qty = 0;
   }
+
+private:
+  OrderId _id;
+  Qty _qty;
 };
 
 inline bool operator==(const Order& lhs, const Order& rhs)
