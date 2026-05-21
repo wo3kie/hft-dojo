@@ -33,7 +33,7 @@ void micro_bench_insert()
     }
   } insert{engine};
    
-  std::cout << "Micro benchmark - Insert order PL: " << Timer<32>(insert) << " cycles" << std::endl;
+  std::cout << "Micro benchmark - Insert order PL: " << Cycles<32>(insert) << " cycles" << std::endl;
 }
 
 void micro_bench_update()
@@ -59,7 +59,7 @@ void micro_bench_update()
     }
   } update{engine};
    
-  std::cout << "Micro benchmark - Update order PL: " << Timer<32>(update) << " cycles" << std::endl;
+  std::cout << "Micro benchmark - Update order PL: " << Cycles<32>(update) << " cycles" << std::endl;
 }
 
 void micro_bench_cancel()
@@ -83,7 +83,7 @@ void micro_bench_cancel()
     }
   } cancel{engine};
    
-  std::cout << "Micro benchmark - Cancel order PL: " << Timer<32>(cancel) << " cycles" << std::endl;
+  std::cout << "Micro benchmark - Cancel order PL: " << Cycles<32>(cancel) << " cycles" << std::endl;
 }
 
 void micro_bench_trade_PL()
@@ -107,7 +107,7 @@ void micro_bench_trade_PL()
     }
   } trade{engine};
    
-  std::cout << "Micro benchmark - Trade order PL: " << Timer<32>(trade) << " cycles" << std::endl;
+  std::cout << "Micro benchmark - Trade order PL: " << Cycles<32>(trade) << " cycles" << std::endl;
 }
 
 template<uint32_t Levels, uint32_t Orders>
@@ -142,7 +142,7 @@ void micro_bench_trade_MKT()
     }
   } trade{engine};
    
-  std::cout << "Micro benchmark - Trade order MKT<" << Levels << ", " << Orders << ">: " << Timer<32>(trade) << " cycles" << std::endl;
+  std::cout << "Micro benchmark - Trade order MKT<" << Levels << ", " << Orders << ">: " << Cycles<32>(trade) << " cycles" << std::endl;
 }
 
 int main()
