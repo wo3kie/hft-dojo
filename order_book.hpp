@@ -160,13 +160,12 @@ public:
   void insert_sell_order(OrderId orderId, Price price, Qty qty)
   {
     PriceLevel<Orders>& level = _sellLevels.at_price(price);
-    const Index slot = level.orders.push_back({orderId, qty});
+    const Index slot = level.insert(orderId, qty);
 
     if(UNLIKELY(slot == InvalidIndex)) {
       return _emit_event(CreateRejected(orderId, qty));
     }
 
-    level.balance += qty;
     _minSellPrice = std::min(_minSellPrice, price);
     _emit_event(CreateAccepted(orderId, slot));
   }
@@ -174,13 +173,12 @@ public:
   void insert_buy_order(OrderId orderId, Price price, Qty qty)
   {
     PriceLevel<Orders>& level = _buyLevels.at_price(price);
-    const Index slot = level.orders.push_back({orderId, qty});
+    const Index slot = level.insert(orderId, qty);
 
     if(UNLIKELY(slot == InvalidIndex)) {
       return _emit_event(CreateRejected(orderId, qty));
     }
 
-    level.balance += qty;
     _maxBuyPrice = std::max(_maxBuyPrice, price);
     _emit_event(CreateAccepted(orderId, slot));
   }
@@ -188,63 +186,45 @@ public:
   void update_sell_order(OrderId orderId, Index slot, Price price, Qty newQty)
   {
     PriceLevel<Orders>& level = _sellLevels.at_price(price);
-    Order& order = level.orders.at_slot(slot);
-
-    if(UNLIKELY(order.id != orderId)) {
+    
+    if (level.update(orderId, slot, newQty) == true) {
+      return _emit_event(UpdateAccepted(orderId));
+    } else {
       return _emit_event(UpdateRejected(orderId, newQty));
     }
-
-    level.balance -= order.qty;
-    order.qty = newQty;
-    level.balance += order.qty;
-
-    _emit_event(UpdateAccepted(orderId));
   }
 
   void update_buy_order(OrderId orderId, Index slot, Price price, Qty newQty)
   {
     PriceLevel<Orders>& level = _buyLevels.at_price(price);
-    Order& order = level.orders.at_slot(slot);
-
-    if(UNLIKELY(order.id != orderId)) {
+    
+    if (level.update(orderId, slot, newQty) == true) {
+      return _emit_event(UpdateAccepted(orderId));
+    } else {
       return _emit_event(UpdateRejected(orderId, newQty));
     }
-
-    level.balance -= order.qty;
-    order.qty = newQty;
-    level.balance += order.qty;
-
-    _emit_event(UpdateAccepted(orderId));
   }
 
   void cancel_sell_order(OrderId orderId, Index slot, Price price)
   {
     PriceLevel<Orders>& level = _sellLevels.at_price(price);
-    Order& order = level.orders.at_slot(slot);
 
-    if(UNLIKELY(order.id != orderId)) {
+    if (level.cancel(orderId, slot) == true) {
+      return _emit_event(CancelAccepted(orderId));
+    } else {
       return _emit_event(CancelRejected(orderId));
     }
-
-    order.id = InvalidOrderId;
-    level.balance -= order.qty;
-    level.orders.remove(slot);
-    _emit_event(CancelAccepted(orderId));
   }
 
   void cancel_buy_order(OrderId orderId, Index slot, Price price)
   {
     PriceLevel<Orders>& level = _buyLevels.at_price(price);
-    Order& order = level.orders.at_slot(slot);
-
-    if(UNLIKELY(order.id != orderId)) {
+    
+    if (level.cancel(orderId, slot) == true) {
+      return _emit_event(CancelAccepted(orderId));
+    } else {
       return _emit_event(CancelRejected(orderId));
     }
-
-    order.id = InvalidOrderId;
-    level.balance -= order.qty;
-    level.orders.remove(slot);
-    _emit_event(CancelAccepted(orderId));
   }
 
   void shift_up()
@@ -274,6 +254,7 @@ public:
   {
     _minSellPrice = centerPrice + OutsideLevels;
     _maxBuyPrice = centerPrice - OutsideLevels;
+    
     _sellLevels.reset(centerPrice);
     _buyLevels.reset(centerPrice);
 
@@ -285,8 +266,8 @@ public:
 private:
   void _expire_order(Order& order)
   {
-    _emit_event(OrderExpired(order.id));
-    order.id = InvalidOrderId;
+    _emit_event(OrderExpired(order.id()));
+    order.clear();
   }
 
   void _expire_level(PriceLevel<Orders>& level)
