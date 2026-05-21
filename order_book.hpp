@@ -31,8 +31,8 @@ struct OrderBook
 {
 public:
   OrderBook(QueueOut& out, Price centerPrice)
-    : _minSellPrice{UINT32_MAX}
-    , _maxBuyPrice{UINT32_MIN}
+    : _minSellPrice{centerPrice + OutsideLevels}
+    , _maxBuyPrice{centerPrice - OutsideLevels}
     , _sellLevels(centerPrice)
     , _buyLevels(centerPrice)
     , _queueOut(out)
@@ -101,8 +101,8 @@ public:
 
   Price buy_price_to(Price price = MinPrice) const
   {
-    const Price min_price = _buyLevels.min_price();
-    return std::max(price, min_price);
+    const Price minPrice = _buyLevels.min_price();
+    return std::max(price, minPrice);
   }
 
   Index buy_index_from() const
@@ -264,6 +264,18 @@ public:
   QueueOut& out()
   {
     return _queueOut;
+  }
+
+  void reset(Price centerPrice)
+  {
+    _minSellPrice = centerPrice + OutsideLevels;
+    _maxBuyPrice = centerPrice - OutsideLevels;
+    _sellLevels.reset(centerPrice);
+    _buyLevels.reset(centerPrice);
+
+    while(_queueOut.empty_approx() == false) {
+      _queueOut.pop();
+    }
   }
 
 private:
