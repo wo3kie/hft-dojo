@@ -137,7 +137,7 @@ public:
     : _centerIndex(LevelsBelow)
   {
     Assert(centerPrice > LevelsBelow);
-    Assert(centerPrice < MaxPrice - LevelsAbove);
+    Assert(centerPrice < Order::MaxPrice - LevelsAbove);
 
     _minPrice = centerPrice - LevelsBelow;
     _maxPrice = centerPrice + LevelsAbove;
@@ -205,7 +205,7 @@ public:
 
   void shift_up(QueueOut& out)
   {
-    Assert(max_price() < MaxPrice);
+    Assert(max_price() < Order::MaxPrice);
 
     _minPrice += 1;
     _maxPrice += 1;
@@ -230,7 +230,7 @@ public:
     }
 
     Assert(centerPrice > LevelsBelow);
-    Assert(centerPrice < MaxPrice - LevelsAbove);
+    Assert(centerPrice < Order::MaxPrice - LevelsAbove);
 
     _centerIndex = LevelsBelow;
     _minPrice = centerPrice - LevelsBelow;
