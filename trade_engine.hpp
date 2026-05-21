@@ -51,13 +51,13 @@ public:
       Assert(qty != 0);
     }
 
-    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
-      return _emit_event(CreateRejected(orderId, qty));
-    }
-
     const Qty traded = _trade_sell(orderId, price, qty);
-
+    
     if(UNLIKELY(traded != qty)) {
+      if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
+        return _emit_event(CreateRejected(orderId, qty));
+      }
+
       _orderBook.insert_sell_order(orderId, price, (qty - traded));
     }
   }
@@ -70,13 +70,13 @@ public:
       Assert(qty != 0);
     }
 
-    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
-      return _emit_event(CreateRejected(orderId, qty));
-    }
-
     const Qty traded = _trade_buy(orderId, price, qty);
 
     if(UNLIKELY(traded != qty)) {
+      if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
+        return _emit_event(CreateRejected(orderId, qty));
+      }
+
       _orderBook.insert_buy_order(orderId, price, (qty - traded));
     }
   }
@@ -117,10 +117,6 @@ public:
       Assert(qty != 0);
     }
 
-    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
-      return _emit_event(CreateRejected(orderId, qty));
-    }
-
     const Qty traded = _trade_sell(orderId, price, qty);
 
     if(UNLIKELY(traded != qty)) {
@@ -134,10 +130,6 @@ public:
       Assert(orderId != InvalidOrderId);
       Assert(price != InvalidPrice);
       Assert(qty != 0);
-    }
-
-    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
-      return _emit_event(CreateRejected(orderId, qty));
     }
 
     const Qty traded = _trade_buy(orderId, price, qty);
@@ -155,11 +147,11 @@ public:
       Assert(qty != 0);
     }
 
-    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
+    if(UNLIKELY(_check_sell_PO(price) == false)) {
       return _emit_event(CreateRejected(orderId, qty));
     }
-
-    if(UNLIKELY(_check_sell_PO(price) == false)) {
+    
+    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
       return _emit_event(CreateRejected(orderId, qty));
     }
 
@@ -174,11 +166,11 @@ public:
       Assert(qty != 0);
     }
 
-    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
+    if(UNLIKELY(_check_buy_PO(price) == false)) {
       return _emit_event(CreateRejected(orderId, qty));
     }
-
-    if(UNLIKELY(_check_buy_PO(price) == false)) {
+    
+    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
       return _emit_event(CreateRejected(orderId, qty));
     }
 
@@ -191,10 +183,6 @@ public:
       Assert(orderId != InvalidOrderId);
       Assert(price != InvalidPrice);
       Assert(qty != 0);
-    }
-
-    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
-      return _emit_event(CreateRejected(orderId, qty));
     }
 
     if(UNLIKELY(_check_sell_FOK(price, qty) == false)) {
@@ -211,10 +199,6 @@ public:
       Assert(orderId != InvalidOrderId);
       Assert(price != InvalidPrice);
       Assert(qty != 0);
-    }
-
-    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
-      return _emit_event(CreateRejected(orderId, qty));
     }
 
     if(UNLIKELY(_check_buy_FOK(price, qty) == false)) {
@@ -287,6 +271,11 @@ public:
     _orderBook.cancel_sell_order(orderId, slot, price);
   }
 
+  void reset(Price centerPrice)
+  {
+    _orderBook.reset(centerPrice);
+  }
+
   QueueOut& out()
   {
     return _queueOut;
@@ -356,10 +345,6 @@ private:
     const Qty oldQty = qty;
 
     {
-      if(UNLIKELY(_orderBook.buy_price_from() == UINT32_MIN)) {
-        return 0;
-      }
-
       priceLimit = _orderBook.buy_price_to(priceLimit);
 
       Price price = _orderBook.buy_price_from();
@@ -392,10 +377,6 @@ private:
     const Qty oldQty = qty;
 
     {
-      if(UNLIKELY(_orderBook.sell_price_from() == UINT32_MAX)) {
-        return 0;
-      }
-
       priceLimit = _orderBook.sell_price_to(priceLimit);
 
       Price price = _orderBook.sell_price_from();
