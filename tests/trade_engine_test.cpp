@@ -418,7 +418,7 @@ void test_trade_IOC_order_matches_and_rejects_remainder()
   }
 }
 
-void test_trade_FOK_order_does_not_match_partial()
+void test_sell_trade_FOK_order_does_not_match_partial()
 {
   TestTradeEngine engine(100);
 
@@ -435,6 +435,28 @@ void test_trade_FOK_order_does_not_match_partial()
   Assert(engine.out().pop() == CreateAccepted(/* id */ 4, /* slot */ 2));
 
   engine.insert_sell_order_FOK(5, /* price */ 100, /* qty */ 300);
+  Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 5, /* taker */ 1));
+  Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 5, /* taker */ 2));
+  Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 5, /* taker */ 4));
+}
+
+void test_buy_trade_FOK_order_does_not_match_partial()
+{
+  TestTradeEngine engine(100);
+
+  engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 100);
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 1, /* slot */ 0));
+
+  engine.insert_sell_order_PL(2, /* price */ 100, /* qty */ 100);
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 2, /* slot */ 1));
+
+  engine.insert_buy_order_FOK(3, /* price */ 100, /* qty */ 300);
+  Assert(engine.out().pop() == CreateRejected(/* id */ 3, /* qty */ 300));
+
+  engine.insert_sell_order_PL(4, /* price */ 100, /* qty */ 100);
+  Assert(engine.out().pop() == CreateAccepted(/* id */ 4, /* slot */ 2));
+
+  engine.insert_buy_order_FOK(5, /* price */ 100, /* qty */ 300);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 5, /* taker */ 1));
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 5, /* taker */ 2));
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 5, /* taker */ 4));
@@ -467,7 +489,8 @@ int main()
   test_cancel_sell_order_rejects_unknown_order_id();
   test_cancel_sell_order_rejects_wrong_price();
   test_trade_IOC_order_matches_and_rejects_remainder();
-  test_trade_FOK_order_does_not_match_partial();
+  test_sell_trade_FOK_order_does_not_match_partial();
+  test_buy_trade_FOK_order_does_not_match_partial();
 
   return 0;
 }
