@@ -45,13 +45,15 @@ public:
 
     qty = _trade_sell(orderId, price, qty);
     
-    if(UNLIKELY(qty != 0)) {
-      if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
-        return _emit_event(CreateRejected(orderId, qty));
-      }
-
-      _orderBook.insert_sell_order(orderId, price, qty);
+    if(qty == 0) {
+      return;
     }
+
+    if(_orderBook.check_sell_price(price)) {
+      return _orderBook.insert_sell_order(orderId, price, qty);
+    }
+      
+    return _emit_event(CreateRejected(orderId, qty));
   }
 
   void insert_buy_order_PL(OrderId orderId, Price price, Qty qty)
@@ -64,13 +66,15 @@ public:
 
     qty = _trade_buy(orderId, price, qty);
 
-    if(UNLIKELY(qty != 0)) {
-      if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
-        return _emit_event(CreateRejected(orderId, qty));
-      }
-
-      _orderBook.insert_buy_order(orderId, price, qty);
+    if(qty == 0) {
+      return;
     }
+
+    if(_orderBook.check_buy_price(price)) {
+      return _orderBook.insert_buy_order(orderId, price, qty);
+    }
+      
+    return _emit_event(CreateRejected(orderId, qty));
   }
 
   void insert_sell_order_MKT(OrderId orderId, Qty qty)
