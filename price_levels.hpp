@@ -19,9 +19,11 @@
 #include "./order.hpp"
 #include "./ring_buffer_spsc.hpp"
 
-template<uint32_t Orders>
+template<uint32_t _Orders>
 struct PriceLevel
 {
+  constexpr static uint32_t Orders = _Orders;
+
 public:
   PriceLevel() = default;
   PriceLevel(PriceLevel&&) = delete;
@@ -29,6 +31,85 @@ public:
 
   PriceLevel& operator=(PriceLevel&&) = delete;
   PriceLevel& operator=(const PriceLevel&) = delete;
+
+public:
+  const Order& order() const
+  {
+    return orders.front();
+  }
+
+  Index insert(OrderId orderId, Qty qty)
+  {
+    const Index index = orders.push_back(Order(orderId, qty));
+
+    if(index != InvalidIndex) {
+      balance += qty;
+    }
+
+    return index;
+  }
+
+  bool update(OrderId orderId, Index slot, Qty newQty)
+  {
+    Order& order = orders.at_slot(slot);
+
+    if (UNLIKELY(order.id() != orderId)) {
+      return false;
+    }
+
+    balance -= order.qty();
+    order.update(newQty);
+    balance += order.qty();
+
+    return true;
+  }
+
+  bool cancel(OrderId orderId, Index slot)
+  {
+    Order& order = orders.at_slot(slot);
+
+    if (UNLIKELY(order.id() != orderId)) {
+      return false;
+    }
+
+    balance -= order.qty();
+    order.clear();
+    orders.remove(slot);
+
+    return true;
+  }
+
+  OrderId expire() 
+  {
+    if (orders.empty()) {
+      return Order::InvalidId;
+    }
+
+    Order& order = orders.front();
+    const OrderId orderId = order.id();
+    balance -= order.qty();
+    order.clear();
+    orders.pop_front();
+    return orderId;
+  }
+  
+  void trade(Qty qty)
+  {
+    Order& order = orders.front();
+
+    balance -= qty;
+    order.trade(qty);
+
+    if(order.qty() == 0) {
+      order.clear();
+      orders.pop_front();
+    }
+  }
+
+  bool empty() const
+  {
+    return orders.empty();
+  }
 
   void reset() 
   {
@@ -43,9 +124,12 @@ public:
   FlatList<Order, Orders> orders;
 };
 
-template<uint32_t LevelsBelow, uint32_t LevelsAbove, uint32_t Orders = 32>
+template<uint32_t _LevelsBelow, uint32_t _LevelsAbove, uint32_t _Orders = 32>
 struct PriceLevels
 {
+  constexpr static uint32_t LevelsBelow = _LevelsBelow;
+  constexpr static uint32_t LevelsAbove = _LevelsAbove;
+  constexpr static uint32_t Orders = _Orders;
   constexpr static uint32_t Mask = LevelsBelow + LevelsAbove;
 
 public:
@@ -66,21 +150,6 @@ public:
   PriceLevels& operator=(const PriceLevels&) = delete;
 
 public:
-  static constexpr uint32_t levels_below()
-  {
-    return LevelsBelow;
-  }
-
-  static constexpr uint32_t levels_above()
-  {
-    return LevelsAbove;
-  }
-
-  static constexpr uint32_t orders()
-  {
-    return Orders;
-  }
-
   Price center_price() const
   {
     return _minPrice + LevelsBelow;
