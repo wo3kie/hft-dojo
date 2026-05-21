@@ -30,6 +30,15 @@ public:
   PriceLevel& operator=(PriceLevel&&) = delete;
   PriceLevel& operator=(const PriceLevel&) = delete;
 
+  void reset() 
+  {
+    balance = 0;
+    
+    while(! orders.empty()) {
+      orders.pop_back();
+    }
+  }
+
   int32_t balance{0};
   FlatList<Order, Orders> orders;
 };
@@ -41,11 +50,13 @@ struct PriceLevels
 
 public:
   PriceLevels(Price centerPrice)
-    : _centerPrice(centerPrice)
-    , _centerIndex(LevelsBelow)
+    : _centerIndex(LevelsBelow)
   {
     Assert(centerPrice > LevelsBelow);
     Assert(centerPrice < MaxPrice - LevelsAbove);
+
+    _minPrice = centerPrice - LevelsBelow;
+    _maxPrice = centerPrice + LevelsAbove;
   }
 
   PriceLevels(PriceLevels&&) = delete;
@@ -72,24 +83,22 @@ public:
 
   Price center_price() const
   {
-    return _centerPrice;
+    return _minPrice + LevelsBelow;
   }
 
   Price min_price() const
   {
-    return _centerPrice - LevelsBelow;
+    return _minPrice;
   }
 
   Price max_price() const
   {
-    return _centerPrice + LevelsAbove;
+    return _maxPrice;
   }
 
   bool check_price(Price price) const
   {
-    const Price minPrice = this->min_price();
-    const Price maxPrice = this->max_price();
-    return bl::in_range(price, minPrice, maxPrice);
+    return bl::in_range(price, _minPrice, _maxPrice);
   }
 
   PriceLevel<Orders>& at_index(Index index)
@@ -118,7 +127,7 @@ public:
   {
     Assert(check_price(price));
 
-    price -= _centerPrice;
+    price -= (_minPrice + LevelsBelow);
     price += _centerIndex;
     price &= Mask;
 
@@ -129,7 +138,8 @@ public:
   {
     Assert(max_price() < MaxPrice);
 
-    _centerPrice += 1;
+    _minPrice += 1;
+    _maxPrice += 1;
     _centerIndex += 1;
     _centerIndex &= Mask;
   }
@@ -138,14 +148,31 @@ public:
   {
     Assert(min_price() > 1);
 
-    _centerPrice -= 1;
+    _minPrice -= 1;
+    _maxPrice -= 1;
     _centerIndex -= 1;
     _centerIndex &= Mask;
   }
 
+  void reset(Price centerPrice)
+  {
+    for(auto& level : _levels.data()) {
+      level.reset();
+    }
+
+    Assert(centerPrice > LevelsBelow);
+    Assert(centerPrice < MaxPrice - LevelsAbove);
+
+    _centerIndex = LevelsBelow;
+    _minPrice = centerPrice - LevelsBelow;
+    _maxPrice = centerPrice + LevelsAbove;
+  }
+
 private:
-  Price _centerPrice;
+  Price _minPrice;
+  Price _maxPrice;
   Index _centerIndex;
+  Index __padding;
 
   Array<PriceLevel<Orders>, LevelsBelow + LevelsAbove + 1> _levels;
 };
