@@ -8,51 +8,152 @@
 
 #include <iostream>
 
+#include "task_worker.hpp"
 #include "trade_engine.hpp"
 #include "timer.hpp"
 
 void micro_bench_insert()
 {
-  TradeEngine<3, 4> engine1(100);
+  TradeEngine<3, 4> engine(100);
   
-  auto insert_sell_order = [&engine1]() {
-    engine1.insert_sell_order_PL(1, /* price */ 100, /* qty */ 1);
-  };
-
-  TradeEngine<3, 4> engine2(100);
-
-  auto insert_buy_order = [&engine2]() {
-    engine2.insert_buy_order_PL(2, /* price */ 100, /* qty */ 1);
-  };
-  
-  std::cout << "Micro benchmark - Insert sell order PL: " << Cycles<8>(insert_sell_order) << " cycles" << std::endl;
-  std::cout << "Micro benchmark - Insert buy order PL: " << Cycles<8>(insert_buy_order) << " cycles" << std::endl << std::endl;
+  struct _Insert {
+    TradeEngine<3, 4>& engine;
+    
+    void setup() {
+    }
+    
+    void run() {
+      engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 1);
+    }
+    
+    void teardown() noexcept {
+      engine.cancel_sell_order(1, /* price */ 100, /* slot */ 0);
+      engine.out().pop();
+      engine.out().pop();
+    }
+  } insert{engine};
+   
+  std::cout << "Micro benchmark - Insert order PL: " << Timer<32>(insert) << " cycles" << std::endl;
 }
 
-void micro_bench_trade()
+void micro_bench_update()
 {
-  TradeEngine<3, 4> engine1(100);
+  TradeEngine<3, 4> engine(100);
+  
+  struct _Update {
+    TradeEngine<3, 4>& engine;
+    
+    void setup() {
+      engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 1);
+    }
+    
+    void run() {
+      engine.update_sell_order(1, /* price */ 100, /* slot */ 0, /* qty */ 2);
+    }
+    
+    void teardown() noexcept {
+      engine.cancel_sell_order(1, /* price */ 100, /* slot */ 0);
+      engine.out().pop();
+      engine.out().pop();
+      engine.out().pop();
+    }
+  } update{engine};
+   
+  std::cout << "Micro benchmark - Update order PL: " << Timer<32>(update) << " cycles" << std::endl;
+}
 
-  auto trade_sell_order = [&engine1]() {
-    engine1.insert_sell_order_PL(1, /* price */ 100, /* qty */ 1);
-    engine1.insert_buy_order_PL(2, /* price */ 100, /* qty */ 1);
-  };
+void micro_bench_cancel()
+{
+  TradeEngine<3, 4> engine(100);
+  
+  struct _Cancel {
+    TradeEngine<3, 4>& engine;
+    
+    void setup() {
+      engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 1);
+    }
+    
+    void run() {
+      engine.cancel_sell_order(1, /* price */ 100, /* slot */ 0);
+    }
+    
+    void teardown() noexcept {
+      engine.out().pop();
+      engine.out().pop();
+    }
+  } cancel{engine};
+   
+  std::cout << "Micro benchmark - Cancel order PL: " << Timer<32>(cancel) << " cycles" << std::endl;
+}
 
-  TradeEngine<3, 4> engine2(100);
+void micro_bench_trade_PL()
+{
+  TradeEngine<3, 4> engine(100);
+  
+  struct _Trade {
+    TradeEngine<3, 4>& engine;
+    
+    void setup() {
+      engine.insert_sell_order_PL(1, /* price */ 100, /* qty */ 1);
+    }
+    
+    void run() {
+      engine.insert_buy_order_PL(2, /* price */ 100, /* qty */ 1);
+    }
+    
+    void teardown() noexcept {
+      engine.out().pop();
+      engine.out().pop();
+    }
+  } trade{engine};
+   
+  std::cout << "Micro benchmark - Trade order PL: " << Timer<32>(trade) << " cycles" << std::endl;
+}
 
-  auto trade_buy_order = [&engine2]() {
-    engine2.insert_buy_order_PL(2, /* price */ 100, /* qty */ 1);
-    engine2.insert_sell_order_PL(1, /* price */ 100, /* qty */ 1);
-  };
+template<uint32_t Levels, uint32_t Orders>
+void micro_bench_trade_MKT()
+{
+  TradeEngine<127, 128> engine(1000);
+  
+  struct _Trade {
+    TradeEngine<127, 128>& engine;
+    
+    void setup() {
+      engine.reset(1000);
 
-  std::cout << "Micro benchmark - Trade sell order PL: " << Cycles<8>(trade_sell_order) << " cycles" << std::endl;
-  std::cout << "Micro benchmark - Trade buy order PL: " << Cycles<8>(trade_buy_order) << " cycles" << std::endl << std::endl;
+      for (Price p = 1; p <= Levels; ++p) {
+        for(OrderId o = 1; o <= Orders; ++o) {
+          engine.insert_sell_order_PL(1000 * p + o, /* price */ 1000 + p, /* qty */ 1);
+          engine.out().pop();
+        }
+      }
+    }
+    
+    void run() {
+      engine.insert_buy_order_MKT(999999999, /* qty */ Levels * Orders);
+    }
+    
+    void teardown() noexcept {
+      for (Price p = 1; p <= Levels; ++p) {
+        for(OrderId o = 1; o <= Orders; ++o) {
+          engine.out().pop();
+        }
+      }
+    }
+  } trade{engine};
+   
+  std::cout << "Micro benchmark - Trade order MKT<" << Levels << ", " << Orders << ">: " << Timer<32>(trade) << " cycles" << std::endl;
 }
 
 int main()
 {
   micro_bench_insert();
-  micro_bench_trade();
+  micro_bench_update();
+  micro_bench_cancel();
+  micro_bench_trade_PL();
+  micro_bench_trade_MKT<1, 32>();
+  micro_bench_trade_MKT<16, 32>();
+  micro_bench_trade_MKT<24, 32>();
 
   return 0;
 }
