@@ -166,7 +166,7 @@ public:
       return _emit_event(CreateRejected(orderId, qty));
     }
 
-    level.balance -= qty;
+    level.balance += qty;
     _minSellPrice = std::min(_minSellPrice, price);
     _emit_event(CreateAccepted(orderId, slot));
   }
@@ -194,8 +194,10 @@ public:
       return _emit_event(UpdateRejected(orderId, newQty));
     }
 
-    level.balance -= (newQty - order.qty);
+    level.balance -= order.qty;
     order.qty = newQty;
+    level.balance += order.qty;
+
     _emit_event(UpdateAccepted(orderId));
   }
 
@@ -208,8 +210,10 @@ public:
       return _emit_event(UpdateRejected(orderId, newQty));
     }
 
-    level.balance += (newQty - order.qty);
+    level.balance -= order.qty;
     order.qty = newQty;
+    level.balance += order.qty;
+
     _emit_event(UpdateAccepted(orderId));
   }
 
@@ -223,7 +227,7 @@ public:
     }
 
     order.id = InvalidOrderId;
-    level.balance += order.qty;
+    level.balance -= order.qty;
     level.orders.remove(slot);
     _emit_event(CancelAccepted(orderId));
   }
