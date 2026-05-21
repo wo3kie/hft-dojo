@@ -26,9 +26,13 @@
 #include <iostream>
 #include <limits>
 
-template<uint32_t InsideLevels, uint32_t OutsideLevels, uint32_t Orders = 32>
+template<uint32_t _InsideLevels, uint32_t _OutsideLevels, uint32_t _Orders = 32>
 struct OrderBook
 {
+  constexpr static uint32_t InsideLevels = _InsideLevels;
+  constexpr static uint32_t OutsideLevels = _OutsideLevels;
+  constexpr static uint32_t Orders = _Orders;
+
 public:
   OrderBook(QueueOut& out, Price centerPrice)
     : _minSellPrice{centerPrice + OutsideLevels}
@@ -46,21 +50,6 @@ public:
   OrderBook& operator=(const OrderBook&) = delete;
 
 public:
-  static constexpr uint32_t inside_levels()
-  {
-    return InsideLevels;
-  }
-
-  static constexpr uint32_t outside_levels()
-  {
-    return OutsideLevels;
-  }
-
-  static constexpr uint32_t orders()
-  {
-    return Orders;
-  }
-
   Price center_price() const
   {
     Assert(_sellLevels.center_price() == _buyLevels.center_price());
@@ -72,7 +61,7 @@ public:
     return _minSellPrice;
   }
 
-  Price sell_price_to(Price price = MaxPrice) const
+  Price sell_price_to(Price price = Order::MaxPrice) const
   {
     const Price maxPrice = _sellLevels.max_price();
     return bl::min(price, maxPrice);
@@ -83,7 +72,7 @@ public:
     return _sellLevels.price_to_index(_minSellPrice);
   }
 
-  Index sell_index_to(Price price = MaxPrice) const
+  Index sell_index_to(Price price = Order::MaxPrice) const
   {
     price = sell_price_to(price);
     return _sellLevels.price_to_index(price);
@@ -99,7 +88,7 @@ public:
     return _maxBuyPrice;
   }
 
-  Price buy_price_to(Price price = MinPrice) const
+  Price buy_price_to(Price price = Order::MinPrice) const
   {
     const Price minPrice = _buyLevels.min_price();
     return std::max(price, minPrice);
@@ -110,7 +99,7 @@ public:
     return _buyLevels.price_to_index(_maxBuyPrice);
   }
 
-  Index buy_index_to(Price price = MinPrice) const
+  Index buy_index_to(Price price = Order::MinPrice) const
   {
     price = buy_price_to(price);
     return _buyLevels.price_to_index(price);
