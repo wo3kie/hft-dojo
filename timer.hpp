@@ -5,22 +5,6 @@
 #include <iostream>
 #include <string>
 
-template<unsigned Iters, typename F>
-struct LoopUnroll {
-    static void run(const F& f) {
-        f();
-
-        LoopUnroll<Iters - 1, F>::run(f);
-    }
-};
-
-template<typename F>
-struct LoopUnroll<1, F> {
-    static void run(const F& f) {
-        f();
-    }
-};
-
 struct Duration
 {
   using duration = std::chrono::duration<long int, std::nano>;
@@ -80,55 +64,80 @@ template<unsigned Iters = 8>
 struct _Timer
 {
   template<typename F>
-  Duration operator()(const F& f) {
+  Duration operator()(F& f) {
     {
-      /*
-       * Warmup
-       */
-      LoopUnroll<Iters, F>::run(f);
+        /*
+          * Warm up
+          */
+
+        for (int i = 0; i < Iters; ++i) {
+            f.setup();
+            f.run();
+            f.teardown();
+        }
     }
   
     std::chrono::duration<long int, std::nano> best = std::chrono::duration<long int, std::nano>::max();
 
     for(int i = 0; i < Iters; ++i) {
-      const auto start = std::chrono::high_resolution_clock::now();
-      LoopUnroll<Iters, F>::run(f);
-      const auto end = std::chrono::high_resolution_clock::now();
-
-      best = std::min(best, end - start);
+      for (int j = 0; j < Iters; ++j) {
+          f.setup();
+          
+          const auto start = std::chrono::high_resolution_clock::now();
+          asm volatile("" ::: "memory");
+                  
+          f.run();
+          
+          asm volatile("" ::: "memory");
+          const auto end = std::chrono::high_resolution_clock::now();
+          
+          f.teardown();
+          best = std::min(best, end - start);
+      }
     }
 
-    return Duration(best / Iters);
-
+    return Duration(best);
   }
 };
 
 template<unsigned Iters>
 inline static _Timer<Iters> Timer;
 
-template <unsigned Iters = 8>
+template <unsigned Iters = 32>
 struct _Cycles
 {
     template<typename F>
-    std::uint64_t operator()(const F& f, unsigned aux = 0u) {
-        {
-            /*
-             * Warmup
-             */
-            LoopUnroll<Iters, F>::run(f);
+    std::uint64_t operator()(F& f, unsigned aux = 0u) {
+      {
+        /*
+          * Warm up
+          */
+
+        for (int i = 0; i < Iters; ++i) {
+            f.setup();
+            f.run();
+            f.teardown();
         }
+      }
 
-        std::uint64_t best = std::numeric_limits<std::uint64_t>::max();
+      std::uint64_t best = std::numeric_limits<std::uint64_t>::max();
 
-        for(int i = 0; i < Iters; ++i) {
-          const std::uint64_t start = __rdtscp(&aux);
-          LoopUnroll<Iters, F>::run(f);
-          const std::uint64_t end = __rdtscp(&aux);
+      for(int i = 0; i < Iters; ++i) {
+        f.setup();
 
-          best = std::min(best, end - start);
-        }
+        const std::uint64_t start = __rdtscp(&aux);
+        asm volatile("" ::: "memory");
+        
+        f.run();
+        
+        asm volatile("" ::: "memory");
+        const std::uint64_t end = __rdtscp(&aux);
+        
+        f.teardown();
+        best = std::min(best, end - start);
+      }
 
-        return best / Iters;
+      return best;
     }
 };
 
