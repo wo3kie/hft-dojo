@@ -386,7 +386,7 @@ private:
         PriceLevel<Orders>& sellLevel = _orderBook.sell_levels().at_index(index);
         const Qty traded = _trade_level(orderId, price, qty, sellLevel);
 
-        sellLevel.balance += traded;
+        sellLevel.balance -= traded;
         qty -= traded;
 
         const bool empty = sellLevel.orders.empty();
