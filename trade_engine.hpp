@@ -80,7 +80,7 @@ public:
       Assert(qty != 0);
     }
 
-    qty = _trade_sell(orderId, MinPrice, qty);
+    qty = _trade_sell(orderId, Order::MinPrice, qty);
 
     if(UNLIKELY(qty != 0)) {
       _emit_event(CreateRejected(orderId, qty));
@@ -94,7 +94,7 @@ public:
       Assert(qty != 0);
     }
 
-    qty = _trade_buy(orderId, MaxPrice, qty);
+    qty = _trade_buy(orderId, Order::MaxPrice, qty);
 
     if(UNLIKELY(qty != 0)) {
       _emit_event(CreateRejected(orderId, qty));
