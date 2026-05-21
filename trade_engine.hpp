@@ -23,6 +23,7 @@ struct TradeEngine
   constexpr static uint32_t OutsideLevels = _OutsideLevels;
   constexpr static uint32_t Orders = _Orders;
 
+public:
   TradeEngine(Price centerPrice)
     : _orderBook(_queueOut, centerPrice)
   {
