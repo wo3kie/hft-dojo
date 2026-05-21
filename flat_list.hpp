@@ -50,6 +50,11 @@ public:
     return _at_slot(_head);
   }
 
+  const TValue& front() const
+  {
+    return _at_slot(_head);
+  }
+
   TValue& back()
   {
     return _at_slot(_tail);
