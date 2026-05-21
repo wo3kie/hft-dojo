@@ -120,7 +120,7 @@ public:
     }
   }
 
-  int32_t balance{0};
+  Qty balance{0};
   FlatList<Order, Orders> orders;
 };
 
