@@ -12,7 +12,6 @@
 #include <limits>
 
 typedef uint32_t OrderId;
-constexpr OrderId InvalidOrderId = 0;
 
 typedef uint32_t Qty;
 
