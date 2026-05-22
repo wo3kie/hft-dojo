@@ -462,8 +462,38 @@ void test_buy_trade_FOK_order_does_not_match_partial()
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 100, /* maker */ 5, /* taker */ 4));
 }
 
+void test_slide_order_book()
+{
+  TradeEngine<15, 16> engine(100);
+
+  for(unsigned i = 100; i <= 100 + 1000; ++i) {
+    engine.insert_buy_order_PL(/* id */ 100'000 + i, /* price */ i, /* qty */ 100);
+    Assert(engine.out().pop() == CreateAccepted(100'000 + i, 0));
+
+    engine.insert_sell_order_PL(/* id */ 200'000 + i, /* price */ i, /* qty */ 100);
+    Assert(engine.out().pop() == Trade(i, 100, 200'000 + i, 100'000 + i));
+  }
+
+  for(unsigned i = 100 + 1000; i >= 1; --i) {
+    engine.insert_buy_order_PL(/* id */ 300'000 + i, /* price */ i, /* qty */ 100);
+    Assert(engine.out().pop() == CreateAccepted(300'000 + i, 0));
+
+    engine.insert_sell_order_PL(/* id */ 400'000 + i, /* price */ i, /* qty */ 100);
+    Assert(engine.out().pop() == Trade(i, 100, 400'000 + i, 300'000 + i));
+  }
+
+  for(unsigned i = 1; i <= 100 + 1000; ++i) {
+    engine.insert_buy_order_PL(/* id */ 500'000 + i, /* price */ i, /* qty */ 100);
+    Assert(engine.out().pop() == CreateAccepted(500'000 + i, 0));
+
+    engine.insert_sell_order_PL(/* id */ 600'000 + i, /* price */ i, /* qty */ 100);
+    Assert(engine.out().pop() == Trade(i, 100, 600'000 + i, 500'000 + i));
+  }
+}
+
 int main()
 {
+  test_slide_order_book();
   test_matches_across_multiple_price_levels();
   test_buy_side_flow_with_update_cancel_and_resting_sell_remainder();
   test_sell_side_resting_order_matches_incoming_buy();
