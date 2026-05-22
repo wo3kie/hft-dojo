@@ -33,7 +33,7 @@ public:
   PriceLevel& operator=(const PriceLevel&) = delete;
 
 public:
-  const Order& order() const
+  Order order() const
   {
     return _orders.front();
   }
@@ -53,13 +53,11 @@ public:
   {
     Order& order = _orders.at_slot(slot);
 
-    if (UNLIKELY(order.id() != orderId)) {
+    if(UNLIKELY(order.id() != orderId)) {
       return false;
     }
 
-    _balance -= order.qty();
-    order.update(newQty);
-    _balance += order.qty();
+    _update(order, newQty);
 
     return true;
   }
@@ -68,28 +66,64 @@ public:
   {
     Order& order = _orders.at_slot(slot);
 
-    if (UNLIKELY(order.id() != orderId)) {
+    if(UNLIKELY(order.id() != orderId)) {
       return false;
     }
 
-    _balance -= order.qty();
-    order.clear();
-    _orders.remove(slot);
+    _cancel(order, slot);
 
     return true;
   }
 
-  void expire_front() 
+  OrderId expire_front()
   {
     Order& order = _orders.front();
+    return _order_expire(order);
+  }
+
+  OrderId trade_front(Qty qty)
+  {
+    Order& order = _orders.front();
+    return _order_trade(order, qty);
+  }
+
+  Qty balance() const
+  {
+    return _balance;
+  }
+
+  bool empty() const
+  {
+    return _orders.empty();
+  }
+
+  void reset()
+  {
+    _balance = 0;
+
+    while(! _orders.empty()) {
+      _orders.front().clear();
+      _orders.pop_back();
+    }
+  }
+
+private:
+  void _update(Order& order, Qty newQty)
+  {
+    _balance -= order.qty();
+    order.update(newQty);
+    _balance += order.qty();
+  }
+
+  void _cancel(Order& order, Index slot)
+  {
     _balance -= order.qty();
     order.clear();
-    _orders.pop_front();
+    _orders.remove(slot);
   }
-  
-  void trade_front(Qty qty)
+
+  void _trade(Order& order, Qty qty)
   {
-    Order& order = _orders.front();
     order.trade(qty);
     _balance -= qty;
 
@@ -99,23 +133,25 @@ public:
     }
   }
 
-  bool empty() const
+  OrderId _order_trade(Order& order, Qty qty)
   {
-    return _orders.empty();
+    const OrderId id = order.id();
+    _trade(order, qty);
+    return id;
   }
 
-  void reset() 
+  OrderId _order_expire(Order& order)
   {
-    _balance = 0;
-    
-    while(! _orders.empty()) {
-      _orders.pop_back();
-    }
+    const OrderId id = order.id();
+    _expire(order);
+    return id;
   }
 
-  Qty balance() const
+  void _expire(Order& order)
   {
-    return _balance;
+    _balance -= order.qty();
+    order.clear();
+    _orders.pop_front();
   }
 
 private:
