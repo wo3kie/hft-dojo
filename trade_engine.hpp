@@ -294,35 +294,17 @@ private:
 
   void _shift_order_book(Price price)
   {
-    {
-      Price centerPrice = _orderBook.center_price();
-      Price minPrice = std::min(centerPrice, price);
-      Price maxPrice = std::max(centerPrice, price);
-
-      if(maxPrice - minPrice <= 4) {
-        return;
-      }
-    }
-
-    while(_orderBook.center_price() < price) {
-      _orderBook.shift_up();
-    }
-
-    while(_orderBook.center_price() > price) {
-      _orderBook.shift_down();
-    }
+    _orderBook.shift(price);
   }
 
   Qty _trade_level(OrderId id, Price price, Qty qty, PriceLevel<Orders>& level)
   {
     while((qty != 0) && (! level.empty())) {
-      const Order& order = level.order();
-      const OrderId orderId = order.id();
-      const Qty orderQty = order.qty();
+      const Qty orderQty = level.order().qty();
       const Qty min = std::min(qty, orderQty);
 
       qty -= min;
-      level.trade_front(min);
+      const OrderId orderId = level.trade_front(min);
       
       _emit_event(Trade(price, min, id, orderId));
     }
@@ -382,7 +364,7 @@ private:
     while(price >= priceLimit) {
       const PriceLevel<Orders>& buyLevel = _orderBook.buy_levels().at_index(index);
 
-      if(UNLIKELY(buyLevel.balance != 0)) {
+      if(UNLIKELY(buyLevel.balance() != 0)) {
         return false;
       }
 
@@ -403,7 +385,7 @@ private:
     while(price <= priceLimit) {
       const PriceLevel<Orders>& sellLevel = _orderBook.sell_levels().at_index(index);
 
-      if(UNLIKELY(sellLevel.balance != 0)) {
+      if(UNLIKELY(sellLevel.balance() != 0)) {
         return false;
       }
 
