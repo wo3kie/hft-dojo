@@ -253,21 +253,13 @@ public:
   }
 
 private:
-  void _expire_order(Order& order)
-  {
-    _emit_event(OrderExpired(order.id()));
-    order.clear();
-  }
-
   void _expire_level(PriceLevel<Orders>& level)
   {
-    while(level.orders.empty() == false) {
-      Order& order = level.orders.front();
-      _expire_order(order);
-      level.orders.pop_front();
+    while(level.empty() == false) {
+      const Order& order = level.order();
+      _emit_event(OrderExpired(order.id()));
+      level.expire_front();
     }
-
-    level.balance = 0;
   }
 
   void _emit_event(Event event)
