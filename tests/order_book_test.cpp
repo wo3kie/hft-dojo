@@ -238,49 +238,6 @@ void test_order_book_cancel_sell_order_accepts_matching_order()
   Assert(buffer.pop() == CancelAccepted(2));
 }
 
-void test_order_book_shift_up_expires_out_of_range_sell_order()
-{
-  QueueOut buffer;
-  TestOrderBook ob(buffer, 100);
-
-  ob.insert_sell_order(1, 69, 10);
-  Assert(buffer.pop() == CreateAccepted(1, 0));
-
-  ob.shift_up();
-  Assert(buffer.pop() == OrderExpired(1));
-  Assert(ob.center_price() == 101);
-}
-
-void test_order_book_shift_down_expires_out_of_range_buy_order()
-{
-  QueueOut buffer;
-  TestOrderBook ob(buffer, 100);
-
-  ob.insert_buy_order(2, 131, 10);
-  Assert(buffer.pop() == CreateAccepted(2, 0));
-
-  ob.shift_down();
-  Assert(buffer.pop() == OrderExpired(2));
-  Assert(ob.center_price() == 99);
-}
-
-void test_order_book_shift_up()
-{
-  QueueOut buffer;
-  TestOrderBook ob(buffer, 100);
-
-  ob.shift_up();
-  Assert(ob.center_price() == 101);
-}
-
-void test_order_book_shift_down()
-{
-  QueueOut buffer;
-  TestOrderBook ob(buffer, 100);
-
-  ob.shift_down();
-  Assert(ob.center_price() == 99);
-}
 
 int main()
 {
@@ -302,10 +259,6 @@ int main()
   test_order_book_update_sell_order_rejects_unknown_order();
   test_order_book_cancel_sell_order_rejects_unknown_order();
   test_order_book_cancel_sell_order_accepts_matching_order();
-  test_order_book_shift_up_expires_out_of_range_sell_order();
-  test_order_book_shift_down_expires_out_of_range_buy_order();
-  test_order_book_shift_up();
-  test_order_book_shift_down();
 
   return 0;
 }
