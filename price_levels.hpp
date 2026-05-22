@@ -35,15 +35,15 @@ public:
 public:
   const Order& order() const
   {
-    return orders.front();
+    return _orders.front();
   }
 
   Index insert(OrderId orderId, Qty qty)
   {
-    const Index index = orders.push_back(Order(orderId, qty));
+    const Index index = _orders.push_back(Order(orderId, qty));
 
     if(index != InvalidIndex) {
-      balance += qty;
+      _balance += qty;
     }
 
     return index;
@@ -51,77 +51,76 @@ public:
 
   bool update(OrderId orderId, Index slot, Qty newQty)
   {
-    Order& order = orders.at_slot(slot);
+    Order& order = _orders.at_slot(slot);
 
     if (UNLIKELY(order.id() != orderId)) {
       return false;
     }
 
-    balance -= order.qty();
+    _balance -= order.qty();
     order.update(newQty);
-    balance += order.qty();
+    _balance += order.qty();
 
     return true;
   }
 
   bool cancel(OrderId orderId, Index slot)
   {
-    Order& order = orders.at_slot(slot);
+    Order& order = _orders.at_slot(slot);
 
     if (UNLIKELY(order.id() != orderId)) {
       return false;
     }
 
-    balance -= order.qty();
+    _balance -= order.qty();
     order.clear();
-    orders.remove(slot);
+    _orders.remove(slot);
 
     return true;
   }
 
-  OrderId expire() 
+  void expire_front() 
   {
-    if (orders.empty()) {
-      return Order::InvalidId;
-    }
-
-    Order& order = orders.front();
-    const OrderId orderId = order.id();
-    balance -= order.qty();
+    Order& order = _orders.front();
+    _balance -= order.qty();
     order.clear();
-    orders.pop_front();
-    return orderId;
+    _orders.pop_front();
   }
   
-  void trade(Qty qty)
+  void trade_front(Qty qty)
   {
-    Order& order = orders.front();
-
-    balance -= qty;
+    Order& order = _orders.front();
     order.trade(qty);
+    _balance -= qty;
 
     if(order.qty() == 0) {
       order.clear();
-      orders.pop_front();
+      _orders.pop_front();
     }
   }
 
   bool empty() const
   {
-    return orders.empty();
+    return _orders.empty();
   }
 
   void reset() 
   {
-    balance = 0;
+    _balance = 0;
     
-    while(! orders.empty()) {
-      orders.pop_back();
+    while(! _orders.empty()) {
+      _orders.pop_back();
     }
   }
 
-  Qty balance{0};
-  FlatList<Order, Orders> orders;
+  Qty balance() const
+  {
+    return _balance;
+  }
+
+private:
+  Qty _balance{0};
+  FlatList<Order, Orders> _orders;
 };
 
 template<uint32_t _LevelsBelow, uint32_t _LevelsAbove, uint32_t _Orders = 32>
