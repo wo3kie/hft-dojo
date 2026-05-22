@@ -92,21 +92,21 @@ void test_price_levels_storage_access()
 {
   PriceLevels<3, 4> pl(6);
 
-  pl.at_price(3).orders.push_back({3, 33});
-  pl.at_price(4).orders.push_back({4, 44});
-  pl.at_price(5).orders.push_back({5, 55});
-  pl.at_price(6).orders.push_back({6, 66});
-  pl.at_price(7).orders.push_back({7, 77});
-  pl.at_price(8).orders.push_back({8, 88});
-  pl.at_price(9).orders.push_back({9, 99});
+  pl.at_price(3).insert(3, 33);
+  pl.at_price(4).insert(4, 44);
+  pl.at_price(5).insert(5, 55);
+  pl.at_price(6).insert(6, 66);
+  pl.at_price(7).insert(7, 77);
+  pl.at_price(8).insert(8, 88);
+  pl.at_price(9).insert(9, 99);
 
-  Assert(pl.at_price(3).orders.front() == Order(3, 33));
-  Assert(pl.at_price(4).orders.front() == Order(4, 44));
-  Assert(pl.at_price(5).orders.front() == Order(5, 55));
-  Assert(pl.at_price(6).orders.front() == Order(6, 66));
-  Assert(pl.at_price(7).orders.front() == Order(7, 77));
-  Assert(pl.at_price(8).orders.front() == Order(8, 88));
-  Assert(pl.at_price(9).orders.front() == Order(9, 99));
+  Assert(pl.at_price(3).order() == Order(3, 33));
+  Assert(pl.at_price(4).order() == Order(4, 44));
+  Assert(pl.at_price(5).order() == Order(5, 55));
+  Assert(pl.at_price(6).order() == Order(6, 66));
+  Assert(pl.at_price(7).order() == Order(7, 77));
+  Assert(pl.at_price(8).order() == Order(8, 88));
+  Assert(pl.at_price(9).order() == Order(9, 99));
 }
 
 void test_price_levels_preserve_storage_for_in_range_prices_after_shifts()
@@ -114,25 +114,25 @@ void test_price_levels_preserve_storage_for_in_range_prices_after_shifts()
   PriceLevels<3, 4> pl(10);
   QueueOut buffer;
 
-  pl.at_price(9).orders.push_back({9, 90});
-  pl.at_price(10).orders.push_back({10, 100});
-  pl.at_price(11).orders.push_back({11, 110});
+  pl.at_price(9).insert(9, 90);
+  pl.at_price(10).insert(10, 100);
+  pl.at_price(11).insert(11, 110);
 
   pl.shift_up(buffer);
   pl.shift_up(buffer);
 
   Assert(pl.center_price() == 12);
-  Assert(pl.at_price(9).orders.front() == Order(9, 90));
-  Assert(pl.at_price(10).orders.front() == Order(10, 100));
-  Assert(pl.at_price(11).orders.front() == Order(11, 110));
+  Assert(pl.at_price(9).order() == Order(9, 90));
+  Assert(pl.at_price(10).order() == Order(10, 100));
+  Assert(pl.at_price(11).order() == Order(11, 110));
 
   pl.shift_down(buffer);
   pl.shift_down(buffer);
 
   Assert(pl.center_price() == 10);
-  Assert(pl.at_price(9).orders.front() == Order(9, 90));
-  Assert(pl.at_price(10).orders.front() == Order(10, 100));
-  Assert(pl.at_price(11).orders.front() == Order(11, 110));
+  Assert(pl.at_price(9).order() == Order(9, 90));
+  Assert(pl.at_price(10).order() == Order(10, 100));
+  Assert(pl.at_price(11).order() == Order(11, 110));
 }
 
 int main()
