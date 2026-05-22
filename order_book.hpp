@@ -50,12 +50,6 @@ public:
   OrderBook& operator=(const OrderBook&) = delete;
 
 public:
-  Price center_price() const
-  {
-    Assert(_sellLevels.center_price() == _buyLevels.center_price());
-    return _sellLevels.center_price();
-  }
-
   Price sell_price_from() const
   {
     return _minSellPrice;
@@ -216,22 +210,32 @@ public:
     }
   }
 
-  void shift_up()
+  template<unsigned Tolerance = 8>
+  void shift(Price price)
   {
-    _expire_level(_buyLevels.at_price(_buyLevels.min_price()));
-    _buyLevels.shift_up(_queueOut);
+    while((price > _sellLevels.center_price() + Tolerance) && (_sellLevels.max_price() < Order::MaxPrice)) {
+      _expire_level(_sellLevels.at_price(_sellLevels.min_price()));
+      _sellLevels.shift_up(_queueOut);
+      _minSellPrice = std::max(_minSellPrice, _sellLevels.min_price());
+    }
+    
+    while((price < _sellLevels.center_price() - Tolerance) && (_sellLevels.min_price() > Order::MinPrice)) {
+      _expire_level(_sellLevels.at_price(_sellLevels.max_price()));
+      _sellLevels.shift_down(_queueOut);
+      _minSellPrice = std::min(_minSellPrice, _sellLevels.max_price());
+    }
 
-    _expire_level(_sellLevels.at_price(_sellLevels.min_price()));
-    _sellLevels.shift_up(_queueOut);
-  }
+    while((price > _buyLevels.center_price() + Tolerance) && (_buyLevels.max_price() < Order::MaxPrice)) {
+      _expire_level(_buyLevels.at_price(_buyLevels.min_price()));
+      _buyLevels.shift_up(_queueOut);
+      _maxBuyPrice = std::max(_maxBuyPrice, _buyLevels.min_price());
+    }
 
-  void shift_down()
-  {
-    _expire_level(_buyLevels.at_price(_buyLevels.max_price()));
-    _buyLevels.shift_down(_queueOut);
-
-    _expire_level(_sellLevels.at_price(_sellLevels.max_price()));
-    _sellLevels.shift_down(_queueOut);
+    while((price < _buyLevels.center_price() - Tolerance) && (_buyLevels.min_price() > Order::MinPrice)) {
+      _expire_level(_buyLevels.at_price(_buyLevels.max_price()));
+      _buyLevels.shift_down(_queueOut);
+      _maxBuyPrice = std::min(_maxBuyPrice, _buyLevels.max_price());
+    }
   }
 
   QueueOut& out()
@@ -256,9 +260,8 @@ private:
   void _expire_level(PriceLevel<Orders>& level)
   {
     while(level.empty() == false) {
-      const Order& order = level.order();
-      _emit_event(OrderExpired(order.id()));
-      level.expire_front();
+      const OrderId orderId = level.expire_front();
+      _emit_event(OrderExpired(orderId));
     }
   }
 
