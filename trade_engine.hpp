@@ -322,7 +322,7 @@ private:
       const Qty min = std::min(qty, orderQty);
 
       qty -= min;
-      level.trade(min);
+      level.trade_front(min);
       
       _emit_event(Trade(price, min, id, orderId));
     }
@@ -423,7 +423,7 @@ private:
 
     while((qty != 0) && (price >= priceLimit)) {
       const PriceLevel<Orders>& buyLevel = _orderBook.buy_levels().at_index(index);
-      qty -= std::min<Qty>(qty, buyLevel.balance);
+      qty -= std::min<Qty>(qty, buyLevel.balance());
 
       price -= 1;
       index -= 1;
@@ -441,7 +441,7 @@ private:
 
     while((qty != 0) && (price <= priceLimit)) {
       const PriceLevel<Orders>& sellLevel = _orderBook.sell_levels().at_index(index);
-      qty -= std::min<Qty>(qty, sellLevel.balance);
+      qty -= std::min<Qty>(qty, sellLevel.balance());
 
       price += 1;
       index += 1;
