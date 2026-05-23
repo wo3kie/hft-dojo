@@ -24,13 +24,15 @@ class FlatList
 
   struct Node
   {
-    int32_t next;
-    int32_t prev;
+    int8_t next;
+    int8_t prev;
+    int8_t __padding1;
+    int8_t __padding2;
     TValue value;
   };
 
-  constexpr static int32_t None = -1;
-  constexpr static int32_t Free = -2;
+  constexpr static int8_t None = -1;
+  constexpr static int8_t Free = -2;
 
 public:
   FlatList()
@@ -60,24 +62,24 @@ public:
     return _at_slot(_tail);
   }
 
-  int32_t push_front(const TValue& value)
+  int8_t push_front(const TValue& value)
   {
     if(full()) {
       return -1;
     }
 
-    const int32_t slot = _push_front(_allocate_node());
+    const int8_t slot = _push_front(_allocate_node());
     _at_slot(slot) = value;
     return slot;
   }
 
-  int32_t push_back(const TValue& value)
+  int8_t push_back(const TValue& value)
   {
     if(full()) {
       return -1;
     }
 
-    const int32_t slot = _push_back(_allocate_node());
+    const int8_t slot = _push_back(_allocate_node());
     _at_slot(slot) = value;
     return slot;
   }
@@ -92,7 +94,7 @@ public:
     _deallocate_node(_pop_back());
   }
 
-  void remove(int32_t slot)
+  void remove(int8_t slot)
   {
     _deallocate_node(_remove(slot));
   }
@@ -118,7 +120,7 @@ public:
     _head = -1;
     _tail = -1;
 
-    for(std::size_t i = 0; i < Capacity - 1; ++i) {
+    for(int8_t i = 0; i < Capacity - 1; ++i) {
       _buffer[i].next = i + 1;
       _buffer[i].prev = Free;
     }
@@ -127,26 +129,26 @@ public:
     _buffer[Capacity - 1].prev = Free;
   }
 
-  const TValue& at_slot(int32_t slot) const
+  const TValue& at_slot(int8_t slot) const
   {
     return _at_slot(slot);
   }
 
-  TValue& at_slot(int32_t slot)
+  TValue& at_slot(int8_t slot)
   {
     return _at_slot(slot);
   }
 
 public: /* debug/utests */
-   bool _debug_is_free(int32_t slot) const
+   bool _debug_is_free(int8_t slot) const
   {
     return _is_free(slot);
   }
 
   bool _debug_validate_links() const
   {
-    int32_t prev = -1;
-    int32_t cur = _head;
+    int8_t prev = -1;
+    int8_t cur = _head;
 
     while(cur != -1) {
       const auto& node = _buffer[cur];
@@ -163,12 +165,12 @@ public: /* debug/utests */
   }
 
 private:
-  bool _validate_slot(int32_t slot) const
+  bool _validate_slot(int8_t slot) const
   {
     return slot >= 0 && slot < capacity();
   }
 
-  bool _is_free(int32_t slot) const
+  bool _is_free(int8_t slot) const
   {
     Assert(_validate_slot(slot));
     
@@ -180,32 +182,32 @@ private:
     return node.prev == Free;
   }
 
-  TValue& _at_slot(int32_t slot)
+  TValue& _at_slot(int8_t slot)
   {
     Assert(!_is_free(slot));
 
     return _buffer[slot].value;
   }
 
-  const TValue& _at_slot(int32_t slot) const
+  const TValue& _at_slot(int8_t slot) const
   {
     Assert(!_is_free(slot));
 
     return _buffer[slot].value;
   }
 
-  int32_t _allocate_node()
+  int8_t _allocate_node()
   {
     Assert(! full());
     Assert(_is_free(_free));
     
-    const int32_t slot = _free;
+    const int8_t slot = _free;
     _free = _buffer[slot].next;
 
     return slot;
   }
 
-  void _deallocate_node(int32_t slot)
+  void _deallocate_node(int8_t slot)
   {
     Assert(! _is_free(slot));
 
@@ -215,7 +217,7 @@ private:
     _free = slot;
   }
 
-  int32_t _push_front(int32_t slot)
+  int8_t _push_front(int8_t slot)
   {
     Assert(_is_free(slot));
 
@@ -232,7 +234,7 @@ private:
     return (_head = slot);
   }
 
-  int32_t _push_back(int32_t slot)
+  int8_t _push_back(int8_t slot)
   {
     Assert(_is_free(slot));
 
@@ -249,9 +251,9 @@ private:
     return (_tail = slot);
   }
 
-  int32_t _pop_front()
+  int8_t _pop_front()
   {
-    const int32_t slot = _head;
+    const int8_t slot = _head;
     Node& node = _buffer[slot];
 
     Assert(! _is_free(node));
@@ -267,9 +269,9 @@ private:
     return slot;
   }
 
-  int32_t _pop_back()
+  int8_t _pop_back()
   {
-    const int32_t slot = _tail;
+    const int8_t slot = _tail;
     Node& node = _buffer[slot];
     
     Assert(! _is_free(node));
@@ -285,7 +287,7 @@ private:
     return slot;
   }
 
-  int32_t _remove(int32_t slot)
+  int8_t _remove(int8_t slot)
   {
     Assert(! _is_free(slot));
 
@@ -307,9 +309,10 @@ private:
   }
 
 private:
-  int32_t _free;
-  int32_t _head;
-  int32_t _tail;
+  int8_t _free;
+  int8_t _head;
+  int8_t _tail;
+  int8_t __padding;
 
   Node _buffer[Capacity];
 };
