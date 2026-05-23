@@ -8,24 +8,203 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include <cstdint>
 #include <immintrin.h>
-#include <thread>
+#include <iostream>
 
-#include "./events.hpp"
-#include "./order_book.hpp"
-#include "./price_levels.hpp"
+#include "assert.hpp"
+#include "common.hpp"
+#include "events.hpp"
+#include "flat_list.hpp"
+#include "flat_queue.hpp"
+#include "likely.hpp"
+#include "timer.hpp"
 
-template<uint32_t _InsideLevels, uint32_t _OutsideLevels, uint32_t _Orders = 32>
-struct TradeEngine
-{
-  constexpr static uint32_t InsideLevels = _InsideLevels;
-  constexpr static uint32_t OutsideLevels = _OutsideLevels;
-  constexpr static uint32_t Orders = _Orders;
+/*
+ * QueueOut
+ */
 
-public:
-  TradeEngine(Price centerPrice)
-    : _orderBook(_queueOut, centerPrice)
+struct QueueOut {
+  void push(const Event& event) noexcept {
+    while(_queue.push(event) == false) {
+      _mm_pause();
+    }
+  }
+
+  Event pop() noexcept {
+    return _queue.pop();
+  }
+
+  void log() {
+    while(_queue.empty_approx() == false) {
+      const Event event = _queue.pop();
+      std::cout << event << std::endl;
+    }
+  }
+
+  RingBufferSPSC<Event, 64> _queue;
+};
+
+/*
+ * Order
+ */ 
+
+struct Order {
+  int32_t id{0};
+  int32_t qty{0};
+};
+
+inline bool operator==(const Order& lhs, const Order& rhs) noexcept {
+  return lhs.id == rhs.id && lhs.qty == rhs.qty;
+}
+
+inline bool operator!=(const Order& lhs, const Order& rhs) noexcept {
+  return ! (lhs == rhs);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const Order& order) {
+  return os << "Order{id=" << order.id << ", qty=" << order.qty << "}";
+}
+
+/*
+ * Level
+ */
+
+struct Level {
+  int32_t total{0};
+  FlatQueue<Order, 16> orders;
+};
+
+/*
+ * Side
+ */
+
+enum class Side : uint8_t { Sell = 0, Buy = 1 };
+
+/*
+ * OrderBook
+ */
+
+struct OrderBook {
+  OrderBook(QueueOut& out)
+    : _bestSellPrice{MaxPrice}
+    , _bestBuyPrice{MinPrice}
+    , _out(out) {
+  }
+
+  static constexpr int32_t MinPrice = 1;
+  static constexpr int32_t MaxPrice = 100;
+
+  bool check_price(int32_t price) const noexcept {
+    return price >= MinPrice && price <= MaxPrice;
+  }
+
+  template<Side side>
+  void insert_order(int32_t orderId, int32_t price, int32_t qty) noexcept {
+    if(check_price(price) == false) {
+      return _out.push(CreateRejected(orderId, qty));
+    }
+
+    Level& level = _levels[price];
+
+    if constexpr(side == Side::Sell) {
+      assert(level.total <= 0);
+    } else {
+      assert(level.total >= 0);
+    }
+
+    if (level.orders.full()) {
+      return _out.push(CreateRejected(orderId, qty));
+    }
+
+    const int32_t index = level.orders.push(Order{orderId, qty});
+
+    if constexpr(side == Side::Sell) {
+      level.total -= qty;
+      _bestSellPrice = std::min(_bestSellPrice, price);
+    } else {
+      level.total += qty;
+      _bestBuyPrice = std::max(_bestBuyPrice, price);
+    }
+
+    _out.push(CreateAccepted(orderId, index));
+  }
+
+  template<Side side>
+  void update_order(int32_t orderId, int32_t price, int32_t slot, int32_t newQty) noexcept {
+    if(check_price(price) == false) {
+      return _out.push(UpdateRejected(orderId, newQty));
+    }
+
+    Level& level = _levels[price];
+    Order& order = level.orders.at(slot);
+
+    if(order.id != orderId) {
+      return _out.push(UpdateRejected(orderId, newQty));
+    }
+
+    const int32_t qty = order.qty;
+
+    if constexpr(side == Side::Sell) {
+      level.total += qty;
+      level.total -= newQty;
+    } else {
+      level.total -= qty;
+      level.total += newQty;
+    }
+
+    order.qty = newQty;
+    _out.push(UpdateAccepted(orderId));
+  }
+
+  template<Side side>
+  void cancel_order(int32_t orderId, int32_t price, int32_t slot) noexcept {
+    if(check_price(price) == false) {
+      return _out.push(CancelRejected(orderId));
+    }
+
+    Level& level = _levels[price];
+    Order& order = level.orders.at(slot);
+
+    if(order.id != orderId) {
+      return _out.push(CancelRejected(orderId));
+    }
+
+    const int32_t qty = order.qty;
+
+    if constexpr(side == Side::Sell) {
+      level.total += qty;
+    } else {
+      level.total -= qty;
+    }
+
+    order.id = 0;
+    order.qty = 0;
+    level.orders.remove(slot);
+
+    _out.push(CancelAccepted(orderId));
+  }
+
+  Level& level(int32_t price) {
+    Assert(check_price(price));
+    return _levels[price];
+  }
+  
+  int32_t _bestSellPrice;
+  int32_t _bestBuyPrice;
+
+private:
+  Level _levels[128];
+  QueueOut& _out;
+};
+
+/*
+ * TradeEngine
+ */
+
+struct TradeEngine {
+  TradeEngine(QueueOut& out)
+    : _out(out)
+    , _orderBook(out) 
   {
   }
 
@@ -36,403 +215,137 @@ public:
   TradeEngine& operator=(const TradeEngine&) = delete;
 
 public:
-  void insert_sell_order_PL(OrderId orderId, Price price, Qty qty)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(price != InvalidPrice);
-      Assert(qty != 0);
-    }
+  void insert_sell_order(int32_t orderId, int32_t price, int32_t qty) noexcept {
+    qty = _trade<Side::Sell>(orderId, price, qty);
 
-    qty = _trade_sell(orderId, price, qty);
-    
-    if(qty == 0) {
-      return;
-    }
-
-    if(_orderBook.check_sell_price(price)) {
-      return _orderBook.insert_sell_order(orderId, price, qty);
-    }
-      
-    return _emit_event(CreateRejected(orderId, qty));
-  }
-
-  void insert_buy_order_PL(OrderId orderId, Price price, Qty qty)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(price != InvalidPrice);
-      Assert(qty != 0);
-    }
-
-    qty = _trade_buy(orderId, price, qty);
-
-    if(qty == 0) {
-      return;
-    }
-
-    if(_orderBook.check_buy_price(price)) {
-      return _orderBook.insert_buy_order(orderId, price, qty);
-    }
-      
-    return _emit_event(CreateRejected(orderId, qty));
-  }
-
-  void insert_sell_order_MKT(OrderId orderId, Qty qty)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(qty != 0);
-    }
-
-    qty = _trade_sell(orderId, Order::MinPrice, qty);
-
-    if(UNLIKELY(qty != 0)) {
-      _emit_event(CreateRejected(orderId, qty));
+    if(qty != 0) {
+      _orderBook.insert_order<Side::Sell>(orderId, price, qty);
     }
   }
 
-  void insert_buy_order_MKT(OrderId orderId, Qty qty)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(qty != 0);
-    }
+  void insert_buy_order(int32_t orderId, int32_t price, int32_t qty) noexcept {
+    qty = _trade<Side::Buy>(orderId, price, qty);
 
-    qty = _trade_buy(orderId, Order::MaxPrice, qty);
-
-    if(UNLIKELY(qty != 0)) {
-      _emit_event(CreateRejected(orderId, qty));
+    if(qty != 0) {
+      _orderBook.insert_order<Side::Buy>(orderId, price, qty);
     }
   }
 
-  void insert_sell_order_IOC(OrderId orderId, Price price, Qty qty)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(price != InvalidPrice);
-      Assert(qty != 0);
-    }
+  void insert_sell_order(int32_t orderId, int32_t qty) noexcept {
+    qty = _trade<Side::Sell>(orderId, OrderBook::MinPrice, qty);
 
-    qty = _trade_sell(orderId, price, qty);
-
-    if(UNLIKELY(qty != 0)) {
-      _emit_event(CreateRejected(orderId, qty));
+    if(qty != 0) {
+      _out.push(CreateRejected(orderId, qty));
     }
   }
 
-  void insert_buy_order_IOC(OrderId orderId, Price price, Qty qty)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(price != InvalidPrice);
-      Assert(qty != 0);
-    }
+  void insert_buy_order(int32_t orderId, int32_t qty) noexcept {
+    qty = _trade<Side::Buy>(orderId, OrderBook::MaxPrice, qty);
 
-    qty = _trade_buy(orderId, price, qty);
-
-    if(UNLIKELY(qty != 0)) {
-      _emit_event(CreateRejected(orderId, qty));
+    if(qty != 0) {
+      _out.push(CreateRejected(orderId, qty));
     }
   }
 
-  void insert_sell_order_PO(OrderId orderId, Price price, Qty qty)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(price != InvalidPrice);
-      Assert(qty != 0);
-    }
-
-    if(UNLIKELY(_check_sell_PO(price) == false)) {
-      return _emit_event(CreateRejected(orderId, qty));
-    }
-    
-    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
-      return _emit_event(CreateRejected(orderId, qty));
-    }
-
-    _orderBook.insert_sell_order(orderId, price, qty);
-  }
-  
-  void insert_buy_order_PO(OrderId orderId, Price price, Qty qty)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(price != InvalidPrice);
-      Assert(qty != 0);
-    }
-
-    if(UNLIKELY(_check_buy_PO(price) == false)) {
-      return _emit_event(CreateRejected(orderId, qty));
-    }
-    
-    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
-      return _emit_event(CreateRejected(orderId, qty));
-    }
-
-    _orderBook.insert_buy_order(orderId, price, qty);
+  void update_sell_order(int32_t orderId, int32_t price, int32_t slot, int32_t newQty) noexcept {
+    _orderBook.update_order<Side::Sell>(orderId, price, slot, newQty);
   }
 
-  void insert_sell_order_FOK(OrderId orderId, Price price, Qty qty)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(price != InvalidPrice);
-      Assert(qty != 0);
-    }
-
-    if(UNLIKELY(_check_sell_FOK(price, qty) == false)) {
-      return _emit_event(CreateRejected(orderId, qty));
-    }
-
-    qty = _trade_sell(orderId, price, qty);
-    Assert(qty == 0);
-  }
-  
-  void insert_buy_order_FOK(OrderId orderId, Price price, Qty qty)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(price != InvalidPrice);
-      Assert(qty != 0);
-    }
-
-    if(UNLIKELY(_check_buy_FOK(price, qty) == false)) {
-      return _emit_event(CreateRejected(orderId, qty));
-    }
-
-    qty = _trade_buy(orderId, price, qty);
-    Assert(qty == 0);
+  void update_buy_order(int32_t orderId, int32_t price, int32_t slot, int32_t newQty) noexcept {
+    _orderBook.update_order<Side::Buy>(orderId, price, slot, newQty);
   }
 
-  void update_buy_order(OrderId orderId, Price price, Index slot, Qty newQty)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(slot != InvalidIndex);
-      Assert(price != InvalidPrice);
-      Assert(newQty != 0);
-    }
-
-    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
-      return _emit_event(UpdateRejected(orderId, newQty));
-    }
-
-    _orderBook.update_buy_order(orderId, slot, price, newQty);
+  void cancel_sell_order(int32_t orderId, int32_t price, int32_t slot) noexcept {
+    _orderBook.cancel_order<Side::Sell>(orderId, price, slot);
   }
 
-  void update_sell_order(OrderId orderId, Price price, Index slot, Qty newQty)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(slot != InvalidIndex);
-      Assert(price != InvalidPrice);
-      Assert(newQty != 0);
-    }
-
-    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
-      return _emit_event(UpdateRejected(orderId, newQty));
-    }
-
-    _orderBook.update_sell_order(orderId, slot, price, newQty);
+  void cancel_buy_order(int32_t orderId, int32_t price, int32_t slot) noexcept {
+    _orderBook.cancel_order<Side::Buy>(orderId, price, slot);
   }
 
-  void cancel_buy_order(OrderId orderId, Price price, Index slot)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(slot != InvalidIndex);
-      Assert(price != InvalidPrice);
-    }
-
-    if(UNLIKELY(_orderBook.check_buy_price(price) == false)) {
-      return _emit_event(CancelRejected(orderId));
-    }
-
-    _orderBook.cancel_buy_order(orderId, slot, price);
-  }
-
-  void cancel_sell_order(OrderId orderId, Price price, Index slot)
-  {
-    {
-      Assert(orderId != Order::InvalidId);
-      Assert(slot != InvalidIndex);
-      Assert(price != InvalidPrice);
-    }
-
-    if(UNLIKELY(_orderBook.check_sell_price(price) == false)) {
-      return _emit_event(CancelRejected(orderId));
-    }
-
-    _orderBook.cancel_sell_order(orderId, slot, price);
-  }
-
-  void reset(Price centerPrice)
-  {
-    _orderBook.reset(centerPrice);
-  }
-
-  QueueOut& out()
-  {
-    return _queueOut;
+  QueueOut& out() noexcept {
+    return _out;
   }
 
 private:
-  void _emit_event(Event event)
-  {
-    int spins = 0;
-
-    while(_queueOut.push(event) == false) {
-      if(spins++ < 16) {
-        _mm_pause();
-      } else {
-        std::this_thread::yield();
-      }
-    }
-  }
-
-  void _shift_order_book(Price price)
-  {
-    _orderBook.shift(price);
-  }
-
-  Qty _trade_level(OrderId id, Price price, Qty qty, PriceLevel<Orders>& level)
-  {
-    while((qty != 0) && (! level.empty())) {
-      const Qty orderQty = level.order().qty();
-      const Qty min = std::min(qty, orderQty);
-
-      qty -= min;
-      const OrderId orderId = level.trade_front(min);
-      
-      _emit_event(Trade(price, min, id, orderId));
-    }
-
-    return qty;
-  }
-
-  Qty _trade_sell(OrderId orderId, Price priceLimit, Qty qty)
-  {
-    priceLimit = _orderBook.buy_price_to(priceLimit);
-
-    Price price = _orderBook.buy_price_from();
-    Index index = _orderBook.buy_index_from();
+  int32_t _trade_sell(int32_t orderId, int32_t priceLimit, int32_t qty) noexcept {
+    int32_t price = _orderBook._bestBuyPrice;
 
     while((qty != 0) && (price >= priceLimit)) {
-      PriceLevel<Orders>& buyLevel = _orderBook.buy_levels().at_index(index);
-      qty = _trade_level(orderId, price, qty, buyLevel);
-      
-      _orderBook.dec_max_buy_price(buyLevel.empty());
-      _shift_order_book(price);
+      Level& level = _orderBook.level(price);
+
+      while((qty != 0) && (level.total > 0)) {
+        Order& order = level.orders.front();
+        const int32_t min = std::min(qty, order.qty);
+
+        qty -= min;
+        order.qty -= min;
+        level.total -= min;
+
+        _out.push(Trade(price, min, orderId, order.id));
+
+        if(UNLIKELY(order.qty != 0)) {
+          continue;
+        }
+
+        order.id = 0;
+        level.orders.pop();
+
+        if(level.orders.empty()) {
+          _orderBook._bestBuyPrice = price - 1;
+        }
+      }
 
       price -= 1;
-      index -= 1;
     }
 
     return qty;
   }
 
-  Qty _trade_buy(OrderId orderId, Price priceLimit, Qty qty)
-  {
-    priceLimit = _orderBook.sell_price_to(priceLimit);
-
-    Price price = _orderBook.sell_price_from();
-    Index index = _orderBook.sell_index_from();
+  int32_t _trade_buy(int32_t orderId, int32_t priceLimit, int32_t qty) noexcept{
+    int32_t price = _orderBook._bestSellPrice;
 
     while((qty != 0) && (price <= priceLimit)) {
-      PriceLevel<Orders>& sellLevel = _orderBook.sell_levels().at_index(index);
-      qty = _trade_level(orderId, price, qty, sellLevel);
+      Level& level = _orderBook.level(price);
 
-      _orderBook.inc_sell_min_price(sellLevel.empty());
-      _shift_order_book(price);
+      while((qty != 0) && (level.total < 0)) {
+        Order& order = level.orders.front();
+        const int32_t min = std::min(qty, order.qty);
+
+        qty -= min;
+        order.qty -= min;
+        level.total += min;
+
+        _out.push(Trade(price, min, orderId, order.id));
+
+        if(UNLIKELY(order.qty != 0)) {
+          continue;
+        }
+
+        order.id = 0;
+        level.orders.pop();
+
+        if(level.orders.empty()) {
+          _orderBook._bestSellPrice = price + 1;
+        }
+      }
 
       price += 1;
-      index += 1;
     }
 
     return qty;
   }
 
-  bool _check_sell_PO(Price priceLimit) const
-  {
-    priceLimit = _orderBook.buy_price_to(priceLimit);
-
-    Price price = _orderBook.buy_price_from();
-    Price index = _orderBook.buy_index_from();
-
-    while(price >= priceLimit) {
-      const PriceLevel<Orders>& buyLevel = _orderBook.buy_levels().at_index(index);
-
-      if(UNLIKELY(buyLevel.balance() != 0)) {
-        return false;
-      }
-
-      price -= 1;
-      index -= 1;
+  template<Side side>
+  int32_t _trade(int32_t orderId, int32_t priceLimit, int32_t qty) {
+    if constexpr(side == Side::Sell) {
+      return _trade_sell(orderId, priceLimit, qty);
+    } else {
+      return _trade_buy(orderId, priceLimit, qty);
     }
-
-    return true;
-  }
-
-  bool _check_buy_PO(Price priceLimit) const
-  {
-    priceLimit = _orderBook.sell_price_to(priceLimit);
-
-    Price price = _orderBook.sell_price_from();
-    Price index = _orderBook.sell_index_from();
-
-    while(price <= priceLimit) {
-      const PriceLevel<Orders>& sellLevel = _orderBook.sell_levels().at_index(index);
-
-      if(UNLIKELY(sellLevel.balance() != 0)) {
-        return false;
-      }
-
-      price += 1;
-      index += 1;
-    }
-
-    return true;
-  }
-  
-  bool _check_sell_FOK(Price priceLimit, Qty qty) const
-  {
-    priceLimit = _orderBook.buy_price_to(priceLimit);
-
-    Price price = _orderBook.buy_price_from();
-    Price index = _orderBook.buy_index_from();
-
-    while((qty != 0) && (price >= priceLimit)) {
-      const PriceLevel<Orders>& buyLevel = _orderBook.buy_levels().at_index(index);
-      qty -= std::min<Qty>(qty, buyLevel.balance());
-
-      price -= 1;
-      index -= 1;
-    }
-
-    return (qty == 0);
-  }
-
-  bool _check_buy_FOK(Price priceLimit, Qty qty) const
-  {
-    priceLimit = _orderBook.sell_price_to(priceLimit);
-
-    Price price = _orderBook.sell_price_from();
-    Price index = _orderBook.sell_index_from();
-
-    while((qty != 0) && (price <= priceLimit)) {
-      const PriceLevel<Orders>& sellLevel = _orderBook.sell_levels().at_index(index);
-      qty -= std::min<Qty>(qty, sellLevel.balance());
-
-      price += 1;
-      index += 1;
-    }
-
-    return (qty == 0);
   }
 
 private:
-  QueueOut _queueOut;
-  OrderBook<InsideLevels, OutsideLevels, Orders> _orderBook;
+  QueueOut& _out;
+  OrderBook _orderBook;
 };
