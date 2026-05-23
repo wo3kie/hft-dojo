@@ -29,14 +29,14 @@ BinPackArguments: false
 BinPackParameters: false
 BraceWrapping:
   AfterCaseLabel:  false
-  AfterClass:      true
+  AfterClass:      false
   AfterControlStatement: false
-  AfterEnum:       true
-  AfterFunction:   true
-  AfterNamespace:  true
+  AfterEnum:       false
+  AfterFunction:   false
+  AfterNamespace:  false
   AfterObjCDeclaration: false
-  AfterStruct:     true
-  AfterUnion:      true
+  AfterStruct:     false
+  AfterUnion:      false
   AfterExternBlock: false
   BeforeCatch:     false
   BeforeElse:      false
