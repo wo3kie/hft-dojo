@@ -118,6 +118,3 @@ std::ostream& operator<<(std::ostream& os, const Event& event)
 
   return os << "UnknownEvent: m1=" << event.m1 << ", m2=" << event.m2 << ", m3=" << event.m3 << ", m4=" << event.m4;
 }
-
-using QueueIn = RingBufferSPSC<Event, 1024>;
-using QueueOut = RingBufferSPSC<Event, 1024>;
