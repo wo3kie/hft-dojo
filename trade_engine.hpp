@@ -44,11 +44,36 @@ struct QueueOut {
   RingBufferSPSC<Event, 64> _queue;
 };
 
+
+/*
+ * Side
+ */
+
+enum class Side : uint8_t { Sell = 0, Buy = 1 };
+
 /*
  * Order
  */ 
 
 struct Order {
+  static constexpr int32_t MinPrice() noexcept{
+    return 1;
+  }
+
+  static constexpr int32_t MaxPrice() noexcept{
+    return 100;
+  }
+  
+  template<Side side>
+  static constexpr int32_t AnyPrice() noexcept {
+    if constexpr(side == Side::Sell) {
+      return Order::MinPrice();
+    } else {
+      return Order::MaxPrice();
+    }
+  }
+
+
   int32_t id{0};
   int32_t qty{0};
 };
@@ -75,27 +100,18 @@ struct Level {
 };
 
 /*
- * Side
- */
-
-enum class Side : uint8_t { Sell = 0, Buy = 1 };
-
-/*
  * OrderBook
  */
 
 struct OrderBook {
   OrderBook(QueueOut& out)
-    : _bestSellPrice{MaxPrice}
-    , _bestBuyPrice{MinPrice}
+    : _bestSellPrice{Order::MaxPrice()}
+    , _bestBuyPrice{Order::MinPrice()}
     , _out(out) {
   }
 
-  static constexpr int32_t MinPrice = 1;
-  static constexpr int32_t MaxPrice = 100;
-
   bool check_price(int32_t price) const noexcept {
-    return price >= MinPrice && price <= MaxPrice;
+    return price >= Order::MinPrice() && price <= Order::MaxPrice();
   }
 
   template<Side side>
@@ -216,35 +232,19 @@ struct TradeEngine {
 
 public:
   void insert_sell_order(int32_t orderId, int32_t price, int32_t qty) noexcept {
-    qty = _trade<Side::Sell>(orderId, price, qty);
-
-    if(qty != 0) {
-      _orderBook.insert_order<Side::Sell>(orderId, price, qty);
-    }
+    _insert_order<Side::Sell>(orderId, price, qty);
   }
 
   void insert_buy_order(int32_t orderId, int32_t price, int32_t qty) noexcept {
-    qty = _trade<Side::Buy>(orderId, price, qty);
-
-    if(qty != 0) {
-      _orderBook.insert_order<Side::Buy>(orderId, price, qty);
-    }
+    _insert_order<Side::Buy>(orderId, price, qty);
   }
 
   void insert_sell_order(int32_t orderId, int32_t qty) noexcept {
-    qty = _trade<Side::Sell>(orderId, OrderBook::MinPrice, qty);
-
-    if(qty != 0) {
-      _out.push(CreateRejected(orderId, qty));
-    }
+    _insert_order<Side::Sell>(orderId, qty);
   }
 
   void insert_buy_order(int32_t orderId, int32_t qty) noexcept {
-    qty = _trade<Side::Buy>(orderId, OrderBook::MaxPrice, qty);
-
-    if(qty != 0) {
-      _out.push(CreateRejected(orderId, qty));
-    }
+    _insert_order<Side::Buy>(orderId, qty);
   }
 
   void update_sell_order(int32_t orderId, int32_t price, int32_t slot, int32_t newQty) noexcept {
@@ -342,6 +342,24 @@ private:
       return _trade_sell(orderId, priceLimit, qty);
     } else {
       return _trade_buy(orderId, priceLimit, qty);
+    }
+  }
+
+  template<Side side>
+  void _insert_order(int32_t orderId, int32_t price, int32_t qty) noexcept {
+    qty = _trade<side>(orderId, price, qty);
+
+    if(qty != 0) {
+      _orderBook.insert_order<side>(orderId, price, qty);
+    }
+  }
+
+  template<Side side>
+  void _insert_order(int32_t orderId, int32_t qty) noexcept {
+    qty = _trade<side>(orderId, Order::AnyPrice<side>(), qty);
+
+    if(qty != 0) {
+      _out.push(CreateRejected(orderId, qty));
     }
   }
 
