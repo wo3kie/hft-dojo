@@ -13,9 +13,7 @@
       "binaryDir": "${sourceDir}/build/debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "BUILD_DOJO_TESTS": "ON",
-        "BUILD_DOJO_BENCHMARKS": "OFF"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
@@ -27,9 +25,7 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_C_FLAGS_RELEASE": "-O2 -DNDEBUG",
         "CMAKE_CXX_FLAGS_RELEASE": "-O2 -DNDEBUG",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "BUILD_DOJO_TESTS": "OFF",
-        "BUILD_DOJO_BENCHMARKS": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     }
   ],
