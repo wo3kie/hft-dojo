@@ -115,10 +115,6 @@ public:
     return _free == -1;
   }
 
-  Node& operator[](int8_t slot) noexcept {
-    return nodes[slot];
-  }
-
 private:
   int8_t _allocate() {
     const int8_t slot = _free;
