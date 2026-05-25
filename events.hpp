@@ -13,83 +13,89 @@
 
 #include "./ring_buffer_spsc.hpp"
 
-enum EventType : uint32_t
+enum EventType : int32_t
 {
-  ETrade = 1,
+  ETrade = -1,
 
-  ECreateAccepted,
-  ECreateRejected,
+  ECreateAccepted = -2,
+  ECreateRejected = -3,
 
-  EUpdateAccepted,
-  EUpdateRejected,
+  EUpdateAccepted = -4,
+  EUpdateRejected = -5,
 
-  ECancelAccepted,
-  ECancelRejected,
+  ECancelAccepted = -6,
+  ECancelRejected = -7,
 
-  EOrderExpired,
+  EOrderExpired = -8,
 };
 
 struct Event
 {
-  uint32_t m1{0};
-  uint32_t m2{0};
-  uint32_t m3{0};
-  uint32_t m4{0};
+  int32_t m1{0};
+  int32_t m2{0};
+  int32_t m3{0};
+  int32_t m4{0};
 };
 
 bool operator==(const Event& lhs, const Event& rhs)
 {
-  return lhs.m1 == rhs.m1 && lhs.m2 == rhs.m2 && lhs.m3 == rhs.m3 && lhs.m4 == rhs.m4;
+  bool result = true;
+
+  result = result && (lhs.m1 == 0 || rhs.m1 == 0 || lhs.m1 == rhs.m1);
+  result = result && (lhs.m2 == 0 || rhs.m2 == 0 || lhs.m2 == rhs.m2);
+  result = result && (lhs.m3 == 0 || rhs.m3 == 0 || lhs.m3 == rhs.m3);
+  result = result && (lhs.m4 == 0 || rhs.m4 == 0 || lhs.m4 == rhs.m4);
+  return result;
 }
 
-Event Trade(uint32_t price, uint32_t qty, uint32_t maker, uint32_t taker)
+Event Trade(int32_t price, int32_t qty, int32_t maker, int32_t taker)
 {
   return {.m1 = price, .m2 = qty, .m3 = maker, .m4 = taker};
 }
 
-Event CreateAccepted(uint32_t id, uint32_t slot)
+Event CreateAccepted(int32_t id, int32_t slot, int32_t qty)
 {
-  return {.m1 = EventType::ECreateAccepted, .m2 = id, .m3 = slot};
+  return {.m1 = EventType::ECreateAccepted, .m2 = id, .m3 = slot, .m4 = qty};
 }
 
-Event CreateRejected(uint32_t id, uint32_t size)
+Event CreateRejected(int32_t id, int32_t size)
 {
   return {.m1 = EventType::ECreateRejected, .m2 = id, .m3 = size};
 }
 
-Event CancelAccepted(uint32_t id)
+Event CancelAccepted(int32_t id)
 {
   return {.m1 = EventType::ECancelAccepted, .m2 = id};
 }
 
-Event CancelRejected(uint32_t id)
+Event CancelRejected(int32_t id)
 {
   return {.m1 = EventType::ECancelRejected, .m2 = id};
 }
 
-Event UpdateAccepted(uint32_t id)
+Event UpdateAccepted(int32_t id)
 {
   return {.m1 = EventType::EUpdateAccepted, .m2 = id};
 }
 
-Event UpdateRejected(uint32_t id, uint32_t size)
+Event UpdateRejected(int32_t id, int32_t size)
 {
   return {.m1 = EventType::EUpdateRejected, .m2 = id, .m3 = size};
 }
 
-Event OrderExpired(uint32_t id)
+Event OrderExpired(int32_t id)
 {
   return {.m1 = EventType::EOrderExpired, .m2 = id};
 }
 
 std::ostream& operator<<(std::ostream& os, const Event& event)
 {
-  if(event.m4 != 0) {
+  if(event.m1 > 0) {
     return os << "Trade: price=" << event.m1 << ", qty=" << event.m2 << ", maker=" << event.m3 << ", taker=" << event.m4;
   }
 
   if(event.m1 == EventType::ECreateAccepted) {
-    return os << "CreateAccepted: id=" << event.m2 << ", slot=" << event.m3;
+    return os << "CreateAccepted: id=" << event.m2 << ", slot=" << event.m3 << ", qty=" << event.m4;
   }
 
   if(event.m1 == EventType::ECreateRejected) {
