@@ -46,10 +46,20 @@ struct QueueOut {
     return _queue.pop();
   }
 
-  void log() {
+  bool empty() const noexcept {
+    return _queue.empty_approx();
+  }
+
+  void clear() noexcept {
+    while(_queue.empty_approx() == false) {
+      _queue.pop();
+    }
+  }
+
+  void log(const std::string& prefix = "") {
     while(_queue.empty_approx() == false) {
       const Event event = _queue.pop();
-      std::cout << event << std::endl;
+      std::cout << prefix << event << std::endl;
     }
   }
 
@@ -78,7 +88,7 @@ struct Order {
   }
 
   static constexpr int32_t MaxPrice() noexcept {
-    return 100;
+    return 128 * 1024 * 1024;
   }
 
   template<Side side>
@@ -97,7 +107,7 @@ struct Order {
   }
 
   static constexpr int32_t MaxQty() noexcept {
-    return 128 * 1024 * 1024;
+    return 32 * 1024 * 1024;
   }
 
   int32_t id{Order::InvalidId()};
@@ -120,17 +130,8 @@ inline std::ostream& operator<<(std::ostream& os, const Order& order) {
  * Level
  */
 
-struct Level {
-public:
-  Level() = default;
-  Level(const Level&) = delete;
-  Level(Level&&) = delete;
-
-  Level& operator=(const Level&) = delete;
-  Level& operator=(Level&&) = delete;
-
-public:
-  static constexpr int8_t MaxOrders = 16;
+struct Level final : noncopyable, nonmovable {
+    static constexpr int8_t MaxOrders = 16;
 
   int32_t total{0};
   FlatQueue<Order, MaxOrders> orders;
@@ -140,36 +141,36 @@ public:
  * OrderBook
  */
 
-struct OrderBook {
+struct OrderBook final : noncopyable, nonmovable {
 public:
-  static bool check_price(int32_t price) noexcept {
-    return price >= Order::MinPrice() && price <= Order::MaxPrice();
+  static constexpr int32_t MaxLevels = 128;
+
+public:
+  explicit OrderBook(QueueOut& out, int32_t centerPrice = MaxLevels / 2)
+    : _out(out) 
+  {
+    _minPrice = std::max(centerPrice - 63, Order::MinPrice());
+    _maxPrice = std::min(_minPrice + 127, Order::MaxPrice());
+
+    _bestSellPrice = _maxPrice;
+    _bestBuyPrice = _minPrice;
   }
 
-  static bool check_qty(int32_t qty) noexcept {
+public:
+  bool check_price(int32_t price) noexcept {
+    return price >= get_min_price() && price <= get_max_price();
+  }
+
+  bool check_qty(int32_t qty) noexcept {
     return qty >= Order::MinQty() && qty <= Order::MaxQty();
   }
 
-public:
-  explicit OrderBook(QueueOut& out)
-    : _bestSellPrice{Order::MaxPrice()}
-    , _bestBuyPrice{Order::MinPrice()}
-    , _out(out) {
-  }
-
-  OrderBook(OrderBook&&) = delete;
-  OrderBook(const OrderBook&) = delete;
-
-  OrderBook& operator=(OrderBook&&) = delete;
-  OrderBook& operator=(const OrderBook&) = delete;
-
-public:
   int32_t get_min_price() const noexcept {
-    return Order::MinPrice();
+    return _minPrice;
   }
 
   int32_t get_max_price() const noexcept {
-    return Order::MaxPrice();
+    return _maxPrice;
   }
 
   template<Side side>
@@ -183,11 +184,6 @@ public:
       const int32_t price = get_max_price();
       return std::min(priceLimit, price);
     }
-  }
-
-  Level& get_level(int32_t price) {
-    Assert(check_price(price));
-    return _levels[price];
   }
 
   template<Side side>
@@ -212,6 +208,11 @@ public:
     }
   }
 
+  Level& get_level(int32_t price) {
+    Assert(check_price(price));
+    return _levels[price - _minPrice];
+  }
+
   template<Side side>
   void insert_order(int32_t orderId, int32_t price, int32_t qty) noexcept {
     static_assert(side == Sell || side == Buy);
@@ -220,29 +221,29 @@ public:
       return _out.push(CreateRejected(orderId, qty));
     }
 
-    Level& get_level = _levels[price];
+    Level& level = get_level(price);
 
     if constexpr(side == Sell) {
-      assert(get_level.total <= 0);
+      assert(level.total <= 0);
     } else {
-      assert(get_level.total >= 0);
+      assert(level.total >= 0);
     }
 
-    if(get_level.orders.full()) {
+    if(level.orders.full()) {
       return _out.push(CreateRejected(orderId, qty));
     }
 
-    const int32_t index = get_level.orders.push(Order{orderId, qty});
+    const int32_t index = level.orders.push(Order{orderId, qty});
 
     if constexpr(side == Sell) {
-      get_level.total -= qty;
+      level.total -= qty;
       _bestSellPrice = std::min(_bestSellPrice, price);
     } else {
-      get_level.total += qty;
+      level.total += qty;
       _bestBuyPrice = std::max(_bestBuyPrice, price);
     }
 
-    _out.push(CreateAccepted(orderId, index));
+    _out.push(CreateAccepted(orderId, index, qty));
   }
 
   template<Side side>
@@ -253,8 +254,8 @@ public:
       return _out.push(UpdateRejected(orderId, newQty));
     }
 
-    Level& get_level = _levels[price];
-    Order& order = get_level.orders.at(slot);
+    Level& level = get_level(price);
+    Order& order = level.orders.at(slot);
 
     if(order.id != orderId) {
       return _out.push(UpdateRejected(orderId, newQty));
@@ -263,11 +264,11 @@ public:
     const int32_t qty = order.qty;
 
     if constexpr(side == Sell) {
-      get_level.total += qty;
-      get_level.total -= newQty;
+      level.total += qty;
+      level.total -= newQty;
     } else {
-      get_level.total -= qty;
-      get_level.total += newQty;
+      level.total -= qty;
+      level.total += newQty;
     }
 
     order.qty = newQty;
@@ -282,8 +283,8 @@ public:
       return _out.push(CancelRejected(orderId));
     }
 
-    Level& get_level = _levels[price];
-    Order& order = get_level.orders.at(slot);
+    Level& level = get_level(price);
+    Order& order = level.orders.at(slot);
 
     if(order.id != orderId) {
       return _out.push(CancelRejected(orderId));
@@ -292,41 +293,38 @@ public:
     const int32_t qty = order.qty;
 
     if constexpr(side == Sell) {
-      get_level.total += qty;
+      level.total += qty;
     } else {
-      get_level.total -= qty;
+      level.total -= qty;
     }
 
     order.id = 0;
     order.qty = 0;
-    get_level.orders.remove(slot);
+    level.orders.remove(slot);
 
     _out.push(CancelAccepted(orderId));
   }
 
 private:
+  int32_t _minPrice;
+  int32_t _maxPrice;
+
   int32_t _bestSellPrice;
   int32_t _bestBuyPrice;
 
   QueueOut& _out;
-  Level _levels[128];
+  Level _levels[MaxLevels];
 };
 
 /*
  * TradeEngine
  */
 
-struct TradeEngine {
-  explicit TradeEngine(QueueOut& out)
+struct TradeEngine final : noncopyable, nonmovable {
+  explicit TradeEngine(QueueOut& out, int32_t centerPrice = OrderBook::MaxLevels / 2)
     : _out(out)
-    , _orderBook(out) {
+    , _orderBook(out, centerPrice) {
   }
-
-  TradeEngine(TradeEngine&&) = delete;
-  TradeEngine(const TradeEngine&) = delete;
-
-  TradeEngine& operator=(TradeEngine&&) = delete;
-  TradeEngine& operator=(const TradeEngine&) = delete;
 
 public:
   template<Side side>
@@ -475,10 +473,6 @@ private:
   int32_t _trade(int32_t orderId, int32_t priceLimit, int32_t qty) noexcept {
     static_assert(side == Sell || side == Buy);
 
-    const auto check_qty = [](int32_t qty) -> bool {
-      return qty != 0;
-    };
-
     const auto check_price = [](int32_t price, int32_t priceLimit) -> bool {
       if constexpr(side == Sell) {
         return price >= priceLimit;
@@ -487,34 +481,27 @@ private:
       }
     };
 
-    const auto check_not_empty = [](int32_t total) -> bool {
-      if constexpr(side == Sell) {
-        return total > 0;
-      } else {
-        return total < 0;
-      }
-    };
-
     int32_t price = _orderBook.get_best_price<-side>();
     priceLimit = _orderBook.price_limit<side>(priceLimit);
 
-    while(check_qty(qty) && check_price(price, priceLimit)) {
-      Level& get_level = _orderBook.get_level(price);
+    while((qty != 0) && check_price(price, priceLimit)) {
+      Level& level = _orderBook.get_level(price);
       _orderBook.set_best_price<side>(price);
+      _orderBook.set_best_price<-side>(price);
 
-      while(check_qty(qty) && check_not_empty(get_level.total)) {
-        Order& order = get_level.orders.front();
+      while((qty != 0) && (side * level.total < 0)) {
+        Order& order = level.orders.front();
         const int32_t min = std::min(qty, order.qty);
 
         qty -= min;
         order.qty -= min;
-        get_level.total += side * min;
+        level.total += side * min;
 
         _out.push(Trade(price, min, orderId, order.id));
 
         if(order.qty == 0) {
           order.id = 0;
-          get_level.orders.pop();
+          level.orders.pop();
         }
       }
 
