@@ -22,3 +22,19 @@ typedef uint32_t Index;
 constexpr Index InvalidIndex = (Index)-1;
 
 constexpr uint32_t UINT32_MIN = 0;
+
+struct noncopyable {
+    noncopyable() = default;
+    ~noncopyable() = default;
+
+    noncopyable(const noncopyable&) = delete;
+    noncopyable& operator=(const noncopyable&) = delete;
+};
+
+struct nonmovable {
+    nonmovable() = default;
+    ~nonmovable() = default;
+
+    nonmovable(nonmovable&&) = delete;
+    nonmovable& operator=(nonmovable&&) = delete;
+};
