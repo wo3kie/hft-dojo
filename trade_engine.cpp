@@ -6,109 +6,302 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "assert.hpp"
 #include "trade_engine.hpp"
+#include "assert.hpp"
 
-int main() {
+template<Side side>
+void test_insert() {
   QueueOut out;
   TradeEngine engine(out);
-  
-  { // insert/update
-    engine.insert_order<Buy>(1, 10, 120);
-    Assert(engine.out().pop() == CreateAccepted(1, 0));
-    
-    engine.update_order<Buy>(1, 10, 0, 100);
-    Assert(engine.out().pop() == UpdateAccepted(1));
-  }
 
-  { // insert/cancel
-    engine.insert_order<Buy>(2, 10, 100);
-    Assert(engine.out().pop() == CreateAccepted(2, 1));
+  engine.insert_order<side>(1, 10, 100);
+  Assert(engine.out().pop() == CreateAccepted(1, 0));
 
-    engine.cancel_order<Buy>(2, 10, 1);
-    Assert(engine.out().pop() == CancelAccepted(2));
+  engine.insert_order<side>(2, 10, 100);
+  Assert(engine.out().pop() == CreateAccepted(2, 1));
 
-    engine.cancel_order<Buy>(2, 10, 1);
-    Assert(engine.out().pop() == CancelRejected(2));
-  }
+  engine.insert_order<side>(3, 11, 100);
+  Assert(engine.out().pop() == CreateAccepted(3, 0));
+}
 
-  { // insert too high price
-    engine.insert_order<Buy>(3, engine.max_price() + 1, 100);
-    Assert(engine.out().pop() == CreateRejected(3, 100));
-  }
+template<Side side>
+void test_insert_invalid_id() {
+  QueueOut out;
+  TradeEngine engine(out);
 
-  { // insert too low price
-    engine.insert_order<Buy>(3, engine.min_price() - 1, 100);
-    Assert(engine.out().pop() == CreateRejected(3, 100));
-  }
+  engine.insert_order<side>(Order::InvalidId(), 100, 100);
+  Assert(engine.out().pop() == CreateRejected(Order::InvalidId(), 100));
+}
 
-  { // insert many orders at the same price
-    engine.insert_order<Buy>(3, 9, 200);
-    Assert(engine.out().pop() == CreateAccepted(3, 0));
+template<Side side>
+void test_insert_invalid_price() {
+  QueueOut out;
+  TradeEngine engine(out);
 
-    engine.insert_order<Buy>(4, 9, 300);
-    Assert(engine.out().pop() == CreateAccepted(4, 1));
+  engine.insert_order<side>(1, engine.max_price() + 1, 100);
+  Assert(engine.out().pop() == CreateRejected(1, 100));
 
-    engine.insert_order<Buy>(5, 9, 400);
-    Assert(engine.out().pop() == CreateAccepted(5, 2));
-  }
+  engine.insert_order<side>(2, engine.min_price() - 1, 100);
+  Assert(engine.out().pop() == CreateRejected(2, 100));
+}
 
-  { // trade one price
-    engine.insert_order<Sell>(6, 10, 50);
-    Assert(engine.out().pop() == Trade(10, 50, 6, 1));
-  }
+template<Side side>
+void test_insert_invalid_qty() {
+  QueueOut out;
+  TradeEngine engine(out);
 
-  { // trade many prices
-    engine.insert_order<Sell>(7, 9, 300);
-    Assert(engine.out().pop() == Trade(10, 50, 7, 1));
-    Assert(engine.out().pop() == Trade(9, 200, 7, 3));
-    Assert(engine.out().pop() == Trade(9, 50, 7, 4));
-  }
+  engine.insert_order<side>(1, 10, Order::MaxQty() + 1);
+  Assert(engine.out().pop() == CreateRejected(1, Order::MaxQty() + 1));
 
-  { // trade market sell order
-    engine.insert_order<Sell>(8, 1000);
-    Assert(engine.out().pop() == Trade(9, 250, 8, 4));
-    Assert(engine.out().pop() == Trade(9, 400, 8, 5));
-    Assert(engine.out().pop() == CreateRejected(8, 350));
-  }
+  engine.insert_order<side>(2, 10, Order::MinQty() - 1);
+  Assert(engine.out().pop() == CreateRejected(2, Order::MinQty() - 1));
+}
 
-  { // insert too many orders
-    for (int32_t i = 0; i < engine.order_per_level(); i++) {
-      engine.insert_order<Buy>(100 + i, 8, 10);
-      Assert(engine.out().pop() == CreateAccepted(100 + i, i));
+template<Side side>
+void test_insert_all() {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  for(int32_t price = engine.min_price(); price <= engine.max_price(); price++) {
+    for(int32_t i = 0; i < engine.order_per_level(); i++) {
+      engine.insert_order<side>(price * 100 + i, price, 10);
+      Assert(engine.out().pop() == CreateAccepted(price * 100 + i, i));
     }
+  }
+}
 
-    engine.insert_order<Buy>(200, 8, 10);
-    Assert(engine.out().pop() == CreateRejected(200, 10));
+template<Side side>
+void test_update() {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  engine.insert_order<side>(1, 10, 100);
+  Assert(engine.out().pop() == CreateAccepted(1, 0));
+
+  engine.update_order<side>(1, 10, 0, 100 + 1);
+  Assert(engine.out().pop() == UpdateAccepted(1));
+
+  engine.update_order<side>(1, 10, 0, 100 - 1);
+  Assert(engine.out().pop() == UpdateAccepted(1));
+}
+
+template<Side side>
+void test_update_invalid_id() {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  engine.update_order<side>(Order::InvalidId(), 10, 0, 100 + 1);
+  Assert(engine.out().pop() == UpdateRejected(Order::InvalidId(), 100 + 1));
+}
+
+template<Side side>
+void test_update_invalid_qty() {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  engine.insert_order<side>(1, 10, 100);
+  Assert(engine.out().pop() == CreateAccepted(1, 0));
+
+  engine.update_order<side>(1, 10, 0, Order::MaxQty() + 1);
+  Assert(engine.out().pop() == UpdateRejected(1, Order::MaxQty() + 1));
+}
+
+template<Side side>
+void test_update_invalid_price() {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  engine.insert_order<side>(1, 10, 100);
+  Assert(engine.out().pop() == CreateAccepted(1, 0));
+
+  engine.update_order<side>(1, 10 + 1, 0, 100 + 1);
+  Assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
+}
+
+template<Side side>
+void test_update_invalid_slot() {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  engine.insert_order<side>(1, 10, 100);
+  Assert(engine.out().pop() == CreateAccepted(1, 0));
+
+  engine.update_order<side>(1, 10, 0 + 1000000, 100 + 1);
+  Assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
+
+  engine.update_order<side>(1, 10, 0 + 1, 100 + 1);
+  Assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
+}
+
+template<Side side>
+void test_update_deleted() {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  engine.insert_order<side>(1, 10, 100);
+  Assert(engine.out().pop() == CreateAccepted(1, 0));
+
+  engine.cancel_order<side>(1, 10, 0);
+  Assert(engine.out().pop() == CancelAccepted(1));
+
+  engine.update_order<side>(1, 10, 0, 100 + 1);
+  Assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
+}
+
+template<Side side>
+void test_delete() {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  engine.insert_order<side>(1, 10, 100);
+  Assert(engine.out().pop() == CreateAccepted(1, 0));
+
+  engine.cancel_order<side>(1, 10, 0);
+  Assert(engine.out().pop() == CancelAccepted(1));
+}
+
+template<Side side>
+void test_delete_invalid_id() {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  engine.insert_order<side>(1, 10, 100);
+  Assert(engine.out().pop() == CreateAccepted(1, 0));
+
+  engine.cancel_order<side>(Order::InvalidId(), 10, 0);
+  Assert(engine.out().pop() == CancelRejected(Order::InvalidId()));
+}
+
+template<Side side>
+void test_delete_invalid_price() {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  engine.insert_order<side>(1, 10, 100);
+  Assert(engine.out().pop() == CreateAccepted(1, 0));
+
+  engine.cancel_order<side>(1, 10 + 1, 0);
+  Assert(engine.out().pop() == CancelRejected(1));
+}
+
+template<Side side>
+void test_delete_invalid_slot() {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  engine.insert_order<side>(1, 10, 100);
+  Assert(engine.out().pop() == CreateAccepted(1, 0));
+
+  engine.cancel_order<side>(1, 10, 0 + 1000000);
+  Assert(engine.out().pop() == CancelRejected(1));
+
+  engine.cancel_order<side>(1, 10, 0 + 1);
+  Assert(engine.out().pop() == CancelRejected(1));
+}
+
+template<Side side>
+void test_double_delete() {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  engine.insert_order<side>(1, 10, 100);
+  Assert(engine.out().pop() == CreateAccepted(1, 0));
+
+  engine.cancel_order<side>(1, 10, 0);
+  Assert(engine.out().pop() == CancelAccepted(1));
+
+  engine.cancel_order<side>(1, 10, 0);
+  Assert(engine.out().pop() == CancelRejected(1));
+}
+
+template<Side side>
+void test_trade_level(int32_t price) {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  const int32_t qty = 100;
+  const int32_t orders = engine.order_per_level();
+
+  for(int32_t order = 1; order <= orders; order++) {
+    engine.insert_order<side>(order, price, qty);
+    Assert(engine.out().pop() == CreateAccepted(order, order - 1));
   }
 
-  { // clear level
-    engine.insert_order<Sell>(300, 10 * engine.order_per_level() + 1);
+  engine.insert_order<-side>(orders + 1, price, orders * qty);
 
-    for (int32_t i = 0; i < engine.order_per_level(); i++) {
-      Assert(engine.out().pop() == Trade(8, 10, 300, 100 + i));
-    }
+  for(int32_t i = 0; i < engine.order_per_level(); i++) {
+    Assert(engine.out().pop() == Trade(price, qty, orders + 1, i + 1));
+  }
+}
 
-    Assert(engine.out().pop() == CreateRejected(300, 1));
+template<Side side>
+void test_trade_level() {
+  QueueOut out;
+  TradeEngine engine(out);
+
+  for(int32_t price = engine.min_price(); price <= engine.max_price(); price++) {
+    test_trade_level<side>(price);
+  }
+}
+
+int main() {
+  {
+    test_insert<Sell>();
+    test_insert<Buy>();
+
+    test_insert_invalid_id<Sell>();
+    test_insert_invalid_id<Buy>();
+
+    test_insert_invalid_price<Sell>();
+    test_insert_invalid_price<Buy>();
+
+    test_insert_invalid_qty<Sell>();
+    test_insert_invalid_qty<Buy>();
+
+    test_insert_all<Sell>();
+    test_insert_all<Buy>();
   }
 
-  { // trade all prices
-    for(int32_t price = engine.min_price(); price <= engine.max_price(); price++) {
-      for(int32_t i = 0; i < 4; i++) {
-        engine.insert_order<Buy>(1000 + price * 100 + i, price, 10);
-        engine.out().pop();
-      }
-    }
+  {
+    test_update<Sell>();
+    test_update<Buy>();
 
-    engine.insert_order<Sell>(2000, 10 * (engine.max_price() - engine.min_price() + 1) * 4 + 1);
+    test_update_invalid_id<Sell>();
+    test_update_invalid_id<Buy>();
 
-    for(int32_t price = engine.max_price(); price >= engine.min_price(); price--) {
-      for(int32_t i = 0; i < 4; i++) {
-        Assert(engine.out().pop() == Trade(price, 10, 2000, 1000 + price * 100 + i));
-      }
-    }
+    test_update_invalid_price<Sell>();
+    test_update_invalid_price<Buy>();
 
-    Assert(engine.out().pop() == CreateRejected(2000, 1));
+    test_update_invalid_qty<Sell>();
+    test_update_invalid_qty<Buy>();
+
+    test_update_invalid_slot<Sell>();
+    test_update_invalid_slot<Buy>();
+
+    test_update_deleted<Sell>();
+    test_update_deleted<Buy>();
+  }
+
+  {
+    test_delete<Sell>();
+    test_delete<Buy>();
+
+    test_delete_invalid_id<Sell>();
+    test_delete_invalid_id<Buy>();
+
+    test_delete_invalid_price<Sell>();
+    test_delete_invalid_price<Buy>();
+
+    test_delete_invalid_slot<Sell>();
+    test_delete_invalid_slot<Buy>();
+
+    test_double_delete<Sell>();
+    test_double_delete<Buy>();
+  }
+
+  {
+    test_trade_level<Sell>();
+    test_trade_level<Buy>();
   }
 
   return 0;
