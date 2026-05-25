@@ -12,10 +12,8 @@
 #include <iostream>
 
 #include "assert.hpp"
-#include "branchless.hpp"
 #include "common.hpp"
 #include "events.hpp"
-#include "flat_list.hpp"
 #include "flat_queue.hpp"
 #include "likely.hpp"
 #include "timer.hpp"
@@ -42,7 +40,7 @@ struct QueueOut {
     }
   }
 
-  RingBufferSPSC<Event, 64> _queue;
+  RingBufferSPSC<Event, 1024> _queue;
 };
 
 
@@ -107,8 +105,10 @@ public:
   Level& operator=(Level&&) = delete;
 
 public:
+  static constexpr int8_t MaxOrders = 16;
+
   int32_t total{0};
-  FlatQueue<Order, 16> orders;
+  FlatQueue<Order, MaxOrders> orders;
 };
 
 /*
@@ -135,6 +135,25 @@ public:
   OrderBook& operator=(const OrderBook&) = delete;
 
 public:  
+  int32_t get_min_price() const noexcept {
+    return Order::MinPrice();
+  }
+
+  int32_t get_max_price() const noexcept {
+    return Order::MaxPrice();
+  }
+
+  template<Side side>
+  int32_t price_limit(int32_t priceLimit) const noexcept {
+    if constexpr (side == Sell) {
+      const int32_t price = get_min_price();
+      return std::max(priceLimit, price);
+    } else {
+      const int32_t price = get_max_price();
+      return std::min(priceLimit, price);
+    }
+  }
+
   Level& get_level(int32_t price) {
     Assert(check_price(price));
     return _levels[price];
@@ -298,6 +317,18 @@ public:
     _orderBook.cancel_order<side>(orderId, price, slot);
   }
 
+  int32_t min_price() const noexcept {
+    return _orderBook.get_min_price();
+  }
+
+  int32_t max_price() const noexcept {
+    return _orderBook.get_max_price();
+  }
+
+  int32_t order_per_level() const noexcept {
+    return (int32_t)Level::MaxOrders;
+  }
+
   QueueOut& out() noexcept {
     return _out;
   }
@@ -325,11 +356,12 @@ private:
       }
     };
 
-    int32_t price = _orderBook.get_best_price<Buy>();
+    int32_t price = _orderBook.get_best_price<-side>();
+    priceLimit = _orderBook.price_limit<side>(priceLimit);
 
     while(check_qty(qty) && check_price(price, priceLimit)) {
       Level& get_level = _orderBook.get_level(price);
-      _orderBook.set_best_price<Buy>(price);
+      _orderBook.set_best_price<side>(price);
 
       while(check_qty(qty) && check_total(get_level.total)) {
         Order& order = get_level.orders.front();
@@ -341,10 +373,8 @@ private:
 
         _out.push(Trade(price, min, orderId, order.id));
 
-        const int32_t condition = (order.qty == 0);
-        bl::clear_if_true(order.qty, condition);
-
-        if(condition) {
+        if(order.qty == 0) {
+          order.id = 0;
           get_level.orders.pop();
         }
       }
