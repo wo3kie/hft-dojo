@@ -1,13 +1,12 @@
 import gdb # type: ignore
 
-class PrintFlatList(gdb.Command):
+class PrintFlatQueue(gdb.Command):
     def __init__(self):
-        super(PrintFlatList, self).__init__("print_flat_list", gdb.COMMAND_USER)
+        super(PrintFlatQueue, self).__init__("print_flat_queue", gdb.COMMAND_USER)
 
     def invoke(self, arg, from_tty):
         val = gdb.parse_and_eval(arg)
         head = int(val["_head"])
-        size = val.type.template_argument(0)
         buffer = val["_buffer"]
 
         N = 4
@@ -23,9 +22,12 @@ class PrintFlatList(gdb.Command):
         else:
             shown = elems[:N] + ["..."] + elems[-N:]
 
-        print(f"FlatList<{size}, {val.type.template_argument(1)}> [ {", ".join(shown)} ]")
+        type = val.type.template_argument(0)
+        size = int(val.type.template_argument(1))
 
-PrintFlatList()
+        print(f"FlatQueue<{type}, {size}> [ {", ".join(shown)} ]")
+
+PrintFlatQueue()
 
 class PrintRingBuffer(gdb.Command):
     def __init__(self):
