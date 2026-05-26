@@ -53,10 +53,10 @@ struct Order {
  */
 
 struct Level final: noncopyable, nonmovable {
-  static constexpr int8_t MaxOrders = 8;
+  static constexpr Index MaxOrders = 8;
 
   Qty total{0};
-  FlatQueue<Order, MaxOrders> orders;
+  FlatQueue<Order, (int8_t)MaxOrders> orders;
 };
 
 /*
@@ -65,8 +65,7 @@ struct Level final: noncopyable, nonmovable {
 
 struct OrderBook final: noncopyable, nonmovable {
 public:
-  static constexpr int32_t MaxLevels = 256;
-  static_assert((MaxLevels & (MaxLevels - 1)) == 0, "MaxLevels must be a power of 2");
+  static constexpr Index MaxLevels = 256;
 
 public:
   explicit OrderBook(QueueOut& out, Price centerPrice = MaxLevels / 2)
@@ -91,7 +90,7 @@ public:
   }
 
   bool shiftUp() {
-    assert(_maxPrice != Order::MaxPrice);
+    Assert(_maxPrice != Order::MaxPrice);
 
     Level& level = get_level_by_price(_minPrice);
     _expire_level(level);
@@ -110,7 +109,7 @@ public:
   }
 
   bool shiftDown() {
-    assert(_minPrice != Order::MinPrice);
+    Assert(_minPrice != Order::MinPrice);
 
     Level& level = get_level_by_price(_maxPrice);
     _expire_level(level);
@@ -202,9 +201,9 @@ public:
     Level& level = get_level_by_price(price);
 
     if constexpr(side == Sell) {
-      assert(level.total <= 0);
+      Assert(level.total <= 0);
     } else {
-      assert(level.total >= 0);
+      Assert(level.total >= 0);
     }
 
     if(level.orders.full()) {
@@ -225,7 +224,7 @@ public:
 
     _out.push(CreateAccepted(orderId, index, qty));
 
-    assert(_bestSellPrice > _bestBuyPrice);
+    Assert(_bestSellPrice > _bestBuyPrice);
   }
 
   template<Side side>
@@ -437,7 +436,7 @@ public:
   }
 
   Index orders_per_level() const noexcept {
-    return (Index)Level::MaxOrders;
+    return Level::MaxOrders;
   }
 
   QueueOut& out() noexcept {
@@ -462,7 +461,7 @@ private:
 
     while((qty != 0) && check_price(price, priceLimit)) {
       Level& level = _orderBook.get_level_by_index(index);
-      assert(level.total * side <= 0);
+      Assert((level.total * side) <= 0);
 
       while((qty != 0) && (level.total != 0)) {
         Order& order = level.orders.front();
