@@ -34,16 +34,6 @@ public:
     return _data[index];
   }
 
-  std::array<Type, Size>& data()
-  {
-    return _data;
-  }
-
-  const std::array<Type, Size>& data() const
-  {
-    return _data;
-  }
-
 private:
   std::array<Type, Size> _data;
 };
