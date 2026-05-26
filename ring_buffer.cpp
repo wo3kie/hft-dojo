@@ -24,8 +24,7 @@
  */
 
 template<std::size_t P /* Producers */, std::size_t C /* Consumers */, typename TRBuffer>
-void test_ring_buffer_correctness()
-{
+void test_ring_buffer_correctness() {
   static_assert(P > 0 && C > 0);
 
   constexpr std::size_t K = 100 * TRBuffer::capacity();
@@ -100,45 +99,37 @@ void test_ring_buffer_correctness()
 
   Assert(produced_total.load(std::memory_order_relaxed) == TOTAL)
       .on_error([](const char* file, int line, const char* op, const auto& actual, const auto& expected) {
-        std::cerr << "Assertion failed: actual: " << actual << ", "
-                  << "expected: " << expected << " "
-                  << "on " << demangle(typeid(TRBuffer).name()) << std::endl;
+        std::cerr << "Assertion failed: actual: " << actual << ", " << "expected: " << expected << " " << "on " << demangle(typeid(TRBuffer).name())
+                  << std::endl;
       });
 
   Assert(consumed_total.load(std::memory_order_relaxed) == TOTAL)
       .on_error([](const char* file, int line, const char* op, const auto& actual, const auto& expected) {
-        std::cerr << "Assertion failed: actual: " << actual << ", "
-                  << "expected: " << expected  << " "
-                  << "on " << demangle(typeid(TRBuffer).name()) << std::endl;
+        std::cerr << "Assertion failed: actual: " << actual << ", " << "expected: " << expected << " " << "on " << demangle(typeid(TRBuffer).name())
+                  << std::endl;
       });
 
   Assert(out_of_range_total.load(std::memory_order_relaxed) == 0)
       .on_error([](const char* file, int line, const char* op, const auto& actual, const auto& expected) {
-        std::cerr << "Assertion failed: actual: " << actual << ", "
-                  << "expected: " << expected << " "
-                  << "on " << demangle(typeid(TRBuffer).name()) << std::endl;
+        std::cerr << "Assertion failed: actual: " << actual << ", " << "expected: " << expected << " " << "on " << demangle(typeid(TRBuffer).name())
+                  << std::endl;
       });
 
   Assert(duplicate_total.load(std::memory_order_relaxed) == 0)
       .on_error([](const char* file, int line, const char* op, const auto& actual, const auto& expected) {
-        std::cerr << "Assertion failed: actual: " << actual << ", "
-                  << "expected: " << expected << " "
-                  << "on " << demangle(typeid(TRBuffer).name()) << std::endl;
+        std::cerr << "Assertion failed: actual: " << actual << ", " << "expected: " << expected << " " << "on " << demangle(typeid(TRBuffer).name())
+                  << std::endl;
       });
 
   for(const auto& count : seen) {
-    Assert(count.load(std::memory_order_relaxed) == 1)
-        .on_error([](const char* file, int line, const char* op, const auto& actual, const auto& expected) {
-          std::cerr << "Assertion failed: actual: " << actual << ", "
-                    << "expected: " << expected << " "
-                    << "on " << demangle(typeid(TRBuffer).name()) << std::endl;
-        });
+    Assert(count.load(std::memory_order_relaxed) == 1).on_error([](const char* file, int line, const char* op, const auto& actual, const auto& expected) {
+      std::cerr << "Assertion failed: actual: " << actual << ", " << "expected: " << expected << " " << "on " << demangle(typeid(TRBuffer).name()) << std::endl;
+    });
   }
 }
 
-template< template<typename, std::size_t> class TBuffer>
-void test_ring_buffer_gdb()
-{
+template<template<typename, std::size_t> class TBuffer>
+void test_ring_buffer_gdb() {
   TBuffer<int, 128> rBuffer;
 
   for(int i = 0; i < 128; ++i) {
@@ -157,17 +148,15 @@ void test_ring_buffer_gdb()
    * (gdb) print_ring_buffer_spmc rBuffer
    * RingBufferSPMC<int, 128> [ 0, 1, 2, 3, ..., 124, 125, 126, 127 ]
    */
- 
+
   Assert(rBuffer.capacity() == 128);
 };
-
 
 /*
  * main
  */
 
-int main()
-{
+int main() {
   test_ring_buffer_gdb<RingBuffer>();
   test_ring_buffer_gdb<RingBufferSPSC>();
   test_ring_buffer_gdb<RingBufferSPMC>();
