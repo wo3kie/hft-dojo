@@ -112,3 +112,50 @@ std::ostream& operator<<(std::ostream& os, const Event& event) {
 
   return os << "UnknownEvent: m1=" << event.m1 << ", m2=" << event.m2 << ", m3=" << event.m3 << ", m4=" << event.m4;
 }
+
+/*
+ * QueueOut
+ */
+
+struct QueueOut {
+  void push(const Event& event) noexcept {
+    for(int i = 0; i < 8; i++) {
+      if(_queue.push(event)) {
+        return;
+      } else {
+        _mm_pause();
+      }
+    }
+
+    for(;;) {
+      if(_queue.push(event)) {
+        return;
+      } else {
+        std::this_thread::yield();
+      }
+    }
+  }
+
+  Event pop() noexcept {
+    return _queue.pop();
+  }
+
+  bool empty() const noexcept {
+    return _queue.empty_approx();
+  }
+
+  void clear() noexcept {
+    while(_queue.empty_approx() == false) {
+      _queue.pop();
+    }
+  }
+
+  void log(const std::string& prefix = "") {
+    while(_queue.empty_approx() == false) {
+      const Event event = _queue.pop();
+      std::cout << prefix << event << std::endl;
+    }
+  }
+
+  RingBufferSPSC<Event, 1024> _queue;
+};
