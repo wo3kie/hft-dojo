@@ -577,13 +577,15 @@ private:
 
         _out.push(Trade(price, min, orderId, order.id));
 
-        if(order.qty == 0) {
-          order.id = 0;
-          level.orders.pop();
+        if(order.qty != 0) {
+          continue;
+        }
 
-          if (level.orders.empty()) {
-            _orderBook.set_best_price<-side>(price + side);
-          }
+        order.id = 0;
+        level.orders.pop();
+
+        if (level.orders.empty()) {
+          _orderBook.set_best_price<-side>(price + side);
         }
       }
 
