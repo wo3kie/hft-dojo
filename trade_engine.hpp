@@ -148,8 +148,7 @@ public:
 
 public:
   explicit OrderBook(QueueOut& out, int32_t centerPrice = MaxLevels / 2)
-    : _out(out) 
-  {
+    : _out(out) {
     _minIndex = 0;
     _minPrice = std::max(centerPrice - (MaxLevels / 2) - 1, Order::MinPrice());
     _maxPrice = std::min(_minPrice + (MaxLevels - 1), Order::MaxPrice());
@@ -394,8 +393,7 @@ private:
 struct TradeEngine final: noncopyable, nonmovable {
   explicit TradeEngine(QueueOut& out, int32_t centerPrice = OrderBook::MaxLevels / 2)
     : _out(out)
-    , _orderBook(out, centerPrice) 
-  {
+    , _orderBook(out, centerPrice) {
   }
 
 public:
@@ -584,7 +582,7 @@ private:
         order.id = 0;
         level.orders.pop();
 
-        if (level.orders.empty()) {
+        if(level.orders.empty()) {
           _orderBook.set_best_price<-side>(price + side);
         }
       }
