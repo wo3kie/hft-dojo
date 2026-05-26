@@ -250,11 +250,11 @@ public:
   }
 
   template<Side side>
-  void set_best_price(int32_t price) noexcept {
+  void update_best_price(bool condition) noexcept {
     if constexpr(side == Sell) {
-      _bestSellPrice = price;
+      _bestSellPrice += 1 * (int32_t)condition;
     } else {
-      _bestBuyPrice = price;
+      _bestBuyPrice -= 1 * (int32_t)condition;
     }
 
     Assert(_bestSellPrice > _bestBuyPrice);
@@ -558,9 +558,7 @@ private:
         order.id = 0;
         level.orders.pop();
 
-        if(level.orders.empty()) {
-          _orderBook.set_best_price<-side>(price + side);
-        }
+        _orderBook.update_best_price<-side>(level.orders.empty());
       }
 
       price += side * 1;
