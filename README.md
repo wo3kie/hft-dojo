@@ -131,7 +131,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **task_worker** -  Executes a void procedure in a separate thread (optional thread affinity).
 
-```{r, engine='cpp'}
+  ```{r, engine='cpp'}
   TaskWorkerSPSC<4, std::function<void()>> worker;
 
   Assert(worker.push([]() noexcept { /* do something */ }));
@@ -142,7 +142,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **trade_engine** - Ultra‑fast trade engine example that generates events in nanoseconds. Supports limit orders, market orders, cancellation, and updates. The trade logic is designed to be branchless and cache‑friendly, making it suitable for high‑performance trading systems.
   
-```{r, engine='cpp'}
+  ```{r, engine='cpp'}
   QueueOut out;
   TradeEngine engine(out, centerPrice);
 
@@ -151,5 +151,11 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
   engine.insert_order<Buy>(/* id */ 2, /* price */ 100, /* qty */ 200);
   Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 200, /* maker */ 2, /* taker */ 1));
-```
+  ```
+
+  ```{r, engine='bash'}
+  $ ./trade_engine 
+  Micro benchmark (Release): insert: 8ns
+  Micro benchmark (Release): trade: 12ns
+  ```
   
