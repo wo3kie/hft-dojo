@@ -130,8 +130,8 @@ inline std::ostream& operator<<(std::ostream& os, const Order& order) {
  * Level
  */
 
-struct Level final : noncopyable, nonmovable {
-    static constexpr int8_t MaxOrders = 16;
+struct Level final: noncopyable, nonmovable {
+  static constexpr int8_t MaxOrders = 8;
 
   int32_t total{0};
   FlatQueue<Order, MaxOrders> orders;
@@ -141,22 +141,72 @@ struct Level final : noncopyable, nonmovable {
  * OrderBook
  */
 
-struct OrderBook final : noncopyable, nonmovable {
+struct OrderBook final: noncopyable, nonmovable {
 public:
-  static constexpr int32_t MaxLevels = 128;
+  static constexpr int32_t MaxLevels = 256;
+  static_assert((MaxLevels & (MaxLevels - 1)) == 0, "MaxLevels must be a power of 2");
 
 public:
   explicit OrderBook(QueueOut& out, int32_t centerPrice = MaxLevels / 2)
     : _out(out) 
   {
-    _minPrice = std::max(centerPrice - 63, Order::MinPrice());
-    _maxPrice = std::min(_minPrice + 127, Order::MaxPrice());
+    _minIndex = 0;
+    _minPrice = std::max(centerPrice - (MaxLevels / 2) - 1, Order::MinPrice());
+    _maxPrice = std::min(_minPrice + (MaxLevels - 1), Order::MaxPrice());
 
     _bestSellPrice = _maxPrice;
     _bestBuyPrice = _minPrice;
   }
 
 public:
+  void _expire_level(Level& level) {
+    while(level.orders.empty() == false) {
+      const Order& order = level.orders.front();
+      _out.push(OrderExpired(order.id));
+      level.orders.pop();
+    }
+
+    level.total = 0;
+  }
+
+  bool shiftUp() {
+    assert(_maxPrice != Order::MaxPrice());
+
+    Level& level = get_level(_minPrice);
+    _expire_level(level);
+
+    _minIndex += 1;
+    _minPrice += 1;
+    _maxPrice += 1;
+
+    _bestSellPrice = std::max(_bestSellPrice, _minPrice);
+    _bestBuyPrice = std::max(_bestBuyPrice, _minPrice);
+
+    Assert(check_price(_bestSellPrice));
+    Assert(check_price(_bestBuyPrice));
+
+    return true;
+  }
+
+  bool shiftDown() {
+    assert(_minPrice != Order::MinPrice());
+
+    Level& level = get_level(_maxPrice);
+    _expire_level(level);
+
+    _minIndex -= 1;
+    _minPrice -= 1;
+    _maxPrice -= 1;
+
+    _bestSellPrice = std::min(_bestSellPrice, _maxPrice);
+    _bestBuyPrice = std::min(_bestBuyPrice, _maxPrice);
+
+    Assert(check_price(_bestSellPrice));
+    Assert(check_price(_bestBuyPrice));
+
+    return true;
+  }
+
   bool check_price(int32_t price) noexcept {
     return price >= get_min_price() && price <= get_max_price();
   }
@@ -171,6 +221,10 @@ public:
 
   int32_t get_max_price() const noexcept {
     return _maxPrice;
+  }
+
+  int32_t get_center_price() const noexcept {
+    return (_minPrice + _maxPrice) / 2;
   }
 
   template<Side side>
@@ -210,7 +264,7 @@ public:
 
   Level& get_level(int32_t price) {
     Assert(check_price(price));
-    return _levels[price - _minPrice];
+    return _levels[(_minIndex + (price - _minPrice)) & (MaxLevels - 1)];
   }
 
   template<Side side>
@@ -306,6 +360,9 @@ public:
   }
 
 private:
+  int32_t _minIndex;
+  int32_t __padding;
+
   int32_t _minPrice;
   int32_t _maxPrice;
 
@@ -320,10 +377,11 @@ private:
  * TradeEngine
  */
 
-struct TradeEngine final : noncopyable, nonmovable {
+struct TradeEngine final: noncopyable, nonmovable {
   explicit TradeEngine(QueueOut& out, int32_t centerPrice = OrderBook::MaxLevels / 2)
     : _out(out)
-    , _orderBook(out, centerPrice) {
+    , _orderBook(out, centerPrice) 
+  {
   }
 
 public:
@@ -460,6 +518,10 @@ public:
     return _orderBook.get_max_price();
   }
 
+  int32_t center_price() const noexcept {
+    return _orderBook.get_center_price();
+  }
+
   int32_t order_per_level() const noexcept {
     return (int32_t)Level::MaxOrders;
   }
@@ -481,11 +543,13 @@ private:
       }
     };
 
+    int32_t lastPrice = _orderBook.get_center_price();
     int32_t price = _orderBook.get_best_price<-side>();
     priceLimit = _orderBook.price_limit<side>(priceLimit);
 
     while((qty != 0) && check_price(price, priceLimit)) {
       Level& level = _orderBook.get_level(price);
+
       _orderBook.set_best_price<side>(price);
       _orderBook.set_best_price<-side>(price);
 
@@ -496,6 +560,7 @@ private:
         qty -= min;
         order.qty -= min;
         level.total += side * min;
+        lastPrice = price;
 
         _out.push(Trade(price, min, orderId, order.id));
 
@@ -508,7 +573,40 @@ private:
       price += side * 1;
     }
 
+    _shiftUp(lastPrice);
+    _shiftDown(lastPrice);
+
     return qty;
+  }
+
+  void _shiftUp(int32_t lastPrice) {
+    const int32_t offset = _orderBook.get_center_price() - lastPrice;
+
+    if(offset <= 0) {
+      return;
+    }
+
+    const int32_t space = Order::MaxPrice() - _orderBook.get_max_price();
+    const int32_t shift = std::min(offset, space);
+
+    for(int32_t i = 0; i < shift; i++) {
+      _orderBook.shiftUp();
+    }
+  }
+
+  void _shiftDown(int32_t lastPrice) {
+    const int32_t offset = lastPrice - _orderBook.get_center_price();
+
+    if(offset <= 0) {
+      return;
+    }
+
+    const int32_t space = _orderBook.get_min_price() - Order::MinPrice();
+    const int32_t shift = std::min(offset, space);
+
+    for(int32_t i = 0; i < shift; i++) {
+      _orderBook.shiftDown();
+    }
   }
 
 private:
