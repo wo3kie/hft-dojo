@@ -18,8 +18,7 @@
  */
 
 template<typename TValue, std::size_t Capacity>
-class RingBufferMT
-{
+class RingBufferMT {
 public:
   using value_type = TValue;
 
@@ -34,8 +33,7 @@ public:
 
 public:
   template<typename TT>
-  bool push(TT&& t)
-  {
+  bool push(TT&& t) {
     std::unique_lock<std::mutex> lock(_mutex);
 
     _notFull.wait(lock, [this]() {
@@ -48,8 +46,7 @@ public:
     return true;
   }
 
-  bool pop(TValue& out)
-  {
+  bool pop(TValue& out) {
     std::unique_lock<std::mutex> lock(_mutex);
 
     _notEmpty.wait(lock, [this]() {
@@ -62,25 +59,21 @@ public:
     return true;
   }
 
-  static constexpr std::size_t capacity()
-  {
+  static constexpr std::size_t capacity() {
     return Capacity;
   }
 
-  [[nodiscard]] bool empty() const
-  {
+  [[nodiscard]] bool empty() const {
     std::lock_guard<std::mutex> lock(_mutex);
     return _buffer.empty();
   }
 
-  bool full() const
-  {
+  bool full() const {
     std::lock_guard<std::mutex> lock(_mutex);
     return _buffer.full();
   }
 
-  /* extension */ TValue pop()
-  {
+  /* extension */ TValue pop() {
     TValue out;
 
     if(! pop(out)) {
