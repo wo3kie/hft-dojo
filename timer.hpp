@@ -101,8 +101,8 @@ struct _Cycles {
   std::uint64_t operator()(F& f, unsigned aux = 0u) {
     {
       /*
-          * Warm up
-          */
+       * Warm up
+       */
 
       for(int i = 0; i < Iters; ++i) {
         f.setup();
