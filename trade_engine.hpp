@@ -265,6 +265,8 @@ public:
     } else {
       _bestBuyPrice = price;
     }
+
+    Assert(_bestSellPrice > _bestBuyPrice);
   }
 
   Level& get_level_by_price(int32_t price) {
@@ -581,7 +583,6 @@ private:
 
           if (level.orders.empty()) {
             _orderBook.set_best_price<-side>(price + side);
-            assert(_orderBook.get_best_price<Sell>() > _orderBook.get_best_price<Buy>());
           }
         }
       }
