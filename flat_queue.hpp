@@ -10,6 +10,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <type_traits>
 
 template<typename T, int8_t Capacity>
 class FlatQueue {
