@@ -16,8 +16,7 @@
 #include <chrono>
 #include <iostream>
 
-void test_submit_delivers_results_to_channels()
-{
+void test_submit_delivers_results_to_channels() {
   TaskExecutorSPSC<4> exec;
 
   Channel<int> channel1;
@@ -29,14 +28,46 @@ void test_submit_delivers_results_to_channels()
   Channel<int> channel7;
   Channel<int> channel8;
 
-  Assert(exec.try_submit([](Channel<int>& channel) noexcept { channel.set(1); }, channel1));
-  Assert(exec.try_submit([](Channel<int>& channel) noexcept { channel.set(2); }, channel2));
-  Assert(exec.try_submit([](Channel<int>& channel) noexcept { channel.set(3); }, channel3));
-  Assert(exec.try_submit([](Channel<int>& channel) noexcept { channel.set(4); }, channel4));
-  exec.submit([](Channel<int>& channel) noexcept { channel.set(5); }, channel5);
-  exec.submit([](Channel<int>& channel) noexcept { channel.set(6); }, channel6);
-  exec.submit([](Channel<int>& channel) noexcept { channel.set(7); }, channel7);
-  exec.submit([](Channel<int>& channel) noexcept { channel.set(8); }, channel8);
+  Assert(exec.try_submit(
+      [](Channel<int>& channel) noexcept {
+        channel.set(1);
+      },
+      channel1));
+  Assert(exec.try_submit(
+      [](Channel<int>& channel) noexcept {
+        channel.set(2);
+      },
+      channel2));
+  Assert(exec.try_submit(
+      [](Channel<int>& channel) noexcept {
+        channel.set(3);
+      },
+      channel3));
+  Assert(exec.try_submit(
+      [](Channel<int>& channel) noexcept {
+        channel.set(4);
+      },
+      channel4));
+  exec.submit(
+      [](Channel<int>& channel) noexcept {
+        channel.set(5);
+      },
+      channel5);
+  exec.submit(
+      [](Channel<int>& channel) noexcept {
+        channel.set(6);
+      },
+      channel6);
+  exec.submit(
+      [](Channel<int>& channel) noexcept {
+        channel.set(7);
+      },
+      channel7);
+  exec.submit(
+      [](Channel<int>& channel) noexcept {
+        channel.set(8);
+      },
+      channel8);
 
   Assert(channel1.get() == 1);
   Assert(channel2.get() == 2);
@@ -48,8 +79,7 @@ void test_submit_delivers_results_to_channels()
   Assert(channel8.get() == 8);
 }
 
-void test_submit_preserves_task_execution_order()
-{
+void test_submit_preserves_task_execution_order() {
   TaskExecutorSPSC<4> exec;
 
   Channel<int> channel1;
@@ -60,25 +90,33 @@ void test_submit_preserves_task_execution_order()
   std::array<int, 4> execution_order = {0, 0, 0, 0};
   std::size_t next = 0;
 
-  exec.submit([&](Channel<int>& channel) noexcept {
-    execution_order[next++] = 1;
-    channel.set(1);
-  }, channel1);
+  exec.submit(
+      [&](Channel<int>& channel) noexcept {
+        execution_order[next++] = 1;
+        channel.set(1);
+      },
+      channel1);
 
-  exec.submit([&](Channel<int>& channel) noexcept {
-    execution_order[next++] = 2;
-    channel.set(2);
-  }, channel2);
+  exec.submit(
+      [&](Channel<int>& channel) noexcept {
+        execution_order[next++] = 2;
+        channel.set(2);
+      },
+      channel2);
 
-  exec.submit([&](Channel<int>& channel) noexcept {
-    execution_order[next++] = 3;
-    channel.set(3);
-  }, channel3);
+  exec.submit(
+      [&](Channel<int>& channel) noexcept {
+        execution_order[next++] = 3;
+        channel.set(3);
+      },
+      channel3);
 
-  exec.submit([&](Channel<int>& channel) noexcept {
-    execution_order[next++] = 4;
-    channel.set(4);
-  }, channel4);
+  exec.submit(
+      [&](Channel<int>& channel) noexcept {
+        execution_order[next++] = 4;
+        channel.set(4);
+      },
+      channel4);
 
   exec.stop();
 
@@ -93,8 +131,7 @@ void test_submit_preserves_task_execution_order()
   Assert(execution_order[3] == 4);
 }
 
-int main()
-{
+int main() {
   test_submit_delivers_results_to_channels();
   test_submit_preserves_task_execution_order();
 }
