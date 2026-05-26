@@ -555,9 +555,9 @@ private:
       }
     };
 
-    int32_t lastPrice = _orderBook.get_center_price();
     int32_t price = _orderBook.get_best_price<-side>();
     int32_t index = _orderBook.get_best_index<-side>();
+    int32_t centerPrice = _orderBook.get_center_price();
     priceLimit = _orderBook.price_limit<side>(priceLimit);
 
     while((qty != 0) && check_price(price, priceLimit)) {
@@ -570,7 +570,7 @@ private:
         qty -= min;
         order.qty -= min;
         level.total += side * min;
-        lastPrice = price;
+        centerPrice = price;
 
         _out.push(Trade(price, min, orderId, order.id));
 
@@ -588,14 +588,14 @@ private:
       index += side * 1;
     }
 
-    _shiftUp(lastPrice);
-    _shiftDown(lastPrice);
+    _shiftUp(centerPrice);
+    _shiftDown(centerPrice);
 
     return qty;
   }
 
-  void _shiftUp(int32_t lastPrice) {
-    const int32_t offset = _orderBook.get_center_price() - lastPrice;
+  void _shiftUp(int32_t centerPrice) {
+    const int32_t offset = _orderBook.get_center_price() - centerPrice;
 
     if(offset <= 0) {
       return;
@@ -609,8 +609,8 @@ private:
     }
   }
 
-  void _shiftDown(int32_t lastPrice) {
-    const int32_t offset = lastPrice - _orderBook.get_center_price();
+  void _shiftDown(int32_t centerPrice) {
+    const int32_t offset = centerPrice - _orderBook.get_center_price();
 
     if(offset <= 0) {
       return;
