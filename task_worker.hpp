@@ -11,10 +11,10 @@
 #include <atomic>
 #include <cassert>
 #include <cstring>
+#include <immintrin.h>
 #include <optional>
 #include <thread>
 #include <utility>
-#include <immintrin.h>
 
 #include <pthread.h>
 
@@ -22,43 +22,31 @@
 
 static constexpr std::size_t NoAffinity = std::numeric_limits<std::size_t>::max();
 
-struct YieldIdlePolicy
-{
-  static void doIt()
-  {
+struct YieldIdlePolicy {
+  static void doIt() {
     std::this_thread::yield();
   }
 };
 
-struct PauseIdlePolicy
-{
-  static void doIt()
-  {
+struct PauseIdlePolicy {
+  static void doIt() {
     _mm_pause();
   }
 };
 
 template<std::size_t QueueSize, typename TTask, typename IdlePolicy = PauseIdlePolicy>
-class TaskWorkerSPSC
-{
+class TaskWorkerSPSC {
 public:
-  enum class WorkerState
-  {
-    Running,
-    Stopping,
-    HardStop
-  };
+  enum class WorkerState { Running, Stopping, HardStop };
 
 public:
   explicit TaskWorkerSPSC(std::size_t cpuAffinity = NoAffinity)
     : _thread([this, cpuAffinity]() {
       this->_run(cpuAffinity);
-    })
-  {
+    }) {
   }
 
-  ~TaskWorkerSPSC()
-  {
+  ~TaskWorkerSPSC() {
     if(_state.load(std::memory_order_relaxed) == WorkerState::Running) {
       _state.store(WorkerState::Stopping, std::memory_order_release);
     }
@@ -76,41 +64,34 @@ public:
 
 public:
   template<typename F>
-  bool push(F&& f)
-  {
+  bool push(F&& f) {
     assert(_state.load(std::memory_order_relaxed) == WorkerState::Running);
     return _queue.push(std::forward<F>(f));
   }
 
-  void stop()
-  {
+  void stop() {
     assert(_state.load(std::memory_order_relaxed) != WorkerState::HardStop);
     _state.store(WorkerState::Stopping, std::memory_order_release);
   }
 
-  void hard_stop()
-  {
+  void hard_stop() {
     _state.store(WorkerState::HardStop, std::memory_order_release);
   }
 
-  /* approximate */ bool running_approx() const
-  {
+  /* approximate */ bool running_approx() const {
     return _state.load(std::memory_order_acquire) == WorkerState::Running;
   }
 
-  /* approximate */ bool empty_approx() const
-  {
+  /* approximate */ bool empty_approx() const {
     return _queue.empty_approx();
   }
 
-  /* approximate */ bool full_approx() const
-  {
+  /* approximate */ bool full_approx() const {
     return _queue.full_approx();
   }
 
 private:
-  void _setThreadAffinity(std::size_t cpuAffinity) const
-  {
+  void _setThreadAffinity(std::size_t cpuAffinity) const {
     if(cpuAffinity == NoAffinity) {
       return;
     }
@@ -128,14 +109,12 @@ private:
     }
   }
 
-  void _run(std::size_t cpuAffinity)
-  {
+  void _run(std::size_t cpuAffinity) {
     _setThreadAffinity(cpuAffinity);
     _run();
   }
 
-  void _run()
-  {
+  void _run() {
     TTask task;
 
     while(_state.load(std::memory_order_acquire) == WorkerState::Running) {
