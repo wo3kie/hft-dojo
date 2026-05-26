@@ -12,11 +12,11 @@
 #include <iostream>
 #include <thread>
 
+#include "array.hpp"
 #include "assert.hpp"
 #include "common.hpp"
 #include "events.hpp"
 #include "flat_queue.hpp"
-#include "likely.hpp"
 #include "timer.hpp"
 
 /*
@@ -172,7 +172,7 @@ public:
   bool shiftUp() {
     assert(_maxPrice != Order::MaxPrice());
 
-    Level& level = get_level(_minPrice);
+    Level& level = get_level_by_price(_minPrice);
     _expire_level(level);
 
     _minIndex += 1;
@@ -191,7 +191,7 @@ public:
   bool shiftDown() {
     assert(_minPrice != Order::MinPrice());
 
-    Level& level = get_level(_maxPrice);
+    Level& level = get_level_by_price(_maxPrice);
     _expire_level(level);
 
     _minIndex -= 1;
@@ -252,6 +252,11 @@ public:
   }
 
   template<Side side>
+  int32_t get_best_index() const noexcept {
+    return (_minIndex + (get_best_price<side>() - _minPrice)) & (MaxLevels - 1);
+  }
+
+  template<Side side>
   void set_best_price(int32_t price) noexcept {
     static_assert(side == Sell || side == Buy);
 
@@ -262,9 +267,13 @@ public:
     }
   }
 
-  Level& get_level(int32_t price) {
+  Level& get_level_by_price(int32_t price) {
     Assert(check_price(price));
-    return _levels[(_minIndex + (price - _minPrice)) & (MaxLevels - 1)];
+    return _levels[(_minIndex + (price - _minPrice))];
+  }
+
+  Level& get_level_by_index(int32_t index) {
+    return _levels[index];
   }
 
   template<Side side>
@@ -275,7 +284,7 @@ public:
       return _out.push(CreateRejected(orderId, qty));
     }
 
-    Level& level = get_level(price);
+    Level& level = get_level_by_price(price);
 
     if constexpr(side == Sell) {
       assert(level.total <= 0);
@@ -292,12 +301,16 @@ public:
     if constexpr(side == Sell) {
       level.total -= qty;
       _bestSellPrice = std::min(_bestSellPrice, price);
+      _bestBuyPrice = std::min(_bestBuyPrice, _bestSellPrice - 1);
     } else {
       level.total += qty;
       _bestBuyPrice = std::max(_bestBuyPrice, price);
+      _bestSellPrice = std::max(_bestSellPrice, _bestBuyPrice + 1);
     }
 
     _out.push(CreateAccepted(orderId, index, qty));
+
+    assert(_bestSellPrice > _bestBuyPrice);
   }
 
   template<Side side>
@@ -308,7 +321,7 @@ public:
       return _out.push(UpdateRejected(orderId, newQty));
     }
 
-    Level& level = get_level(price);
+    Level& level = get_level_by_price(price);
     Order& order = level.orders.at(slot);
 
     if(order.id != orderId) {
@@ -337,7 +350,7 @@ public:
       return _out.push(CancelRejected(orderId));
     }
 
-    Level& level = get_level(price);
+    Level& level = get_level_by_price(price);
     Order& order = level.orders.at(slot);
 
     if(order.id != orderId) {
@@ -361,16 +374,15 @@ public:
 
 private:
   int32_t _minIndex;
-  int32_t __padding;
-
   int32_t _minPrice;
-  int32_t _maxPrice;
 
   int32_t _bestSellPrice;
   int32_t _bestBuyPrice;
 
+  int32_t _maxPrice;
+
   QueueOut& _out;
-  Level _levels[MaxLevels];
+  Array<Level, MaxLevels> _levels;
 };
 
 /*
@@ -545,13 +557,11 @@ private:
 
     int32_t lastPrice = _orderBook.get_center_price();
     int32_t price = _orderBook.get_best_price<-side>();
+    int32_t index = _orderBook.get_best_index<-side>();
     priceLimit = _orderBook.price_limit<side>(priceLimit);
 
     while((qty != 0) && check_price(price, priceLimit)) {
-      Level& level = _orderBook.get_level(price);
-
-      _orderBook.set_best_price<side>(price);
-      _orderBook.set_best_price<-side>(price);
+      Level& level = _orderBook.get_level_by_index(index);
 
       while((qty != 0) && (side * level.total < 0)) {
         Order& order = level.orders.front();
@@ -567,10 +577,15 @@ private:
         if(order.qty == 0) {
           order.id = 0;
           level.orders.pop();
+
+          if (level.orders.empty()) {
+            _orderBook.set_best_price<-side>(price + side);
+          }
         }
       }
 
       price += side * 1;
+      index += side * 1;
     }
 
     _shiftUp(lastPrice);
