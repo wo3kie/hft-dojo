@@ -27,8 +27,7 @@
  */
 
 template<class TType, typename IdlePolicy = PauseIdlePolicy>
-struct Channel
-{
+struct Channel {
 public:
   Channel() = default;
 
@@ -39,14 +38,12 @@ public:
   Channel& operator=(const Channel&) = delete;
 
 public:
-  void set(TType value)
-  {
+  void set(TType value) {
     _value = std::move(value);
     _ready.store(true, std::memory_order_release);
   }
 
-  TType& get()
-  {
+  TType& get() {
     while(! _ready.load(std::memory_order_acquire)) {
       IdlePolicy::doIt();
     }
@@ -64,12 +61,10 @@ private:
  */
 
 template<std::size_t QueueSize, typename IdlePolicy = PauseIdlePolicy>
-class TaskExecutorSPSC
-{
+class TaskExecutorSPSC {
 public:
   explicit TaskExecutorSPSC(std::size_t cpuAffinity = NoAffinity)
-    : _worker(cpuAffinity)
-  {
+    : _worker(cpuAffinity) {
   }
 
   TaskExecutorSPSC(TaskExecutorSPSC&&) = delete;
@@ -82,8 +77,7 @@ public:
 
 public:
   template<class F, typename T>
-  bool try_submit(F&& f, Channel<T>& channel)
-  {
+  bool try_submit(F&& f, Channel<T>& channel) {
     assert(_worker.running_approx());
 
     if(_worker.full_approx()) {
@@ -100,20 +94,17 @@ public:
   }
 
   template<class F, typename T>
-  void submit(F&& f, Channel<T>& channel)
-  {
+  void submit(F&& f, Channel<T>& channel) {
     while(! try_submit(std::forward<F>(f), channel)) {
       IdlePolicy::doIt();
     }
   }
 
-  void stop()
-  {
+  void stop() {
     _worker.stop();
   }
 
-  void hard_stop()
-  {
+  void hard_stop() {
     _worker.hard_stop();
   }
 
