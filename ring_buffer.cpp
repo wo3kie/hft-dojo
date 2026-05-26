@@ -8,7 +8,7 @@
  */
 
 #include "assert.hpp"
-#include "demangle.hpp"
+#include "common.hpp"
 
 #include "ring_buffer.hpp"
 #include "ring_buffer_mutex.hpp"
