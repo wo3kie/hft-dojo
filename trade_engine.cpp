@@ -653,16 +653,30 @@ void test_micro_bench_insert() {
     }
 
     void run() {
-      engine.insert_order<Sell>(engine.max_price(), engine.max_price(), 100);
+      engine.insert_order<Sell>(engine.center_price(), engine.center_price(), 100);
+      engine.insert_order<Sell>(engine.center_price() + 1, engine.center_price() + 1, 100);
+      engine.insert_order<Sell>(engine.center_price() + 2, engine.center_price() + 2, 100);
+      engine.insert_order<Sell>(engine.center_price() + 3, engine.center_price() + 3, 100);
+      engine.insert_order<Sell>(engine.center_price() + 4, engine.center_price() + 4, 100);
+      engine.insert_order<Sell>(engine.center_price() + 5, engine.center_price() + 5, 100);
+      engine.insert_order<Sell>(engine.center_price() + 6, engine.center_price() + 6, 100);
+      engine.insert_order<Sell>(engine.center_price() + 7, engine.center_price() + 7, 100);
     }
 
     void teardown() {
-      engine.cancel_order<Sell>(engine.max_price(), engine.max_price(), 0);
+      engine.cancel_order<Sell>(engine.center_price(), engine.center_price(), 0);
+      engine.cancel_order<Sell>(engine.center_price() + 1, engine.center_price() + 1, 0);
+      engine.cancel_order<Sell>(engine.center_price() + 2, engine.center_price() + 2, 0);
+      engine.cancel_order<Sell>(engine.center_price() + 3, engine.center_price() + 3, 0);
+      engine.cancel_order<Sell>(engine.center_price() + 4, engine.center_price() + 4, 0);
+      engine.cancel_order<Sell>(engine.center_price() + 5, engine.center_price() + 5, 0);
+      engine.cancel_order<Sell>(engine.center_price() + 6, engine.center_price() + 6, 0);
+      engine.cancel_order<Sell>(engine.center_price() + 7, engine.center_price() + 7, 0);
       engine.out().clear();
     }
   } insert(engine);
 
-  std::cout << "Micro benchmark (" << PROFILE << "): insert: " << Cycles<32>(insert) << std::endl;
+  std::cout << "Micro benchmark (" << PROFILE << "): insert: " << Timer<32>(insert) / 8 << "ns" << std::endl;
 }
 
 void test_micro_bench_trade() {
@@ -677,11 +691,25 @@ void test_micro_bench_trade() {
     TradeEngine& engine;
 
     void setup() {
-      engine.insert_order<Sell>(engine.center_price(), engine.center_price(), 100);
+      engine.insert_order<Sell>(1, engine.center_price(), 100);
+      engine.insert_order<Sell>(2, engine.center_price(), 100);
+      engine.insert_order<Sell>(3, engine.center_price(), 100);
+      engine.insert_order<Sell>(4, engine.center_price(), 100);
+      engine.insert_order<Sell>(5, engine.center_price(), 100);
+      engine.insert_order<Sell>(6, engine.center_price(), 100);
+      engine.insert_order<Sell>(7, engine.center_price(), 100);
+      engine.insert_order<Sell>(8, engine.center_price(), 100);
     }
 
     void run() {
-      engine.insert_order<Buy>(engine.center_price(), engine.center_price(), 100);
+      engine.insert_order<Buy>(1, engine.center_price(), 100);
+      engine.insert_order<Buy>(2, engine.center_price(), 100);
+      engine.insert_order<Buy>(3, engine.center_price(), 100);
+      engine.insert_order<Buy>(4, engine.center_price(), 100);
+      engine.insert_order<Buy>(5, engine.center_price(), 100);
+      engine.insert_order<Buy>(6, engine.center_price(), 100);
+      engine.insert_order<Buy>(7, engine.center_price(), 100);
+      engine.insert_order<Buy>(8, engine.center_price(), 100);
     }
 
     void teardown() {
@@ -689,7 +717,7 @@ void test_micro_bench_trade() {
     }
   } trade(engine);
 
-  std::cout << "Micro benchmark (" << PROFILE << "): trade: " << Cycles<32>(trade) << std::endl;
+  std::cout << "Micro benchmark (" << PROFILE << "): trade: " << Timer<32>(trade) / 8 << "ns" << std::endl;
 }
 
 int main() {
