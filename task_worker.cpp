@@ -13,15 +13,16 @@
 #include "assert.hpp"
 #include "task_worker.hpp"
 
-void test_stop_drains_all_queued_tasks()
-{
+void test_stop_drains_all_queued_tasks() {
   std::size_t counter = 0;
 
   {
     TaskWorkerSPSC<4, std::function<void()>> worker;
 
     for(std::size_t i = 0; i < 1024; ++i) {
-      while(! worker.push([i, &counter]() { counter += 1; })) {
+      while(! worker.push([i, &counter]() {
+        counter += 1;
+      })) {
         _mm_pause();
       };
     }
@@ -32,8 +33,7 @@ void test_stop_drains_all_queued_tasks()
   Assert(counter == 1024);
 }
 
-void test_hard_stop_skips_queued_tasks_after_current_task()
-{
+void test_hard_stop_skips_queued_tasks_after_current_task() {
   std::atomic<std::size_t> counter{0};
   std::atomic<bool> current_task_started{false};
   std::atomic<bool> release_current_task{false};
@@ -76,8 +76,7 @@ void test_hard_stop_skips_queued_tasks_after_current_task()
   Assert(counter.load(std::memory_order_relaxed) == 1);
 }
 
-int main()
-{
+int main() {
   test_stop_drains_all_queued_tasks();
   test_hard_stop_skips_queued_tasks_after_current_task();
 
