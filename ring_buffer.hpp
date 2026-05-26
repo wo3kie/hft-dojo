@@ -16,8 +16,7 @@
  */
 
 template<typename TValue, std::size_t Capacity>
-class RingBuffer
-{
+class RingBuffer {
 public:
   using value_type = TValue;
 
@@ -32,8 +31,7 @@ public:
 
 public:
   template<typename TT>
-  bool push(TT&& t)
-  {
+  bool push(TT&& t) {
     if(full()) {
       return false;
     }
@@ -44,8 +42,7 @@ public:
     return true;
   }
 
-  bool pop(TValue& out)
-  {
+  bool pop(TValue& out) {
     if(empty()) {
       return false;
     }
@@ -56,23 +53,19 @@ public:
     return true;
   }
 
-  static constexpr std::size_t capacity()
-  {
+  static constexpr std::size_t capacity() {
     return Capacity;
   }
 
-  [[nodiscard]] bool empty() const
-  {
+  [[nodiscard]] bool empty() const {
     return _head == _tail;
   }
 
-  bool full() const
-  {
+  bool full() const {
     return _index(_tail + 1) == _head;
   }
 
-  /* extension */ TValue pop()
-  {
+  /* extension */ TValue pop() {
     TValue out;
 
     if(! pop(out)) {
@@ -83,8 +76,7 @@ public:
   }
 
 private:
-  static constexpr std::size_t _index(std::size_t i) 
-  {
+  static constexpr std::size_t _index(std::size_t i) {
     constexpr bool isPowerOf2 = ((Capacity + 1) & Capacity) == 0;
 
     if constexpr(isPowerOf2) {
