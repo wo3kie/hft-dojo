@@ -15,8 +15,7 @@
 #include <cxxabi.h>
 #include <string>
 
-inline std::string demangle(const char* mangled_name)
-{
+inline std::string demangle(const char* mangled_name) {
   int status = 0;
   char* demangled = abi::__cxa_demangle(mangled_name, nullptr, nullptr, &status);
 
@@ -46,17 +45,17 @@ constexpr Index InvalidIndex = (Index)-1;
 constexpr uint32_t UINT32_MIN = 0;
 
 struct noncopyable {
-    noncopyable() = default;
-    ~noncopyable() = default;
+  noncopyable() = default;
+  ~noncopyable() = default;
 
-    noncopyable(const noncopyable&) = delete;
-    noncopyable& operator=(const noncopyable&) = delete;
+  noncopyable(const noncopyable&) = delete;
+  noncopyable& operator=(const noncopyable&) = delete;
 };
 
 struct nonmovable {
-    nonmovable() = default;
-    ~nonmovable() = default;
+  nonmovable() = default;
+  ~nonmovable() = default;
 
-    nonmovable(nonmovable&&) = delete;
-    nonmovable& operator=(nonmovable&&) = delete;
+  nonmovable(nonmovable&&) = delete;
+  nonmovable& operator=(nonmovable&&) = delete;
 };
