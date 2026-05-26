@@ -33,8 +33,8 @@ void test_insert_invalid_id(int32_t centerPrice) {
   QueueOut out;
   TradeEngine engine(out, centerPrice);
 
-  engine.insert_order<side>(Order::InvalidId(), 100, 100);
-  Assert(engine.out().pop() == CreateRejected(Order::InvalidId(), 100));
+  engine.insert_order<side>(Order::InvalidId, 100, 100);
+  Assert(engine.out().pop() == CreateRejected(Order::InvalidId, 100));
 }
 
 template<Side side>
@@ -54,11 +54,11 @@ void test_insert_invalid_qty(int32_t centerPrice) {
   QueueOut out;
   TradeEngine engine(out, centerPrice);
 
-  engine.insert_order<side>(1, 10, Order::MaxQty() + 1);
-  Assert(engine.out().pop() == CreateRejected(1, Order::MaxQty() + 1));
+  engine.insert_order<side>(1, 10, Order::MaxQty + 1);
+  Assert(engine.out().pop() == CreateRejected(1, Order::MaxQty + 1));
 
-  engine.insert_order<side>(2, 10, Order::MinQty() - 1);
-  Assert(engine.out().pop() == CreateRejected(2, Order::MinQty() - 1));
+  engine.insert_order<side>(2, 10, Order::MinQty - 1);
+  Assert(engine.out().pop() == CreateRejected(2, Order::MinQty - 1));
 }
 
 template<Side side>
@@ -67,7 +67,7 @@ void test_insert_all(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   for(int32_t price = engine.min_price(); price <= engine.max_price(); price++) {
-    for(int32_t i = 0; i < engine.order_per_level(); i++) {
+    for(int32_t i = 0; i < engine.orders_per_level(); i++) {
       engine.insert_order<side>(price * 100 + i, price, 10);
       Assert(engine.out().pop() == CreateAccepted(price * 100 + i, i, 10));
     }
@@ -94,8 +94,8 @@ void test_update_invalid_id(int32_t centerPrice) {
   QueueOut out;
   TradeEngine engine(out, centerPrice);
 
-  engine.update_order<side>(Order::InvalidId(), centerPrice, 0, 100 + 1);
-  Assert(engine.out().pop() == UpdateRejected(Order::InvalidId(), 100 + 1));
+  engine.update_order<side>(Order::InvalidId, centerPrice, 0, 100 + 1);
+  Assert(engine.out().pop() == UpdateRejected(Order::InvalidId, 100 + 1));
 }
 
 template<Side side>
@@ -106,8 +106,8 @@ void test_update_invalid_qty(int32_t centerPrice) {
   engine.insert_order<side>(1, centerPrice, 100);
   Assert(engine.out().pop() == CreateAccepted(1, 0, 100));
 
-  engine.update_order<side>(1, centerPrice, 0, Order::MaxQty() + 1);
-  Assert(engine.out().pop() == UpdateRejected(1, Order::MaxQty() + 1));
+  engine.update_order<side>(1, centerPrice, 0, Order::MaxQty + 1);
+  Assert(engine.out().pop() == UpdateRejected(1, Order::MaxQty + 1));
 }
 
 template<Side side>
@@ -172,8 +172,8 @@ void test_delete_invalid_id(int32_t centerPrice) {
   engine.insert_order<side>(1, centerPrice, 100);
   Assert(engine.out().pop() == CreateAccepted(1, 0, 100));
 
-  engine.cancel_order<side>(Order::InvalidId(), centerPrice, 0);
-  Assert(engine.out().pop() == CancelRejected(Order::InvalidId()));
+  engine.cancel_order<side>(Order::InvalidId, centerPrice, 0);
+  Assert(engine.out().pop() == CancelRejected(Order::InvalidId));
 }
 
 template<Side side>
@@ -224,7 +224,7 @@ void test_trade_level(int32_t centerPrice, int32_t tradePrice) {
   TradeEngine engine(out, centerPrice);
 
   const int32_t qty = 100;
-  const int32_t orders = engine.order_per_level();
+  const int32_t orders = engine.orders_per_level();
 
   for(int32_t order = 1; order <= orders; order++) {
     engine.insert_order<side>(order, tradePrice, qty);
@@ -233,7 +233,7 @@ void test_trade_level(int32_t centerPrice, int32_t tradePrice) {
 
   engine.insert_order<-side>(orders + 1, tradePrice, orders * qty);
 
-  for(int32_t i = 0; i < engine.order_per_level(); i++) {
+  for(int32_t i = 0; i < engine.orders_per_level(); i++) {
     Assert(engine.out().pop() == Trade(tradePrice, qty, orders + 1, i + 1));
   }
 }
@@ -259,8 +259,8 @@ void test_trend(int32_t centerPrice, int32_t trend = 1) {
   const auto update_price = [&](int32_t price, int32_t trend) -> int32_t {
     price += trend;
 
-    price = std::max(price, Order::MinPrice());
-    price = std::min(price, Order::MaxPrice());
+    price = std::max(price, Order::MinPrice);
+    price = std::min(price, Order::MaxPrice);
 
     return price;
   };
@@ -277,8 +277,8 @@ void test_trend(int32_t centerPrice, int32_t trend = 1) {
 }
 
 void test() {
-  constexpr int32_t MinPrice = Order::MinPrice();
-  constexpr int32_t MaxPrice = Order::MaxPrice();
+  constexpr int32_t MinPrice = Order::MinPrice;
+  constexpr int32_t MaxPrice = Order::MaxPrice;
 
   constexpr int32_t Price1 = MinPrice;
   constexpr int32_t Price2 = MinPrice + 32;
@@ -629,8 +629,8 @@ void test_random(int32_t centerPrice, int32_t iters) {
 }
 
 void test_random(int32_t iters) {
-  constexpr int32_t MinPrice = Order::MinPrice();
-  constexpr int32_t MaxPrice = Order::MaxPrice();
+  constexpr int32_t MinPrice = Order::MinPrice;
+  constexpr int32_t MaxPrice = Order::MaxPrice;
   constexpr int32_t CenterPrices[] = {MinPrice, MinPrice + 32, 1000000, MaxPrice - 64, MaxPrice};
 
   for(int32_t centerPrice : CenterPrices) {
@@ -693,7 +693,7 @@ void test_micro_bench_trade() {
 }
 
 int main() {
-  
+
 #ifndef NDEBUG
   test();
 #endif
