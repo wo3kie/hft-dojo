@@ -69,18 +69,17 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
     Assert(a == b);
   }
   ```
-- **branchless** - A small collection of branchless functions like `min`, `max`, `abs`...
 
-- **flat_list** - A doubly‑linked flat list with fixed maximum capacity. All operations (`push_front`, `push_back`, `pop_front`, `pop_back`, `remove`) run in O(1) time.
+- **flat_queue** - A doubly‑linked flat list with fixed maximum capacity. All operations (`push_front`, `push_back`, `pop_front`, `pop_back`, `remove`) run in O(1) time.
 
   ```{r, engine='cpp'}
-  FlatList<int, 8> list;
+  FlatQueue<int, 8> queue;
   
-  list.push_front(1);
-  assert(list.front() == 1);
+  queue.push(1);
+  assert(queue.front() == 1);
 
-  list.push_back(2);
-  assert(list.back() == 2);
+  queue.pop();
+  assert(queue.empty());
   ```
 
 - **gdb_utils** - GDB helpers for inspecting the internal state of the data structures in this repository.
@@ -97,43 +96,8 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   (gdb) print_ring_buffer_spmc rBuffer
   RingBufferSPMC<int, 128> [ 0, 1, 2, 3, ..., 124, 125, 126, 127 ]
   ```
-  
-- **likely** - `LIKELY` and `UNLIKELY` macros that can be used to provide branch prediction hints to the compiler.
-  
-  ```{r, engine='cpp'}
-  if(UNLIKELY(qty != 0)) {
-    _orderBook.insertSellOrder(orderId, price, qty);
-  }
-  ```
-  
+    
 - **map_reduce** - An implementation of the parallel map and serial reduce paradigm in C++.
-  
-- **trade_engine** - Ultra‑fast trade engine example that generates events in nanoseconds. Supports limit orders, market orders, cancellation, and updates. The trade logic is designed to be branchless and cache‑friendly, making it suitable for high‑performance trading systems.
-  
-```{r, engine='cpp'}
-    TradeEngine</* LevelsBelow */ 3, /* LevelsAbove */ 4> engine(/* initialPrice */ 100);
-
-    engine.insertBuyOrder_PL(1, /* price */ 100, /* qty */ 200);
-    Assert(engine.bufferOut().pop() == CreateAccepted(/* orderId */ 1, /* slot */ 0));
-
-    engine.insertSellOrder_MKT(2, /* qty */ 200);
-    Assert(engine.bufferOut().pop() == Trade(/* price */ 100, /* qty */ 200, /* maker */ 2, /* taker */ 1));
-```
-  
-- **order_book** -  Simple limit order book with add/remove/update operations and a sliding‑window mechanism for tracking price trends. The order book is designed to be fast and efficient, with a focus on low latency and high throughput. It supports both buy and sell orders, and can be used as a building block for more complex trading systems.
-  
-  ```{r, engine='cpp'}
-
-  OrderBook</* LevelsBelow */ 31, /* LevelsAbove */ 32> ob(buffer, /* initialPrice */ 100);
-
-  ob.insertBuyOrder(/* orderId */ 1, /* price */ 100, /* qty */ 10);
-  Assert(ob.bufferOut().pop() == CreateAccepted(/* orderId */ 1, /* slot */ 0));
-  
-  ob.updateBuyOrder(/* orderId */ 1, /* slot */ 0, /* qty */ 20);
-  Assert(ob.bufferOut().pop() == UpdateAccepted(/* orderId */ 1));
-  ```
-
-- **price_levels** - An implementation of a price level data structure that can be used to store orders at a specific price level in a limit order book.
   
 - **ring_buffer** - Single‑threaded ring buffer. It is designed for scenarios where only one thread is producing and consuming data, so it does not include any synchronization mechanisms. This makes it very fast and efficient for single‑threaded use cases.
   
@@ -175,3 +139,17 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   Assert(worker.push([]() noexcept { /* do something */ }));
   Assert(worker.push([]() noexcept { /* do something */ }));
   ```
+
+- **trade_engine** - Ultra‑fast trade engine example that generates events in nanoseconds. Supports limit orders, market orders, cancellation, and updates. The trade logic is designed to be branchless and cache‑friendly, making it suitable for high‑performance trading systems.
+  
+```{r, engine='cpp'}
+  QueueOut out;
+  TradeEngine engine(out, centerPrice);
+
+  engine.insert_order<Sell>(/* id */ 1, /* price */ 100, /* qty */ 200);
+  Assert(engine.out().pop() == CreateAccepted(1, 100, 200));
+
+  engine.insert_order<Buy>(/* id */ 2, /* price */ 100, /* qty */ 200);
+  Assert(engine.out().pop() == Trade(/* price */ 100, /* qty */ 200, /* maker */ 2, /* taker */ 1));
+```
+  
