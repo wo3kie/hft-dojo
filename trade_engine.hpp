@@ -562,8 +562,9 @@ private:
 
     while((qty != 0) && check_price(price, priceLimit)) {
       Level& level = _orderBook.get_level_by_index(index);
+      assert(level.total * side <= 0);
 
-      while((qty != 0) && (side * level.total < 0)) {
+      while((qty != 0) && (level.total != 0)) {
         Order& order = level.orders.front();
         const int32_t min = std::min(qty, order.qty);
 
@@ -580,6 +581,7 @@ private:
 
           if (level.orders.empty()) {
             _orderBook.set_best_price<-side>(price + side);
+            assert(_orderBook.get_best_price<Sell>() > _orderBook.get_best_price<Buy>());
           }
         }
       }
