@@ -32,17 +32,10 @@ inline std::string demangle(const char* mangled_name) {
 #define LIKELY(x) (__builtin_expect(! ! (x), 1))
 #define UNLIKELY(x) (__builtin_expect(! ! (x), 0))
 
-typedef uint32_t OrderId;
-
-typedef uint32_t Qty;
-
-typedef uint32_t Price;
-constexpr Price InvalidPrice = 0;
-
-typedef uint32_t Index;
-constexpr Index InvalidIndex = (Index)-1;
-
-constexpr uint32_t UINT32_MIN = 0;
+typedef int32_t OrderId;
+typedef int32_t Qty;
+typedef int32_t Price;
+typedef int32_t Index;
 
 struct noncopyable {
   noncopyable() = default;
