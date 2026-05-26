@@ -10,6 +10,12 @@
 #include "assert.hpp"
 #include "timer.hpp"
 
+#ifdef NDEBUG
+  constexpr auto PROFILE = "Release";
+#else
+  constexpr auto PROFILE = "Debug";
+#endif
+
 template<Side side>
 void test_insert(int32_t centerPrice) {
   QueueOut out;
@@ -648,17 +654,15 @@ void test_micro_bench_insert() {
 
     void run() {
       engine.insert_order<Sell>(engine.max_price(), engine.max_price(), 100);
-      engine.insert_order<Buy>(engine.min_price(), engine.min_price(), 100);
     }
 
     void teardown() {
       engine.cancel_order<Sell>(engine.max_price(), engine.max_price(), 0);
-      engine.cancel_order<Buy>(engine.min_price(), engine.min_price(), 0);
       engine.out().clear();
     }
   } insert(engine);
 
-  std::cout << "Micro benchmark: insert: " << Cycles<32>(insert) << std::endl;
+  std::cout << "Micro benchmark (" << PROFILE << "): insert: " << Cycles<32>(insert) << std::endl;
 }
 
 void test_micro_bench_trade() {
@@ -673,10 +677,10 @@ void test_micro_bench_trade() {
     TradeEngine& engine;
 
     void setup() {
+      engine.insert_order<Sell>(engine.center_price(), engine.center_price(), 100);
     }
 
     void run() {
-      engine.insert_order<Sell>(engine.center_price(), engine.center_price(), 100);
       engine.insert_order<Buy>(engine.center_price(), engine.center_price(), 100);
     }
 
@@ -685,10 +689,11 @@ void test_micro_bench_trade() {
     }
   } trade(engine);
 
-  std::cout << "Micro benchmark: trade: " << Cycles<32>(trade) << std::endl;
+  std::cout << "Micro benchmark (" << PROFILE << "): trade: " << Cycles<32>(trade) << std::endl;
 }
 
 int main() {
+  
 #ifndef NDEBUG
   test();
 #endif
