@@ -69,7 +69,8 @@ public:
 
 public:
   explicit OrderBook(QueueOut& out, Price centerPrice = MaxLevels / 2)
-    : _out(out) {
+    : _out(out) 
+  {
     _minIndex = 0;
     _minPrice = std::max(centerPrice - (MaxLevels / 2) - 1, Order::MinPrice);
     _maxPrice = std::min(_minPrice + (MaxLevels - 1), Order::MaxPrice);
@@ -127,11 +128,11 @@ public:
     return true;
   }
 
-  bool check_price(Price price) noexcept {
+  bool check_price(Price price) const noexcept {
     return price >= get_min_price() && price <= get_max_price();
   }
 
-  bool check_qty(Qty qty) noexcept {
+  bool check_qty(Qty qty) const noexcept {
     return (qty >= Order::MinQty) && (qty <= Order::MaxQty);
   }
 
@@ -240,13 +241,11 @@ public:
       return _out.push(UpdateRejected(orderId, newQty));
     }
 
-    const Qty qty = order.qty;
-
     if constexpr(side == Sell) {
-      level.total += qty;
+      level.total += order.qty;
       level.total -= newQty;
     } else {
-      level.total -= qty;
+      level.total -= order.qty;
       level.total += newQty;
     }
 
@@ -267,18 +266,15 @@ public:
       return _out.push(CancelRejected(orderId));
     }
 
-    const Qty qty = order.qty;
-
     if constexpr(side == Sell) {
-      level.total += qty;
+      level.total += order.qty;
     } else {
-      level.total -= qty;
+      level.total -= order.qty;
     }
 
     order.id = 0;
     order.qty = 0;
     level.orders.remove(slot);
-
     _out.push(CancelAccepted(orderId));
   }
 
@@ -302,7 +298,8 @@ private:
 struct TradeEngine final: noncopyable, nonmovable {
   explicit TradeEngine(QueueOut& out, Price centerPrice = OrderBook::MaxLevels / 2)
     : _out(out)
-    , _orderBook(out, centerPrice) {
+    , _orderBook(out, centerPrice) 
+  {
   }
 
 public:
@@ -466,12 +463,10 @@ private:
       while((qty != 0) && (level.total != 0)) {
         Order& order = level.orders.front();
         const Qty min = std::min(qty, order.qty);
-
         qty -= min;
         order.qty -= min;
         level.total += side * min;
         centerPrice = price;
-
         _out.push(Trade(price, min, orderId, order.id));
 
         if(UNLIKELY(order.qty != 0)) {
@@ -480,7 +475,6 @@ private:
 
         order.id = 0;
         level.orders.pop();
-
         _orderBook.update_best_price<-side>(level.orders.empty());
       }
 
@@ -490,7 +484,6 @@ private:
 
     _shiftUp(centerPrice);
     _shiftDown(centerPrice);
-
     return qty;
   }
 
