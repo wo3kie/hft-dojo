@@ -5,6 +5,8 @@
 #include <iostream>
 #include <string>
 
+#include <x86intrin.h>
+
 struct Duration
 {
   using duration = std::chrono::duration<long int, std::nano>;
