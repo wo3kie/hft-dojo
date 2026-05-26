@@ -506,7 +506,7 @@ void test() {
     test_delete_invalid_price<Buy>(Price1);
 
     test_delete_invalid_price<Sell>(Price2);
-    test_delete_invalid_price<Buy>(Price2); 
+    test_delete_invalid_price<Buy>(Price2);
 
     test_delete_invalid_price<Sell>(Price3);
     test_delete_invalid_price<Buy>(Price3);
@@ -575,13 +575,13 @@ void test() {
 
     test_trend(Price2, +1);
     test_trend(Price2, -1);
-    
+
     test_trend(Price3, +1);
     test_trend(Price3, -1);
-    
+
     test_trend(Price4, +1);
     test_trend(Price4, -1);
-    
+
     test_trend(Price5, +1);
     test_trend(Price5, -1);
   }
@@ -688,8 +688,7 @@ void test_micro_bench_trade() {
   std::cout << "Micro benchmark: trade: " << Cycles<32>(trade) << std::endl;
 }
 
-int main() 
-{  
+int main() {
 #ifndef NDEBUG
   test();
 #endif
