@@ -11,8 +11,7 @@
  */
 
 template<typename TValue, std::size_t Capacity>
-class RingBufferSPSC
-{
+class RingBufferSPSC {
 public:
   using value_type = TValue;
 
@@ -27,8 +26,7 @@ public:
 
 public:
   template<typename T>
-  bool push(T&& value)
-  {
+  bool push(T&& value) {
     const std::size_t head = _head.load(std::memory_order_acquire);
     const std::size_t tail = _tail.load(std::memory_order_relaxed);
 
@@ -42,8 +40,7 @@ public:
     return true;
   }
 
-  bool pop(TValue& out)
-  {
+  bool pop(TValue& out) {
     const std::size_t head = _head.load(std::memory_order_relaxed);
     const std::size_t tail = _tail.load(std::memory_order_acquire);
 
@@ -57,29 +54,25 @@ public:
     return true;
   }
 
-  static constexpr std::size_t capacity()
-  {
+  static constexpr std::size_t capacity() {
     return Capacity;
   }
 
-  /* approximate */ bool empty_approx() const
-  {
+  /* approximate */ bool empty_approx() const {
     const std::size_t head = _head.load(std::memory_order_acquire);
     const std::size_t tail = _tail.load(std::memory_order_acquire);
 
     return head == tail;
   }
 
-  /* approximate */ bool full_approx() const
-  {
+  /* approximate */ bool full_approx() const {
     const std::size_t head = _head.load(std::memory_order_acquire);
     const std::size_t tail = _tail.load(std::memory_order_acquire);
 
     return head == _index(tail + 1);
   }
 
-  /* extension */ TValue pop()
-  {
+  /* extension */ TValue pop() {
     TValue out;
 
     if(pop(out) == false) {
@@ -90,8 +83,7 @@ public:
   }
 
 private:
-  static constexpr std::size_t _index(std::size_t i)
-  {
+  static constexpr std::size_t _index(std::size_t i) {
     constexpr bool isPowerOf2 = ((Capacity + 1) & Capacity) == 0;
 
     if constexpr(isPowerOf2) {
