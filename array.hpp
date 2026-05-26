@@ -12,24 +12,20 @@
 #include <cstdint>
 
 template<typename Type, int32_t Size>
-struct Array
-{
+struct Array {
   static_assert((Size & (Size - 1)) == 0);
 
 public:
-  int32_t size() const
-  {
+  int32_t size() const {
     return Size;
   }
 
-  Type& operator[](int32_t index)
-  {
+  Type& operator[](int32_t index) {
     index = index & (Size - 1);
     return _data[index];
   }
 
-  const Type& operator[](int32_t index) const
-  {
+  const Type& operator[](int32_t index) const {
     index = index & (Size - 1);
     return _data[index];
   }
