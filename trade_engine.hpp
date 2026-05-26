@@ -93,8 +93,6 @@ struct Order {
 
   template<Side side>
   static constexpr int32_t AnyPrice() noexcept {
-    static_assert(side == Sell || side == Buy);
-
     if constexpr(side == Sell) {
       return Order::MinPrice();
     } else {
@@ -228,8 +226,6 @@ public:
 
   template<Side side>
   int32_t price_limit(int32_t priceLimit) const noexcept {
-    static_assert(side == Sell || side == Buy);
-
     if constexpr(side == Sell) {
       const int32_t price = get_min_price();
       return std::max(priceLimit, price);
@@ -241,8 +237,6 @@ public:
 
   template<Side side>
   int32_t get_best_price() const noexcept {
-    static_assert(side == Sell || side == Buy);
-
     if constexpr(side == Sell) {
       return _bestSellPrice;
     } else {
@@ -257,8 +251,6 @@ public:
 
   template<Side side>
   void set_best_price(int32_t price) noexcept {
-    static_assert(side == Sell || side == Buy);
-
     if constexpr(side == Sell) {
       _bestSellPrice = price;
     } else {
@@ -279,8 +271,6 @@ public:
 
   template<Side side>
   void insert_order(int32_t orderId, int32_t price, int32_t qty) noexcept {
-    static_assert(side == Sell || side == Buy);
-
     if(check_price(price) == false) {
       return _out.push(CreateRejected(orderId, qty));
     }
@@ -316,8 +306,6 @@ public:
 
   template<Side side>
   void update_order(int32_t orderId, int32_t price, int32_t slot, int32_t newQty) noexcept {
-    static_assert(side == Sell || side == Buy);
-
     if(check_price(price) == false) {
       return _out.push(UpdateRejected(orderId, newQty));
     }
@@ -345,8 +333,6 @@ public:
 
   template<Side side>
   void cancel_order(int32_t orderId, int32_t price, int32_t slot) noexcept {
-    static_assert(side == Sell || side == Buy);
-
     if(check_price(price) == false) {
       return _out.push(CancelRejected(orderId));
     }
@@ -399,8 +385,6 @@ struct TradeEngine final: noncopyable, nonmovable {
 public:
   template<Side side>
   void insert_order(int32_t orderId, int32_t price, int32_t qty) noexcept {
-    static_assert(side == Sell || side == Buy);
-
 #ifndef NDEBUG
     if(orderId == Order::InvalidId()) {
       return _out.push(CreateRejected(orderId, qty));
@@ -432,8 +416,6 @@ public:
 
   template<Side side>
   void insert_order(int32_t orderId, int32_t qty) noexcept {
-    static_assert(side == Sell || side == Buy);
-
 #ifndef NDEBUG
     if(orderId == Order::InvalidId()) {
       return _out.push(CreateRejected(orderId, qty));
@@ -458,8 +440,6 @@ public:
 
   template<Side side>
   void update_order(int32_t orderId, int32_t price, int32_t slot, int32_t newQty) noexcept {
-    static_assert(side == Sell || side == Buy);
-
 #ifndef NDEBUG
     if(orderId == Order::InvalidId()) {
       return _out.push(UpdateRejected(orderId, newQty));
@@ -495,8 +475,6 @@ public:
 
   template<Side side>
   void cancel_order(int32_t orderId, int32_t price, int32_t slot) noexcept {
-    static_assert(side == Sell || side == Buy);
-
 #ifndef NDEBUG
     if(orderId == Order::InvalidId()) {
       return _out.push(CancelRejected(orderId));
@@ -545,8 +523,6 @@ public:
 private:
   template<Side side>
   int32_t _trade(int32_t orderId, int32_t priceLimit, int32_t qty) noexcept {
-    static_assert(side == Sell || side == Buy);
-
     const auto check_price = [](int32_t price, int32_t priceLimit) -> bool {
       if constexpr(side == Sell) {
         return price >= priceLimit;
