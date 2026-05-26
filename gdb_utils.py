@@ -109,3 +109,25 @@ class PrintRingBufferSPMC(gdb.Command):
         print(f"RingBufferSPMC<{val.type.template_argument(0)}, {size}> [ {", ".join(shown)} ]")
 
 PrintRingBufferSPMC()
+
+class PrintQueue(gdb.Command):
+    def __init__(self):
+        super(PrintQueue, self).__init__("pq", gdb.COMMAND_USER)
+
+    def invoke(self, arg, from_tty):
+        val = gdb.parse_and_eval(arg)
+        type = str(val.type.strip_typedefs())
+
+        if type.startswith("FlatQueue<"):
+            PrintFlatQueue().invoke(arg, from_tty)
+        elif type.startswith("RingBuffer<"):
+            PrintRingBuffer().invoke(arg, from_tty)
+        elif type.startswith("RingBufferSPSC<"):
+            PrintRingBufferSPSC().invoke(arg, from_tty)
+        elif type.startswith("RingBufferSPMC<"):
+            PrintRingBufferSPMC().invoke(arg, from_tty)
+        else:
+            print(f"Unsupported queue type: {type}")
+        
+
+PrintQueue()
