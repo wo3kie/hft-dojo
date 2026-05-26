@@ -8,6 +8,7 @@
 
 #include "trade_engine.hpp"
 #include "assert.hpp"
+#include "timer.hpp"
 
 template<Side side>
 void test_insert(int32_t centerPrice) {
@@ -241,7 +242,356 @@ void test_trade_level(int32_t centerPrice) {
   }
 }
 
-void test_random(int32_t centerPrice, int32_t iters = 100'000) {
+void test_trend(int32_t centerPrice, int32_t trend = 1) {
+  QueueOut out;
+  TradeEngine engine(out, centerPrice);
+
+  int32_t price = centerPrice;
+  const int32_t minPrice = engine.min_price();
+  const int32_t maxPrice = engine.max_price();
+
+  const auto update_price = [&](int32_t price, int32_t trend) -> int32_t {
+    price += trend;
+
+    price = std::max(price, Order::MinPrice());
+    price = std::min(price, Order::MaxPrice());
+
+    return price;
+  };
+
+  for(int32_t iter = 0; iter != 3 * (maxPrice - minPrice); iter += 1, price = update_price(price, trend)) {
+    engine.insert_order<Sell>(1000000 + price, price, 100);
+    engine.out().clear();
+    // Assert(engine.out().pop() == CreateAccepted(1000000 + price, 0, 100));
+
+    engine.insert_order<Buy>(2000000 + price, price, 100);
+    engine.out().clear();
+    // Assert(engine.out().pop() == Trade(price, 100, 2000000 + price, 1000000 + price));
+  }
+}
+
+void test() {
+  constexpr int32_t MinPrice = Order::MinPrice();
+  constexpr int32_t MaxPrice = Order::MaxPrice();
+
+  constexpr int32_t Price1 = MinPrice;
+  constexpr int32_t Price2 = MinPrice + 32;
+  constexpr int32_t Price3 = 1'000;
+  constexpr int32_t Price4 = MaxPrice - 32;
+  constexpr int32_t Price5 = MaxPrice;
+
+  {
+    test_insert<Sell>(Price1);
+    test_insert<Buy>(Price1);
+
+    test_insert<Sell>(Price2);
+    test_insert<Buy>(Price2);
+
+    test_insert<Sell>(Price3);
+    test_insert<Buy>(Price3);
+
+    test_insert<Sell>(Price4);
+    test_insert<Buy>(Price4);
+
+    test_insert<Sell>(Price5);
+    test_insert<Buy>(Price5);
+  }
+
+  {
+    test_insert_invalid_id<Sell>(Price1);
+    test_insert_invalid_id<Buy>(Price1);
+
+    test_insert_invalid_id<Sell>(Price2);
+    test_insert_invalid_id<Buy>(Price2);
+
+    test_insert_invalid_id<Sell>(Price3);
+    test_insert_invalid_id<Buy>(Price3);
+
+    test_insert_invalid_id<Sell>(Price4);
+    test_insert_invalid_id<Buy>(Price4);
+
+    test_insert_invalid_id<Sell>(Price5);
+    test_insert_invalid_id<Buy>(Price5);
+  }
+
+  {
+    test_insert_invalid_price<Sell>(Price1);
+    test_insert_invalid_price<Buy>(Price1);
+
+    test_insert_invalid_price<Sell>(Price2);
+    test_insert_invalid_price<Buy>(Price2);
+
+    test_insert_invalid_price<Sell>(Price3);
+    test_insert_invalid_price<Buy>(Price3);
+
+    test_insert_invalid_price<Sell>(Price4);
+    test_insert_invalid_price<Buy>(Price4);
+
+    test_insert_invalid_price<Sell>(Price5);
+    test_insert_invalid_price<Buy>(Price5);
+  }
+
+  {
+    test_insert_invalid_qty<Sell>(Price1);
+    test_insert_invalid_qty<Buy>(Price1);
+
+    test_insert_invalid_qty<Sell>(Price2);
+    test_insert_invalid_qty<Buy>(Price2);
+
+    test_insert_invalid_qty<Sell>(Price3);
+    test_insert_invalid_qty<Buy>(Price3);
+
+    test_insert_invalid_qty<Sell>(Price4);
+    test_insert_invalid_qty<Buy>(Price4);
+
+    test_insert_invalid_qty<Sell>(Price5);
+    test_insert_invalid_qty<Buy>(Price5);
+  }
+
+  {
+    test_insert_all<Sell>(Price1);
+    test_insert_all<Buy>(Price1);
+
+    test_insert_all<Sell>(Price2);
+    test_insert_all<Buy>(Price2);
+
+    test_insert_all<Sell>(Price3);
+    test_insert_all<Buy>(Price3);
+
+    test_insert_all<Sell>(Price4);
+    test_insert_all<Buy>(Price4);
+
+    test_insert_all<Sell>(Price5);
+    test_insert_all<Buy>(Price5);
+  }
+
+  {
+    test_update<Sell>(Price1);
+    test_update<Buy>(Price1);
+
+    test_update<Sell>(Price2);
+    test_update<Buy>(Price2);
+
+    test_update<Sell>(Price3);
+    test_update<Buy>(Price3);
+
+    test_update<Sell>(Price4);
+    test_update<Buy>(Price4);
+
+    test_update<Sell>(Price5);
+    test_update<Buy>(Price5);
+  }
+
+  {
+    test_update_invalid_id<Sell>(Price1);
+    test_update_invalid_id<Buy>(Price1);
+
+    test_update_invalid_id<Sell>(Price2);
+    test_update_invalid_id<Buy>(Price2);
+
+    test_update_invalid_id<Sell>(Price3);
+    test_update_invalid_id<Buy>(Price3);
+
+    test_update_invalid_id<Sell>(Price4);
+    test_update_invalid_id<Buy>(Price4);
+
+    test_update_invalid_id<Sell>(Price5);
+    test_update_invalid_id<Buy>(Price5);
+  }
+
+  {
+    test_update_invalid_price<Sell>(Price1);
+    test_update_invalid_price<Buy>(Price1);
+
+    test_update_invalid_price<Sell>(Price2);
+    test_update_invalid_price<Buy>(Price2);
+
+    test_update_invalid_price<Sell>(Price3);
+    test_update_invalid_price<Buy>(Price3);
+
+    test_update_invalid_price<Sell>(Price4);
+    test_update_invalid_price<Buy>(Price4);
+
+    test_update_invalid_price<Sell>(Price5);
+    test_update_invalid_price<Buy>(Price5);
+  }
+
+  {
+    test_update_invalid_qty<Sell>(Price1);
+    test_update_invalid_qty<Buy>(Price1);
+
+    test_update_invalid_qty<Sell>(Price2);
+    test_update_invalid_qty<Buy>(Price2);
+
+    test_update_invalid_qty<Sell>(Price3);
+    test_update_invalid_qty<Buy>(Price3);
+
+    test_update_invalid_qty<Sell>(Price4);
+    test_update_invalid_qty<Buy>(Price4);
+
+    test_update_invalid_qty<Sell>(Price5);
+    test_update_invalid_qty<Buy>(Price5);
+  }
+
+  {
+    test_update_invalid_slot<Sell>(Price1);
+    test_update_invalid_slot<Buy>(Price1);
+
+    test_update_invalid_slot<Sell>(Price2);
+    test_update_invalid_slot<Buy>(Price2);
+
+    test_update_invalid_slot<Sell>(Price3);
+    test_update_invalid_slot<Buy>(Price3);
+
+    test_update_invalid_slot<Sell>(Price4);
+    test_update_invalid_slot<Buy>(Price4);
+
+    test_update_invalid_slot<Sell>(Price5);
+    test_update_invalid_slot<Buy>(Price5);
+  }
+
+  {
+    test_update_deleted<Sell>(Price1);
+    test_update_deleted<Buy>(Price1);
+
+    test_update_deleted<Sell>(Price2);
+    test_update_deleted<Buy>(Price2);
+
+    test_update_deleted<Sell>(Price3);
+    test_update_deleted<Buy>(Price3);
+
+    test_update_deleted<Sell>(Price4);
+    test_update_deleted<Buy>(Price4);
+
+    test_update_deleted<Sell>(Price5);
+    test_update_deleted<Buy>(Price5);
+  }
+
+  {
+    test_delete<Sell>(Price1);
+    test_delete<Buy>(Price1);
+
+    test_delete<Sell>(Price2);
+    test_delete<Buy>(Price2);
+
+    test_delete<Sell>(Price3);
+    test_delete<Buy>(Price3);
+
+    test_delete<Sell>(Price4);
+    test_delete<Buy>(Price4);
+
+    test_delete<Sell>(Price5);
+    test_delete<Buy>(Price5);
+  }
+
+  {
+    test_delete_invalid_id<Sell>(Price1);
+    test_delete_invalid_id<Buy>(Price1);
+
+    test_delete_invalid_id<Sell>(Price2);
+    test_delete_invalid_id<Buy>(Price2);
+
+    test_delete_invalid_id<Sell>(Price3);
+    test_delete_invalid_id<Buy>(Price3);
+
+    test_delete_invalid_id<Sell>(Price4);
+    test_delete_invalid_id<Buy>(Price4);
+
+    test_delete_invalid_id<Sell>(Price5);
+    test_delete_invalid_id<Buy>(Price5);
+  }
+
+  {
+    test_delete_invalid_price<Sell>(Price1);
+    test_delete_invalid_price<Buy>(Price1);
+
+    test_delete_invalid_price<Sell>(Price2);
+    test_delete_invalid_price<Buy>(Price2); 
+
+    test_delete_invalid_price<Sell>(Price3);
+    test_delete_invalid_price<Buy>(Price3);
+
+    test_delete_invalid_price<Sell>(Price4);
+    test_delete_invalid_price<Buy>(Price4);
+
+    test_delete_invalid_price<Sell>(Price5);
+    test_delete_invalid_price<Buy>(Price5);
+  }
+
+  {
+    test_delete_invalid_slot<Sell>(Price1);
+    test_delete_invalid_slot<Buy>(Price1);
+
+    test_delete_invalid_slot<Sell>(Price2);
+    test_delete_invalid_slot<Buy>(Price2);
+
+    test_delete_invalid_slot<Sell>(Price3);
+    test_delete_invalid_slot<Buy>(Price3);
+
+    test_delete_invalid_slot<Sell>(Price4);
+    test_delete_invalid_slot<Buy>(Price4);
+
+    test_delete_invalid_slot<Sell>(Price5);
+    test_delete_invalid_slot<Buy>(Price5);
+  }
+
+  {
+    test_double_delete<Sell>(Price1);
+    test_double_delete<Buy>(Price1);
+
+    test_double_delete<Sell>(Price2);
+    test_double_delete<Buy>(Price2);
+
+    test_double_delete<Sell>(Price3);
+    test_double_delete<Buy>(Price3);
+
+    test_double_delete<Sell>(Price4);
+    test_double_delete<Buy>(Price4);
+
+    test_double_delete<Sell>(Price5);
+    test_double_delete<Buy>(Price5);
+  }
+
+  {
+    test_trade_level<Sell>(Price1);
+    test_trade_level<Buy>(Price1);
+
+    test_trade_level<Sell>(Price2);
+    test_trade_level<Buy>(Price2);
+
+    test_trade_level<Sell>(Price3);
+    test_trade_level<Buy>(Price3);
+
+    test_trade_level<Sell>(Price4);
+    test_trade_level<Buy>(Price4);
+
+    test_trade_level<Sell>(Price5);
+    test_trade_level<Buy>(Price5);
+  }
+
+  {
+    test_trend(Price1, +1);
+    test_trend(Price1, -1);
+
+    test_trend(Price2, +1);
+    test_trend(Price2, -1);
+    
+    test_trend(Price3, +1);
+    test_trend(Price3, -1);
+    
+    test_trend(Price4, +1);
+    test_trend(Price4, -1);
+    
+    test_trend(Price5, +1);
+    test_trend(Price5, -1);
+  }
+}
+
+void test_random(int32_t centerPrice, int32_t iters) {
+  const auto str = [](int32_t i) -> std::string {
+    return std::to_string(i);
+  };
+
   QueueOut out;
   TradeEngine engine(out, centerPrice);
 
@@ -252,89 +602,101 @@ void test_random(int32_t centerPrice, int32_t iters = 100'000) {
     const int32_t price = minPrice + rand() % (maxPrice - minPrice + 1);
     const int32_t size = rand() % 1000;
 
-    if (i % 2) {
+    if(i % 2) {
       engine.insert_order<Sell>(i, price, size);
-      engine.out().log("insert sell: id:" + std::to_string(i) + " price:" + std::to_string(price) + " size:" + std::to_string(size) + " -> ");
+      engine.out().clear();
+      //engine.out().log("insert sell: id:" + str(i) + " price:" + str(price) + " size:" + str(size) + " -> ");
     } else {
       engine.insert_order<Buy>(i, price, size);
-      engine.out().log("insert buy : id:" + std::to_string(i) + " price:" + std::to_string(price) + " size:" + std::to_string(size) + " -> ");
+      engine.out().clear();
+      //engine.out().log("insert buy : id:" + str(i) + " price:" + str(price) + " size:" + str(size) + " -> ");
     }
   }
 
   engine.insert_order<Buy>(iters + 1, OrderBook::MaxLevels * Level::MaxOrders * 1000);
-  engine.out().log("insert buy : id:" + std::to_string(iters + 1) + " price:any " + " size:" + std::to_string(Level::MaxOrders * 1000) + " -> ");
+  engine.out().clear();
+  //engine.out().log("insert buy : id:" + str(iters + 1) + " price:any " + " size:" + str(Level::MaxOrders * 1000) + " -> ");
 
   engine.insert_order<Sell>(iters + 2, OrderBook::MaxLevels * Level::MaxOrders * 1000);
-  engine.out().log("insert sell: id:" + std::to_string(iters + 2) + " price:any " + " size:" + std::to_string(Level::MaxOrders * 1000) + " -> ");
+  engine.out().clear();
+  //engine.out().log("insert sell: id:" + str(iters + 2) + " price:any " + " size:" + str(Level::MaxOrders * 1000) + " -> ");
 }
 
-int main() {
+void test_random(int32_t iters) {
   constexpr int32_t MinPrice = Order::MinPrice();
   constexpr int32_t MaxPrice = Order::MaxPrice();
   constexpr int32_t CenterPrices[] = {MinPrice, MinPrice + 32, 1000000, MaxPrice - 64, MaxPrice};
 
-  for(int32_t centerPrice : {100}) {
-    test_random(centerPrice, 10'000);
-  }
-
   for(int32_t centerPrice : CenterPrices) {
-    test_insert<Sell>(centerPrice);
-    test_insert<Buy>(centerPrice);
-
-    test_insert_invalid_id<Sell>(centerPrice);
-    test_insert_invalid_id<Buy>(centerPrice);
-
-    test_insert_invalid_price<Sell>(centerPrice);
-    test_insert_invalid_price<Buy>(centerPrice);
-
-    test_insert_invalid_qty<Sell>(centerPrice);
-    test_insert_invalid_qty<Buy>(centerPrice);
-
-    test_insert_all<Sell>(centerPrice);
-    test_insert_all<Buy>(centerPrice);
+    test_random(centerPrice, iters);
   }
+}
 
-  for(int32_t centerPrice : CenterPrices) {
-    test_update<Sell>(centerPrice);
-    test_update<Buy>(centerPrice);
+void test_micro_bench_insert() {
+  QueueOut out;
+  TradeEngine engine(out);
 
-    test_update_invalid_id<Sell>(centerPrice);
-    test_update_invalid_id<Buy>(centerPrice);
+  struct Insert {
+    Insert(TradeEngine& engine)
+      : engine(engine) {
+    }
 
-    test_update_invalid_price<Sell>(centerPrice);
-    test_update_invalid_price<Buy>(centerPrice);
+    TradeEngine& engine;
 
-    test_update_invalid_qty<Sell>(centerPrice);
-    test_update_invalid_qty<Buy>(centerPrice);
+    void setup() {
+    }
 
-    test_update_invalid_slot<Sell>(centerPrice);
-    test_update_invalid_slot<Buy>(centerPrice);
+    void run() {
+      engine.insert_order<Sell>(engine.max_price(), engine.max_price(), 100);
+      engine.insert_order<Buy>(engine.min_price(), engine.min_price(), 100);
+    }
 
-    test_update_deleted<Sell>(centerPrice);
-    test_update_deleted<Buy>(centerPrice);
-  }
+    void teardown() {
+      engine.cancel_order<Sell>(engine.max_price(), engine.max_price(), 0);
+      engine.cancel_order<Buy>(engine.min_price(), engine.min_price(), 0);
+      engine.out().clear();
+    }
+  } insert(engine);
 
-  for(int32_t centerPrice : CenterPrices) {
-    test_delete<Sell>(centerPrice);
-    test_delete<Buy>(centerPrice);
+  std::cout << "Micro benchmark: insert: " << Cycles<32>(insert) << std::endl;
+}
 
-    test_delete_invalid_id<Sell>(centerPrice);
-    test_delete_invalid_id<Buy>(centerPrice);
+void test_micro_bench_trade() {
+  QueueOut out;
+  TradeEngine engine(out);
 
-    test_delete_invalid_price<Sell>(centerPrice);
-    test_delete_invalid_price<Buy>(centerPrice);
+  struct Trade {
+    Trade(TradeEngine& engine)
+      : engine(engine) {
+    }
 
-    test_delete_invalid_slot<Sell>(centerPrice);
-    test_delete_invalid_slot<Buy>(centerPrice);
+    TradeEngine& engine;
 
-    test_double_delete<Sell>(centerPrice);
-    test_double_delete<Buy>(centerPrice);
-  }
+    void setup() {
+    }
 
-  for(int32_t centerPrice : CenterPrices) {
-    test_trade_level<Sell>(centerPrice);
-    test_trade_level<Buy>(centerPrice);
-  }
+    void run() {
+      engine.insert_order<Sell>(engine.center_price(), engine.center_price(), 100);
+      engine.insert_order<Buy>(engine.center_price(), engine.center_price(), 100);
+    }
+
+    void teardown() {
+      engine.out().clear();
+    }
+  } trade(engine);
+
+  std::cout << "Micro benchmark: trade: " << Cycles<32>(trade) << std::endl;
+}
+
+int main() 
+{  
+#ifndef NDEBUG
+  test();
+#endif
+
+  test_micro_bench_insert();
+  test_micro_bench_trade();
+  test_random(10'000);
 
   return 0;
 }
