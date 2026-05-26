@@ -11,11 +11,9 @@
 
 using Trivial = int;
 
-struct Moveable
-{
+struct Moveable {
   Moveable(int v)
-    : value(v)
-  {
+    : value(v) {
   }
 
   Moveable(Moveable&&) = default;
@@ -29,47 +27,39 @@ struct Moveable
   int value;
 };
 
-struct BigData
-{
+struct BigData {
   BigData(std::initializer_list<int> data)
-    : _data(data)
-  {
+    : _data(data) {
   }
 
-  BigData(const BigData& data)
-  {
+  BigData(const BigData& data) {
     _data = data._data;
   }
 
-  BigData(BigData&& data)
-  {
+  BigData(BigData&& data) {
     _data = std::move(data._data);
   }
 
-  BigData& operator=(BigData&& data)
-  {
+  BigData& operator=(BigData&& data) {
     _data = std::move(data._data);
     return *this;
   }
 
-  BigData& operator=(const BigData& data)
-  {
+  BigData& operator=(const BigData& data) {
     _data = data._data;
     return *this;
   }
 
   ~BigData() = default;
 
-  std::size_t size() const
-  {
+  std::size_t size() const {
     return _data.size();
   }
 
   std::vector<int> _data;
 };
 
-void test_map_reduce_run_sums_trivial_lvalues()
-{
+void test_map_reduce_run_sums_trivial_lvalues() {
   std::function<int(Trivial)> map = [](Trivial /* data */) -> int {
     return 12;
   };
@@ -80,14 +70,10 @@ void test_map_reduce_run_sums_trivial_lvalues()
 
   Trivial value_trivial = 12;
 
-  Assert(48 == MapReduce(map, reduce).run(value_trivial,
-                                          value_trivial,
-                                          value_trivial,
-                                          value_trivial));
+  Assert(48 == MapReduce(map, reduce).run(value_trivial, value_trivial, value_trivial, value_trivial));
 }
 
-void test_map_reduce_run_sums_trivial_temporaries()
-{
+void test_map_reduce_run_sums_trivial_temporaries() {
   std::function<int(Trivial)> map = [](Trivial /* data */) -> int {
     return 12;
   };
@@ -96,14 +82,10 @@ void test_map_reduce_run_sums_trivial_temporaries()
     return a + i;
   };
 
-  Assert(48 == MapReduce(map, reduce).run(Trivial(12),
-                                          Trivial(12),
-                                          Trivial(12),
-                                          Trivial(12)));
+  Assert(48 == MapReduce(map, reduce).run(Trivial(12), Trivial(12), Trivial(12), Trivial(12)));
 }
 
-void test_map_reduce_run_accepts_move_only_values()
-{
+void test_map_reduce_run_accepts_move_only_values() {
   std::function<int(Moveable)> map = [](Moveable data) -> int {
     return data.value;
   };
@@ -117,14 +99,10 @@ void test_map_reduce_run_accepts_move_only_values()
   Moveable value_moveable3(12);
   Moveable value_moveable4(12);
 
-  Assert(48 == MapReduce(map, reduce).run(std::move(value_moveable1),
-                                          std::move(value_moveable2),
-                                          std::move(value_moveable3),
-                                          std::move(value_moveable4)));
+  Assert(48 == MapReduce(map, reduce).run(std::move(value_moveable1), std::move(value_moveable2), std::move(value_moveable3), std::move(value_moveable4)));
 }
 
-void test_map_reduce_run_with_init_accepts_move_only_values()
-{
+void test_map_reduce_run_with_init_accepts_move_only_values() {
   std::function<int(Moveable)> map = [](Moveable data) -> int {
     return data.value;
   };
@@ -133,15 +111,10 @@ void test_map_reduce_run_with_init_accepts_move_only_values()
     return a + i;
   };
 
-  Assert(2 + 48 == MapReduce(map, reduce).run_with_init(2,
-                                                        Moveable(12),
-                                                        Moveable(12),
-                                                        Moveable(12),
-                                                        Moveable(12)));
+  Assert(2 + 48 == MapReduce(map, reduce).run_with_init(2, Moveable(12), Moveable(12), Moveable(12), Moveable(12)));
 }
 
-void test_map_reduce_run_preserves_bigdata_lvalues()
-{
+void test_map_reduce_run_preserves_bigdata_lvalues() {
   std::function<int(const BigData&)> map = [](const BigData& data) -> int {
     return data.size();
   };
@@ -163,8 +136,7 @@ void test_map_reduce_run_preserves_bigdata_lvalues()
   Assert(value_bigdata4.size() == 12);
 }
 
-void test_map_reduce_run_accepts_bigdata_temporaries()
-{
+void test_map_reduce_run_accepts_bigdata_temporaries() {
   std::function<int(const BigData&)> map = [](const BigData& data) -> int {
     return data.size();
   };
@@ -173,14 +145,17 @@ void test_map_reduce_run_accepts_bigdata_temporaries()
     return a + i;
   };
 
-  Assert(48 == MapReduce(map, reduce).run(BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
-                                          BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
-                                          BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
-                                          BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})));
+  Assert(
+      48
+      == MapReduce(map, reduce)
+             .run(
+                 BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
+                 BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
+                 BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
+                 BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})));
 }
 
-void test_map_reduce_run_accepts_std_array_input()
-{
+void test_map_reduce_run_accepts_std_array_input() {
   std::function<int(const BigData&)> map = [](const BigData& data) -> int {
     return data.size();
   };
@@ -189,10 +164,11 @@ void test_map_reduce_run_accepts_std_array_input()
     return a + i;
   };
 
-  std::array<BigData, 4> bigdata_array = {BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
-                                          BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
-                                          BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
-                                          BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})};
+  std::array<BigData, 4> bigdata_array = {
+      BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
+      BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
+      BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
+      BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})};
 
   Assert(48 == MapReduce(map, reduce).run(bigdata_array));
 
@@ -202,8 +178,7 @@ void test_map_reduce_run_accepts_std_array_input()
   Assert(bigdata_array[3].size() == 12);
 }
 
-void test_map_reduce_run_with_init_accepts_std_array_input()
-{
+void test_map_reduce_run_with_init_accepts_std_array_input() {
   std::function<int(const BigData&)> map = [](const BigData& data) -> int {
     return data.size();
   };
@@ -212,10 +187,11 @@ void test_map_reduce_run_with_init_accepts_std_array_input()
     return a + i;
   };
 
-  std::array<BigData, 4> bigdata_array = {BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
-                                          BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
-                                          BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
-                                          BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})};
+  std::array<BigData, 4> bigdata_array = {
+      BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
+      BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
+      BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
+      BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})};
 
   Assert(2 + 48 == MapReduce(map, reduce).run_with_init(2, bigdata_array));
 
@@ -225,8 +201,7 @@ void test_map_reduce_run_with_init_accepts_std_array_input()
   Assert(bigdata_array[3].size() == 12);
 }
 
-int main()
-{
+int main() {
   test_map_reduce_run_sums_trivial_lvalues();
   test_map_reduce_run_sums_trivial_temporaries();
   test_map_reduce_run_accepts_move_only_values();
