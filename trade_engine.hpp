@@ -12,7 +12,6 @@
 #include <iostream>
 #include <thread>
 
-#include "array.hpp"
 #include "assert.hpp"
 #include "common.hpp"
 #include "events.hpp"
@@ -138,11 +137,11 @@ public:
 
   Level& get_level_by_price(Price price) {
     Assert(check_price(price));
-    return _levels[(_minIndex + (price - _minPrice))];
+    return get_level_by_index(_minIndex + (price - _minPrice));
   }
 
   Level& get_level_by_index(Index index) {
-    return _levels[index];
+    return _levels[index & (MaxLevels - 1)];
   }
 
   template<Side side>
@@ -285,7 +284,7 @@ private:
   Price _maxPrice;
 
   QueueOut& _out;
-  Array<Level, MaxLevels> _levels;
+  Level _levels[MaxLevels];
 };
 
 /*
