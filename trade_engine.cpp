@@ -619,11 +619,11 @@ void test_random(int32_t centerPrice, int32_t iters) {
     }
   }
 
-  engine.insert_order_ioc<Buy>(iters + 1, OrderBook::MaxLevels * Level::MaxOrders * 1000);
+  engine.insert_order_ioc<Buy>(iters + 1, (2 * OrderBook::Levels + 1) * Level::MaxOrders * 1000);
   engine.out().clear();
   //engine.out().log("insert buy : id:" + str(iters + 1) + " price:any " + " size:" + str(Level::MaxOrders * 1000) + " -> ");
 
-  engine.insert_order_ioc<Sell>(iters + 2, OrderBook::MaxLevels * Level::MaxOrders * 1000);
+  engine.insert_order_ioc<Sell>(iters + 2, (2 * OrderBook::Levels + 1) * Level::MaxOrders * 1000);
   engine.out().clear();
   //engine.out().log("insert sell: id:" + str(iters + 2) + " price:any " + " size:" + str(Level::MaxOrders * 1000) + " -> ");
 }
@@ -728,7 +728,7 @@ int main() {
 
   test_micro_bench_insert();
   test_micro_bench_trade();
-  test_random(10'000);
+  test_random(100'000);
 
   return 0;
 }
