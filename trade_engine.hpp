@@ -64,18 +64,23 @@ struct Level final: noncopyable, nonmovable {
 
 struct OrderBook final: noncopyable, nonmovable {
 public:
-  static constexpr Index MaxLevels = 256;
+  static constexpr Index Levels = 127;
+  static constexpr Index Size = Levels + 1 + Levels + /* empty */ 1;
 
 public:
-  explicit OrderBook(QueueOut& out, Price centerPrice = MaxLevels / 2)
+  explicit OrderBook(QueueOut& out, Price centerPrice = Levels + 1)
     : _out(out) 
   {
     _minIndex = 0;
-    _minPrice = std::max(centerPrice - (MaxLevels / 2) - 1, Order::MinPrice);
-    _maxPrice = std::min(_minPrice + (MaxLevels - 1), Order::MaxPrice);
+    _minPrice = std::max(centerPrice - Levels, Order::MinPrice);
+    _maxPrice = std::min(_minPrice + (Levels + Levels), Order::MaxPrice);
 
-    _bestSellPrice = _maxPrice;
-    _bestBuyPrice = _minPrice;
+    _bestSellPrice = _maxPrice + 1;
+    _bestBuyPrice = _minPrice - 1;
+
+    Assert(_bestSellPrice > _bestBuyPrice);
+    Assert(_bestSellPrice <= _maxPrice + 1);
+    Assert(_bestBuyPrice >= _minPrice - 1);
   }
 
 public:
@@ -120,11 +125,6 @@ public:
   }
 
   template<Side side>
-  Index get_best_index() const noexcept {
-    return (_minIndex + (get_best_price<side>() - _minPrice)) & (MaxLevels - 1);
-  }
-
-  template<Side side>
   void update_best_price(bool condition) noexcept {
     if constexpr(side == Sell) {
       _bestSellPrice += 1 * (Price)condition;
@@ -133,6 +133,8 @@ public:
     }
 
     Assert(_bestSellPrice > _bestBuyPrice);
+    Assert(_bestSellPrice <= _maxPrice + 1);
+    Assert(_bestBuyPrice >= _minPrice - 1);
   }
 
   Level& get_level_by_price(Price price) {
@@ -141,7 +143,7 @@ public:
   }
 
   Level& get_level_by_index(Index index) {
-    return _levels[index & (MaxLevels - 1)];
+    return _levels[index & (Size - 1)];
   }
 
   template<Side side>
@@ -177,6 +179,8 @@ public:
     _out.push(CreateAccepted(orderId, index, qty));
 
     Assert(_bestSellPrice > _bestBuyPrice);
+    Assert(_bestSellPrice <= _maxPrice + 1);
+    Assert(_bestBuyPrice >= _minPrice - 1);
   }
 
   template<Side side>
@@ -240,10 +244,11 @@ public:
     _maxPrice += 1;
 
     _bestSellPrice = std::max(_bestSellPrice, _minPrice);
-    _bestBuyPrice = std::max(_bestBuyPrice, _minPrice);
+    _bestBuyPrice = std::max(_bestBuyPrice, _minPrice - 1);
 
-    Assert(check_price(_bestSellPrice));
-    Assert(check_price(_bestBuyPrice));
+    Assert(_bestSellPrice > _bestBuyPrice);
+    Assert(_bestSellPrice <= _maxPrice + 1);
+    Assert(_bestBuyPrice >= _minPrice - 1);
   }
 
   void shiftDown() {
@@ -256,11 +261,12 @@ public:
     _minPrice -= 1;
     _maxPrice -= 1;
 
-    _bestSellPrice = std::min(_bestSellPrice, _maxPrice);
+    _bestSellPrice = std::min(_bestSellPrice, _maxPrice + 1);
     _bestBuyPrice = std::min(_bestBuyPrice, _maxPrice);
 
-    Assert(check_price(_bestSellPrice));
-    Assert(check_price(_bestBuyPrice));
+    Assert(_bestSellPrice > _bestBuyPrice);
+    Assert(_bestSellPrice <= _maxPrice + 1);
+    Assert(_bestBuyPrice >= _minPrice - 1);
   }
 
 private:
@@ -284,7 +290,7 @@ private:
   Price _maxPrice;
 
   QueueOut& _out;
-  Level _levels[MaxLevels];
+  Level _levels[Size];
 };
 
 /*
@@ -292,7 +298,7 @@ private:
  */
 
 struct TradeEngine final: noncopyable, nonmovable {
-  explicit TradeEngine(QueueOut& out, Price centerPrice = OrderBook::MaxLevels / 2)
+  explicit TradeEngine(QueueOut& out, Price centerPrice = OrderBook::Levels + 1)
     : _out(out)
     , _orderBook(out, centerPrice) 
   {
@@ -442,7 +448,7 @@ public:
   }  
   
   Index levels() const noexcept {
-    return OrderBook::MaxLevels;
+    return OrderBook::Levels;
   }
 
   Index orders_per_level() const noexcept {
@@ -465,21 +471,22 @@ private:
     };
 
     Price price = _orderBook.get_best_price<-side>();
-    Index index = _orderBook.get_best_index<-side>();
-    Price centerPrice = _orderBook.get_center_price();
+    Price lastPrice = _orderBook.get_center_price();
+
     priceLimit = _orderBook.price_limit<side>(priceLimit);
 
     while((qty != 0) && check_price(price, priceLimit)) {
-      Level& level = _orderBook.get_level_by_index(index);
+      Level& level = _orderBook.get_level_by_price(price);
       Assert((level.total * side) <= 0);
 
       while((qty != 0) && (level.total != 0)) {
         Order& order = level.orders.front();
         const Qty min = std::min(qty, order.qty);
+        
         qty -= min;
         order.qty -= min;
         level.total += side * min;
-        centerPrice = price;
+        lastPrice = price;
         _out.push(Trade(price, min, orderId, order.id));
 
         if(UNLIKELY(order.qty != 0)) {
@@ -492,16 +499,15 @@ private:
       }
 
       price += side;
-      index += side;
     }
 
-    _shiftUp(centerPrice);
-    _shiftDown(centerPrice);
+    _shiftUp(lastPrice);
+    _shiftDown(lastPrice);
     return qty;
   }
 
-  void _shiftUp(Price centerPrice) {
-    const Price offset = _orderBook.get_center_price() - centerPrice;
+  void _shiftUp(Price lastPrice) {
+    const Price offset = _orderBook.get_center_price() - lastPrice;
 
     if(offset <= 0) {
       return;
@@ -515,8 +521,8 @@ private:
     }
   }
 
-  void _shiftDown(Price centerPrice) {
-    const Price offset = centerPrice - _orderBook.get_center_price();
+  void _shiftDown(Price lastPrice) {
+    const Price offset = lastPrice - _orderBook.get_center_price();
 
     if(offset <= 0) {
       return;
