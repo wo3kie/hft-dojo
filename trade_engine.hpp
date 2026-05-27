@@ -86,7 +86,7 @@ public:
 
 public:
   bool check_price(Price price) const noexcept {
-    return price >= get_min_price() && price <= get_max_price();
+    return (price >= _minPrice) && (price <= _maxPrice);
   }
 
   bool check_qty(Qty qty) const noexcept {
@@ -102,16 +102,17 @@ public:
   }
 
   Price get_center_price() const noexcept {
-    return (_minPrice + _maxPrice) / 2;
+    const Price centerPrice = (_minPrice + _maxPrice) / 2;
+    return centerPrice;
   }
 
   template<Side side>
   Price price_limit(Price priceLimit) const noexcept {
     if constexpr(side == Sell) {
-      const Price price = get_min_price();
+      const Price price = _minPrice;
       return std::max(priceLimit, price);
     } else {
-      const Price price = get_max_price();
+      const Price price = _maxPrice;
       return std::min(priceLimit, price);
     }
   }
@@ -238,11 +239,13 @@ public:
     Assert(_maxPrice != Order::MaxPrice);
 
     Level& level = get_level_by_price(_minPrice);
-    _expire_level(level);
+    _expire_level(level, _minPrice);
 
     _minIndex += 1;
     _minPrice += 1;
     _maxPrice += 1;
+
+    _create_level(_maxPrice);
 
     _bestSellPrice = std::max(_bestSellPrice, _minPrice);
     _bestBuyPrice = std::max(_bestBuyPrice, _minPrice - 1);
@@ -256,11 +259,13 @@ public:
     Assert(_minPrice != Order::MinPrice);
 
     Level& level = get_level_by_price(_maxPrice);
-    _expire_level(level);
+    _expire_level(level, _maxPrice);
 
     _minIndex -= 1;
     _minPrice -= 1;
     _maxPrice -= 1;
+
+    _create_level(_minPrice);
 
     _bestSellPrice = std::min(_bestSellPrice, _maxPrice + 1);
     _bestBuyPrice = std::min(_bestBuyPrice, _maxPrice);
@@ -271,14 +276,20 @@ public:
   }
 
 private:
-  void _expire_level(Level& level) {
+  void _expire_level(Level& level, int32_t price) {
     while(level.orders.empty() == false) {
       const Order& order = level.orders.front();
-      _out.push(OrderExpired(order.id));
+      _out.push(LevelExpired(price, order.id));
       level.orders.pop();
     }
 
+    _out.push(LevelExpired(price, 0));
+
     level.total = 0;
+  }
+
+  void _create_level(int32_t price) {
+    _out.push(LevelCreated(price));
   }
 
 private:

@@ -25,7 +25,8 @@ enum EventType : int32_t {
   ECancelAccepted = -6,
   ECancelRejected = -7,
 
-  EOrderExpired = -8,
+  ELevelExpired = -8,
+  ELevelCreated = -9,
 };
 
 struct Event {
@@ -73,8 +74,12 @@ Event UpdateRejected(int32_t id, int32_t size) {
   return {.m1 = EventType::EUpdateRejected, .m2 = id, .m3 = size};
 }
 
-Event OrderExpired(int32_t id) {
-  return {.m1 = EventType::EOrderExpired, .m2 = id};
+Event LevelExpired(int32_t price, int32_t id) {
+  return {.m1 = EventType::ELevelExpired, .m2 = price, .m3 = id};
+}
+
+Event LevelCreated(int32_t price) {
+  return {.m1 = EventType::ELevelCreated, .m2 = price};
 }
 
 std::ostream& operator<<(std::ostream& os, const Event& event) {
@@ -106,8 +111,12 @@ std::ostream& operator<<(std::ostream& os, const Event& event) {
     return os << "CancelRejected: id=" << event.m2;
   }
 
-  if(event.m1 == EventType::EOrderExpired) {
-    return os << "OrderExpired: id=" << event.m2;
+  if(event.m1 == EventType::ELevelExpired) {
+    return os << "LevelExpired: price=" << event.m2 << ", id=" << event.m3;
+  }
+
+  if(event.m1 == EventType::ELevelCreated) {
+    return os << "LevelCreated: price=" << event.m2;
   }
 
   return os << "UnknownEvent: m1=" << event.m1 << ", m2=" << event.m2 << ", m3=" << event.m3 << ", m4=" << event.m4;
