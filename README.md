@@ -50,14 +50,6 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 ## Content
   
-- **array** - Fixed‑size array with positive/negative/modulo indexing. For best performance, the size should be a power of two to enable bitwise indexing.
-  
-  ```{r, engine='cpp'}
-  Array<int 8> arr = {0, 1, 2, 3, 4, 5, 6, 7};
-  assert(arr[ 0] == 0);
-  assert(arr[-1] == 7);
-  ```
-
 - **assert** - Improved assert that accepts simple comparison expressions (`==`, `!=`, `<`, `<=`, `>`, `>=`) and prints both actual and expected values on failure.
   
   ```{r, engine='bash'}
