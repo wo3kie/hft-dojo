@@ -64,16 +64,17 @@ struct Level final: noncopyable, nonmovable {
 
 struct OrderBook final: noncopyable, nonmovable {
 public:
-  static constexpr Index Levels = 127;
-  static constexpr Index Size = Levels + 1 + Levels + /* empty */ 1;
+  static constexpr Index Size = 256;
+  static constexpr Index Levels = ((Size / 2 - 1) / 4) * 4; // 124
 
 public:
   explicit OrderBook(QueueOut& out, Price centerPrice = Levels + 1)
     : _out(out) 
   {
+     centerPrice = (((centerPrice - 1) / 4) * 4) + 1;
     _minIndex = 0;
     _minPrice = std::max(centerPrice - Levels, Order::MinPrice);
-    _maxPrice = std::min(_minPrice + (Levels + Levels), Order::MaxPrice);
+    _maxPrice = std::min(_minPrice + Levels + Levels, Order::MaxPrice);
 
     _bestSellPrice = _maxPrice + 1;
     _bestBuyPrice = _minPrice - 1;
@@ -447,10 +448,6 @@ public:
     return _orderBook.get_max_price();
   }  
   
-  Index levels() const noexcept {
-    return OrderBook::Levels;
-  }
-
   Index orders_per_level() const noexcept {
     return Level::MaxOrders;
   }
