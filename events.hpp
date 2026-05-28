@@ -9,7 +9,9 @@
  */
 
 #include <cstdint>
-#include <ostream>
+#include <immintrin.h>
+#include <iostream>
+#include <thread>
 
 #include "./ring_buffer_spsc.hpp"
 
@@ -78,8 +80,8 @@ Event LevelExpired(int32_t price, int32_t id) {
   return {.m1 = EventType::ELevelExpired, .m2 = price, .m3 = id};
 }
 
-Event LevelCreated(int32_t price) {
-  return {.m1 = EventType::ELevelCreated, .m2 = price};
+Event LevelsCreated(int32_t fromPrice, int32_t toPrice) {
+  return {.m1 = EventType::ELevelCreated, .m2 = fromPrice, .m3 = toPrice};
 }
 
 std::ostream& operator<<(std::ostream& os, const Event& event) {
@@ -116,7 +118,7 @@ std::ostream& operator<<(std::ostream& os, const Event& event) {
   }
 
   if(event.m1 == EventType::ELevelCreated) {
-    return os << "LevelCreated: price=" << event.m2;
+    return os << "LevelsCreated: fromPrice=" << event.m2 << ", toPrice=" << event.m3;
   }
 
   return os << "UnknownEvent: m1=" << event.m1 << ", m2=" << event.m2 << ", m3=" << event.m3 << ", m4=" << event.m4;
