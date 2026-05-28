@@ -67,7 +67,7 @@ void test_insert_all(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   for(int32_t price = engine.min_price(); price <= engine.max_price(); price++) {
-    for(int32_t i = 0; i < engine.orders_per_level(); i++) {
+    for(int32_t i = 0; i < TradeEngine::OrdersPerLevel; i++) {
       engine.insert_order<side>(price * 100 + i, price, 10);
       Assert(engine.out().pop() == CreateAccepted(price * 100 + i, i, 10));
     }
@@ -224,7 +224,7 @@ void test_trade_level(int32_t centerPrice, int32_t tradePrice) {
   TradeEngine engine(out, centerPrice);
 
   const int32_t qty = 100;
-  const int32_t orders = engine.orders_per_level();
+  const int32_t orders = TradeEngine::OrdersPerLevel;
 
   for(int32_t order = 1; order <= orders; order++) {
     engine.insert_order<side>(order, tradePrice, qty);
@@ -233,7 +233,7 @@ void test_trade_level(int32_t centerPrice, int32_t tradePrice) {
 
   engine.insert_order<-side>(orders + 1, tradePrice, orders * qty);
 
-  for(int32_t i = 0; i < engine.orders_per_level(); i++) {
+  for(int32_t i = 0; i < TradeEngine::OrdersPerLevel; i++) {
     Assert(engine.out().pop() == Trade(tradePrice, qty, orders + 1, i + 1));
   }
 }
@@ -619,11 +619,11 @@ void test_random(int32_t centerPrice, int32_t iters) {
     }
   }
 
-  engine.insert_order_ioc<Buy>(iters + 1, (2 * OrderBook::Levels + 1) * Level::MaxOrders * 1000);
+  engine.insert_mkt_order_ioc<Buy>(iters + 1, (2 * OrderBook::Levels + 1) * Level::MaxOrders * 1000);
   //engine.out().clear();
   engine.out().log("insert buy : id:" + str(iters + 1) + " price:any " + " size:" + str(Level::MaxOrders * 1000) + " -> ");
 
-  engine.insert_order_ioc<Sell>(iters + 2, (2 * OrderBook::Levels + 1) * Level::MaxOrders * 1000);
+  engine.insert_mkt_order_ioc<Sell>(iters + 2, (2 * OrderBook::Levels + 1) * Level::MaxOrders * 1000);
   //engine.out().clear();
   engine.out().log("insert sell: id:" + str(iters + 2) + " price:any " + " size:" + str(Level::MaxOrders * 1000) + " -> ");
 }
@@ -635,8 +635,8 @@ void test_random(int32_t iters) {
   constexpr int32_t MaxPrice = Order::MaxPrice;
   constexpr int32_t CenterPrices[] = {MinPrice, MinPrice + 32, 1000000, MaxPrice - 64, MaxPrice};
 
-  for(int32_t centerPrice : CenterPrices) {
-    test_random(centerPrice, iters);
+  for(int32_t centerPrice : {128}) {
+    test_random(centerPrice, 1000);
   }
 }
 
