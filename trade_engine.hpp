@@ -235,16 +235,15 @@ public:
     _out.push(CancelAccepted(orderId));
   }
 
-  void shiftUp() {
-    Assert(_maxPrice != Order::MaxPrice);
+  bool shiftUp() {
+    if (_maxPrice == Order::MaxPrice) {
+      return false;
+    }
 
-    Level& level = get_level_by_price(_minPrice);
-    _expire_level(level, _minPrice);
-
+    _expire_level(get_level_by_price(_minPrice), _minPrice);
     _minIndex += 1;
     _minPrice += 1;
     _maxPrice += 1;
-
     _create_level(_maxPrice);
 
     _bestSellPrice = std::max(_bestSellPrice, _minPrice);
@@ -253,18 +252,18 @@ public:
     Assert(_bestSellPrice > _bestBuyPrice);
     Assert(_bestSellPrice <= _maxPrice + 1);
     Assert(_bestBuyPrice >= _minPrice - 1);
+    return true;
   }
 
-  void shiftDown() {
-    Assert(_minPrice != Order::MinPrice);
+  bool shiftDown() {
+    if (_minPrice == Order::MinPrice) {
+      return false;
+    }
 
-    Level& level = get_level_by_price(_maxPrice);
-    _expire_level(level, _maxPrice);
-
+    _expire_level(get_level_by_price(_maxPrice), _maxPrice);
     _minIndex -= 1;
     _minPrice -= 1;
     _maxPrice -= 1;
-
     _create_level(_minPrice);
 
     _bestSellPrice = std::min(_bestSellPrice, _maxPrice + 1);
@@ -273,6 +272,7 @@ public:
     Assert(_bestSellPrice > _bestBuyPrice);
     Assert(_bestSellPrice <= _maxPrice + 1);
     Assert(_bestBuyPrice >= _minPrice - 1);
+    return true;
   }
 
 private:
@@ -282,8 +282,6 @@ private:
       _out.push(LevelExpired(price, order.id));
       level.orders.pop();
     }
-
-    _out.push(LevelExpired(price, 0));
 
     level.total = 0;
   }
@@ -515,33 +513,23 @@ private:
   }
 
   void _shiftUp(Price lastPrice) {
-    const Price offset = _orderBook.get_center_price() - lastPrice;
+    do {
+      const Price centerPrice = _orderBook.get_center_price();
 
-    if(offset <= 0) {
-      return;
-    }
-
-    const Price space = Order::MaxPrice - _orderBook.get_max_price();
-    const Price shift = std::min(offset, space);
-
-    for(Price i = 0; i < shift; i++) {
-      _orderBook.shiftUp();
-    }
+      if (centerPrice >= lastPrice) {
+        break;
+      }
+    } while(_orderBook.shiftUp());
   }
 
   void _shiftDown(Price lastPrice) {
-    const Price offset = lastPrice - _orderBook.get_center_price();
+    do {
+      const Price centerPrice = _orderBook.get_center_price();
 
-    if(offset <= 0) {
-      return;
-    }
-
-    const Price space = _orderBook.get_min_price() - Order::MinPrice;
-    const Price shift = std::min(offset, space);
-
-    for(Price i = 0; i < shift; i++) {
-      _orderBook.shiftDown();
-    }
+      if (centerPrice <= lastPrice) {
+        break;
+      }
+    } while(_orderBook.shiftDown());
   }
 
 private:
