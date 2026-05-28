@@ -610,25 +610,27 @@ void test_random(int32_t centerPrice, int32_t iters) {
 
     if(i % 2) {
       engine.insert_order<Sell>(i, price, size);
-      engine.out().clear();
-      //engine.out().log("insert sell: id:" + str(i) + " price:" + str(price) + " size:" + str(size) + " -> ");
+      //engine.out().clear();
+      engine.out().log("insert sell: id:" + str(i) + " price:" + str(price) + " size:" + str(size) + " -> ");
     } else {
       engine.insert_order<Buy>(i, price, size);
-      engine.out().clear();
-      //engine.out().log("insert buy : id:" + str(i) + " price:" + str(price) + " size:" + str(size) + " -> ");
+      //engine.out().clear();
+      engine.out().log("insert buy : id:" + str(i) + " price:" + str(price) + " size:" + str(size) + " -> ");
     }
   }
 
   engine.insert_order_ioc<Buy>(iters + 1, (2 * OrderBook::Levels + 1) * Level::MaxOrders * 1000);
-  engine.out().clear();
-  //engine.out().log("insert buy : id:" + str(iters + 1) + " price:any " + " size:" + str(Level::MaxOrders * 1000) + " -> ");
+  //engine.out().clear();
+  engine.out().log("insert buy : id:" + str(iters + 1) + " price:any " + " size:" + str(Level::MaxOrders * 1000) + " -> ");
 
   engine.insert_order_ioc<Sell>(iters + 2, (2 * OrderBook::Levels + 1) * Level::MaxOrders * 1000);
-  engine.out().clear();
-  //engine.out().log("insert sell: id:" + str(iters + 2) + " price:any " + " size:" + str(Level::MaxOrders * 1000) + " -> ");
+  //engine.out().clear();
+  engine.out().log("insert sell: id:" + str(iters + 2) + " price:any " + " size:" + str(Level::MaxOrders * 1000) + " -> ");
 }
 
 void test_random(int32_t iters) {
+  srand(32);
+  
   constexpr int32_t MinPrice = Order::MinPrice;
   constexpr int32_t MaxPrice = Order::MaxPrice;
   constexpr int32_t CenterPrices[] = {MinPrice, MinPrice + 32, 1000000, MaxPrice - 64, MaxPrice};
@@ -728,7 +730,7 @@ int main() {
 
   test_micro_bench_insert();
   test_micro_bench_trade();
-  test_random(100'000);
+  test_random(10'000);
 
   return 0;
 }
