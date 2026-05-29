@@ -13,33 +13,7 @@
 #include "events.hpp"
 #include "flat_queue.hpp"
 
-/*
- * Side
- */
-
-typedef int8_t Side;
-constexpr Side Sell = -1;
-constexpr Side Buy = 1;
-
-/*
- * Order
- */
-
-struct Order {
-  static constexpr OrderId InvalidId = 0;
-  
-  static constexpr Price MinPrice = 1;
-  static constexpr Price MaxPrice = 128 * 1024 * 1024;
-
-  template<Side side>
-  static constexpr Price AnyPrice = (side == Sell) ? MinPrice : MaxPrice;
-
-  static constexpr Qty MinQty = 1;
-  static constexpr Qty MaxQty = 32 * 1024 * 1024;
-  
-  OrderId id{Order::InvalidId};
-  Qty qty{0};
-};
+#include "orders.hpp"
 
 /*
  * Level
@@ -49,7 +23,7 @@ struct Level final: noncopyable, nonmovable {
   static constexpr Index MaxOrders = 8;
 
   Qty total{0};
-  FlatQueue<Order, (int8_t)MaxOrders> orders;
+  Orders8 orders;
 };
 
 /*
@@ -150,7 +124,7 @@ public:
       return _out.push(CreateRejected(orderId, qty));
     }
 
-    const Index index = level.orders.push(Order{orderId, qty});
+    const Index index = level.orders.push(orderId & 7, orderId, qty);
 
     if constexpr(side == Sell) {
       level.total -= qty;
@@ -175,22 +149,21 @@ public:
       return _out.push(UpdateRejected(orderId, newQty));
     }
 
+    int32_t oldQty = 0;
     Level& level = get_level_by_price(price);
-    Order& order = level.orders.at(slot);
 
-    if(order.id != orderId) {
+    if (level.orders.update(slot, orderId, oldQty, newQty) == false) {
       return _out.push(UpdateRejected(orderId, newQty));
     }
 
     if constexpr(side == Sell) {
-      level.total += order.qty;
+      level.total += oldQty;
       level.total -= newQty;
     } else {
-      level.total -= order.qty;
+      level.total -= oldQty;
       level.total += newQty;
     }
 
-    order.qty = newQty;
     _out.push(UpdateAccepted(orderId));
   }
 
@@ -200,22 +173,19 @@ public:
       return _out.push(CancelRejected(orderId));
     }
 
+    int32_t oldQty = 0;
     Level& level = get_level_by_price(price);
-    Order& order = level.orders.at(slot);
-
-    if(order.id != orderId) {
+    
+    if (level.orders.cancel(slot, orderId, oldQty) == false) {
       return _out.push(CancelRejected(orderId));
     }
 
     if constexpr(side == Sell) {
-      level.total += order.qty;
+      level.total += oldQty;
     } else {
-      level.total -= order.qty;
+      level.total -= oldQty;
     }
 
-    order.id = 0;
-    order.qty = 0;
-    level.orders.remove(slot);
     _out.push(CancelAccepted(orderId));
   }
 
