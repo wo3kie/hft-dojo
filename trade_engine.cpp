@@ -481,13 +481,13 @@ void benchmark(int32_t iters) {
 
 int main() {
 #ifndef NDEBUG
-  // test(Order::MinPrice + 32);
-  // test(1'000);
-  // test(Order::MaxPrice - 32);
+  test(Order::MinPrice + 32);
+  test(1'000);
+  test(Order::MaxPrice - 32);
 #endif
   
-  // test_micro_bench_insert();
-  // test_micro_bench_trade();
+  test_micro_bench_insert();
+  test_micro_bench_trade();
 
 #ifndef NDEBUG
   benchmark(33'000);
