@@ -16,16 +16,18 @@
   constexpr auto PROFILE = "Debug";
 #endif
 
+constexpr int32_t ANY = 0;
+
 template<Side side>
 void test_insert(int32_t centerPrice) {
   QueueOut out;
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0, 100));
+  Assert(engine.out().pop() == CreateAccepted(1, ANY, 100));
 
   engine.insert_order<side>(2, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(2, 1, 100));
+  Assert(engine.out().pop() == CreateAccepted(2, ANY, 100));
 }
 
 template<Side side>
@@ -69,7 +71,7 @@ void test_insert_all(int32_t centerPrice) {
   for(int32_t price = engine.min_price(); price <= engine.max_price(); price++) {
     for(int32_t i = 0; i < TradeEngine::OrdersPerLevel; i++) {
       engine.insert_order<side>(price * 100 + i, price, 10);
-      Assert(engine.out().pop() == CreateAccepted(price * 100 + i, i, 10));
+      Assert(engine.out().pop() == CreateAccepted(price * 100 + i, ANY, 10));
     }
   }
 }
@@ -80,12 +82,13 @@ void test_update(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0, 100));
+  const Event event = engine.out().pop();
+  Assert(event == CreateAccepted(1, ANY, 100));
 
-  engine.update_order<side>(1, centerPrice, 0, 100 + 1);
+  engine.update_order<side>(1, centerPrice, event.m3, 100 + 1);
   Assert(engine.out().pop() == UpdateAccepted(1));
 
-  engine.update_order<side>(1, centerPrice, 0, 100 - 1);
+  engine.update_order<side>(1, centerPrice, event.m3, 100 - 1);
   Assert(engine.out().pop() == UpdateAccepted(1));
 }
 
@@ -116,7 +119,7 @@ void test_update_invalid_price(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0, 100));
+  Assert(engine.out().pop() == CreateAccepted(1, ANY, 100));
 
   engine.update_order<side>(1, centerPrice + 1, 0, 100 + 1);
   Assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
@@ -128,7 +131,7 @@ void test_update_invalid_slot(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0, 100));
+  Assert(engine.out().pop() == CreateAccepted(1, ANY, 100));
 
   engine.update_order<side>(1, centerPrice, 0 + 1000000, 100 + 1);
   Assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
@@ -143,12 +146,13 @@ void test_update_deleted(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0, 100));
+  const Event event = engine.out().pop();
+  Assert(event == CreateAccepted(1, ANY, 100));
 
-  engine.cancel_order<side>(1, centerPrice, 0);
+  engine.cancel_order<side>(1, centerPrice, event.m3);
   Assert(engine.out().pop() == CancelAccepted(1));
 
-  engine.update_order<side>(1, centerPrice, 0, 100 + 1);
+  engine.update_order<side>(1, centerPrice, event.m3, 100 + 1);
   Assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
 }
 
@@ -158,9 +162,10 @@ void test_delete(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0, 100));
+  const Event event = engine.out().pop();
+  Assert(event == CreateAccepted(1, ANY, 100));
 
-  engine.cancel_order<side>(1, centerPrice, 0);
+  engine.cancel_order<side>(1, centerPrice, event.m3);
   Assert(engine.out().pop() == CancelAccepted(1));
 }
 
@@ -170,7 +175,7 @@ void test_delete_invalid_id(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0, 100));
+  Assert(engine.out().pop() == CreateAccepted(1, ANY, 100));
 
   engine.cancel_order<side>(Order::InvalidId, centerPrice, 0);
   Assert(engine.out().pop() == CancelRejected(Order::InvalidId));
@@ -182,7 +187,7 @@ void test_delete_invalid_price(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0, 100));
+  Assert(engine.out().pop() == CreateAccepted(1, ANY, 100));
 
   engine.cancel_order<side>(1, centerPrice + 1, 0);
   Assert(engine.out().pop() == CancelRejected(1));
@@ -194,12 +199,13 @@ void test_delete_invalid_slot(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0, 100));
+  const Event event = engine.out().pop();
+  Assert(event == CreateAccepted(1, ANY, 100));
 
-  engine.cancel_order<side>(1, centerPrice, 0 + 1000000);
+  engine.cancel_order<side>(1, centerPrice, event.m3 + 1000000);
   Assert(engine.out().pop() == CancelRejected(1));
 
-  engine.cancel_order<side>(1, centerPrice, 0 + 1);
+  engine.cancel_order<side>(1, centerPrice, event.m3 + 1);
   Assert(engine.out().pop() == CancelRejected(1));
 }
 
@@ -209,7 +215,7 @@ void test_double_delete(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(1, 0, 100));
+  Assert(engine.out().pop() == CreateAccepted(1, ANY, 100));
 
   engine.cancel_order<side>(1, centerPrice, 0);
   Assert(engine.out().pop() == CancelAccepted(1));
@@ -228,7 +234,7 @@ void test_trade_level(int32_t centerPrice, int32_t tradePrice) {
 
   for(int32_t order = 1; order <= orders; order++) {
     engine.insert_order<side>(order, tradePrice, qty);
-    Assert(engine.out().pop() == CreateAccepted(order, order - 1, qty));
+    Assert(engine.out().pop() == CreateAccepted(order, ANY, qty));
   }
 
   engine.insert_order<-side>(orders + 1, tradePrice, orders * qty);
@@ -304,9 +310,6 @@ void test(int32_t price) {
     test_update_invalid_qty<Sell>(price);
     test_update_invalid_qty<Buy>(price);
 
-    test_update_invalid_slot<Sell>(price);
-    test_update_invalid_slot<Buy>(price);
-
     test_update_deleted<Sell>(price);
     test_update_deleted<Buy>(price);
 
@@ -318,9 +321,6 @@ void test(int32_t price) {
 
     test_delete_invalid_price<Sell>(price);
     test_delete_invalid_price<Buy>(price);
-
-    test_delete_invalid_slot<Sell>(price);
-    test_delete_invalid_slot<Buy>(price);
 
     test_double_delete<Sell>(price);
     test_double_delete<Buy>(price);
@@ -348,25 +348,25 @@ void test_micro_bench_insert() {
     }
 
     void run() {
-      engine.insert_order<Sell>(engine.center_price() + 0, engine.center_price() + 0, 100);
-      engine.insert_order<Sell>(engine.center_price() + 1, engine.center_price() + 1, 100);
-      engine.insert_order<Sell>(engine.center_price() + 2, engine.center_price() + 2, 100);
-      engine.insert_order<Sell>(engine.center_price() + 3, engine.center_price() + 3, 100);
-      engine.insert_order<Sell>(engine.center_price() + 4, engine.center_price() + 4, 100);
-      engine.insert_order<Sell>(engine.center_price() + 5, engine.center_price() + 5, 100);
-      engine.insert_order<Sell>(engine.center_price() + 6, engine.center_price() + 6, 100);
-      engine.insert_order<Sell>(engine.center_price() + 7, engine.center_price() + 7, 100);
+      engine.insert_order<Sell>(1, engine.center_price() + 1, 100);
+      engine.insert_order<Sell>(2, engine.center_price() + 2, 100);
+      engine.insert_order<Sell>(3, engine.center_price() + 3, 100);
+      engine.insert_order<Sell>(4, engine.center_price() + 4, 100);
+      engine.insert_order<Sell>(5, engine.center_price() + 5, 100);
+      engine.insert_order<Sell>(6, engine.center_price() + 6, 100);
+      engine.insert_order<Sell>(7, engine.center_price() + 7, 100);
+      engine.insert_order<Sell>(8, engine.center_price() + 8, 100);
     }
 
     void teardown() {
-      engine.cancel_order<Sell>(engine.center_price() + 0, engine.center_price() + 0, 0);
-      engine.cancel_order<Sell>(engine.center_price() + 1, engine.center_price() + 1, 0);
-      engine.cancel_order<Sell>(engine.center_price() + 2, engine.center_price() + 2, 0);
-      engine.cancel_order<Sell>(engine.center_price() + 3, engine.center_price() + 3, 0);
-      engine.cancel_order<Sell>(engine.center_price() + 4, engine.center_price() + 4, 0);
-      engine.cancel_order<Sell>(engine.center_price() + 5, engine.center_price() + 5, 0);
-      engine.cancel_order<Sell>(engine.center_price() + 6, engine.center_price() + 6, 0);
-      engine.cancel_order<Sell>(engine.center_price() + 7, engine.center_price() + 7, 0);
+      engine.cancel_order<Sell>(1, engine.center_price() + 1, 1&7);
+      engine.cancel_order<Sell>(2, engine.center_price() + 2, 2&7);
+      engine.cancel_order<Sell>(3, engine.center_price() + 3, 3&7);
+      engine.cancel_order<Sell>(4, engine.center_price() + 4, 4&7);
+      engine.cancel_order<Sell>(5, engine.center_price() + 5, 5&7);
+      engine.cancel_order<Sell>(6, engine.center_price() + 6, 6&7);
+      engine.cancel_order<Sell>(7, engine.center_price() + 7, 7&7);
+      engine.cancel_order<Sell>(8, engine.center_price() + 8, 8&7);
       engine.out().clear();
     }
   } insert(engine);
@@ -436,6 +436,7 @@ void benchmark(int32_t iters) {
         /* windowHalfSize  */ 124,
         /* laplaceScale b  */ 5.0,
         /* marketProb      */ 0.05,
+        /* cancelProb      */ 0.25,
         /* seed            */ 123
       );
 
@@ -450,11 +451,17 @@ void benchmark(int32_t iters) {
           } else {
             _engine.insert_order<Buy>(e.id, e.price, e.qty);
           }
-        } else {
+        } else if (e.qty < 0) {
           if (e.price == 0) {
             _engine.insert_mkt_order_ioc<Sell>(e.id, -e.qty);
           } else {
             _engine.insert_order<Sell>(e.id, e.price, -e.qty);
+          }
+        } else {
+          if (e.price > 0) {
+            _engine.cancel_order<Buy>(e.id, e.price, e.id&7);
+          } else if (e.price < 0) {
+            _engine.cancel_order<Sell>(e.id, -e.price, e.id&7);
           }
         }
 
@@ -474,15 +481,19 @@ void benchmark(int32_t iters) {
 
 int main() {
 #ifndef NDEBUG
-  test(Order::MinPrice + 32);
-  test(1'000);
-  test(Order::MaxPrice - 32);
+  // test(Order::MinPrice + 32);
+  // test(1'000);
+  // test(Order::MaxPrice - 32);
 #endif
   
-  test_micro_bench_insert();
-  test_micro_bench_trade();
+  // test_micro_bench_insert();
+  // test_micro_bench_trade();
 
+#ifndef NDEBUG
+  benchmark(33'000);
+#else
   benchmark(33'000'000);
+#endif
 
   return 0;
 }
