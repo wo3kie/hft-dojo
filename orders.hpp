@@ -197,7 +197,6 @@ public:
   bool update(int8_t slot, int32_t orderId, int32_t& oldQty, int32_t newQty) noexcept {
     for(int8_t iter = 0; iter < 8; iter += 1) {
       if(_buffer.update(slot, orderId, oldQty, newQty)) {
-        std::cout << (int32_t)iter << std::endl;
         return true;
       }
 
@@ -210,7 +209,6 @@ public:
   bool cancel(int8_t slot, int32_t orderId, int32_t& oldQty) noexcept {
     for(int8_t iter = 0; iter < 8; iter += 1) {
       if(_buffer.cancel(slot, orderId, oldQty)) {
-        std::cout << (int32_t)iter << std::endl;
         return true;
       }
 
