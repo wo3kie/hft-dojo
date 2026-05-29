@@ -62,7 +62,7 @@ struct _Timer {
           * Warm up
           */
 
-      for(int i = 0; i < Iters; ++i) {
+      for(int i = 1; i < Iters; ++i) {
         f.setup();
         f.run();
         f.teardown();
@@ -104,7 +104,7 @@ struct _Cycles {
        * Warm up
        */
 
-      for(int i = 0; i < Iters; ++i) {
+      for(int i = 1; i < Iters; ++i) {
         f.setup();
         f.run();
         f.teardown();
