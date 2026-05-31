@@ -120,7 +120,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   Assert(worker.push([]() noexcept { /* do something */ }));
   ```
 
-- **trade_engine** - Ultra‑fast trade engine example that generates events in nanoseconds. Supports limit orders, market orders, cancellation, and updates. The trade logic is designed to be branchless and cache‑friendly, making it suitable for high‑performance trading systems.
+- **trade_engine** - a minimalistic, single‑header matching engine built with zero external dependencies (no STL, no Boost, no runtime allocations). It implements limit orders, market orders, cancellations, and quantity updates, producing events in just a few nanoseconds. The entire design is intentionally branchless, cache‑friendly, and deterministic, making it suitable as a foundation for ultra‑low‑latency trading systems and research on high‑performance market microstructure.
   
   ```{r, engine='cpp'}
   QueueOut out;
@@ -135,7 +135,8 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
   ```{r, engine='bash'}
   $ ./trade_engine 
-  Micro benchmark (Release): insert: 8ns
-  Micro benchmark (Release): trade: 12ns
+  Micro benchmark (Release): insert: 7ns
+  Micro benchmark (Release): trade: 8ns
+  Benchmark (Release)(iters=33000000): 875ms: 875624933ns
   ```
   
