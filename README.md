@@ -61,19 +61,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
     Assert(a == b);
   }
   ```
-
-- **flat_queue** - A doubly‑linked flat list with fixed maximum capacity. All operations (`push_front`, `push_back`, `pop_front`, `pop_back`, `remove`) run in O(1) time.
-
-  ```{r, engine='cpp'}
-  FlatQueue<int, 8> queue;
   
-  queue.push(1);
-  assert(queue.front() == 1);
-
-  queue.pop();
-  assert(queue.empty());
-  ```
-
 - **gdb_utils** - GDB helpers for inspecting the internal state of the data structures in this repository.
 
   ```{r, engine='bash'}
