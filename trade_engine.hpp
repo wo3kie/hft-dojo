@@ -193,16 +193,13 @@ struct Level final: noncopyable, nonmovable {
 
   template<Side side>
   int32_t push(int32_t id, int32_t qty) noexcept {
-    if(full()) {
-      return false;
-    }
-
     for(int32_t slot = id & 7, iter = 0; iter < 8; iter += 1, slot = (slot + 3) & 7) {
       if(push<side>(id, qty, slot)) {
         return slot;
       }
     }
 
+    assert(false);
     return -1;
   }
 
@@ -251,8 +248,6 @@ struct Level final: noncopyable, nonmovable {
 
   template<Side side>
   bool cancel(int32_t id, int32_t& oldQty) noexcept {
-    int32_t slot = id & 7;
-
     for(int32_t iter = 0, slot = id & 7; iter < 8; iter += 1, slot = (slot + 3) & 7) {
       if(cancel<side>(id, oldQty, slot)) {
         return true;
@@ -396,6 +391,10 @@ public:
     int32_t oldQty = 0;
     Level& level = get_level_by_price(price);
 
+    if (side * level.total < 0) {
+      return _out.push(UpdateRejected(id, newQty));
+    }
+
     if(level.update<side>(id, oldQty, newQty, slot) == false) {
       return _out.push(UpdateRejected(id, newQty));
     }
@@ -411,6 +410,10 @@ public:
 
     int32_t oldQty = 0;
     Level& level = get_level_by_price(price);
+
+    if (side * level.total < 0) {
+      return _out.push(UpdateRejected(id, newQty));
+    }
 
     if(level.update<side>(id, oldQty, newQty) == false) {
       return _out.push(UpdateRejected(id, newQty));
@@ -428,6 +431,10 @@ public:
     int32_t oldQty = 0;
     Level& level = get_level_by_price(price);
 
+    if (side * level.total < 0) {
+      return _out.push(CancelRejected(id));
+    }
+
     if(level.cancel<side>(id, oldQty, slot) == false) {
       return _out.push(CancelRejected(id));
     }
@@ -443,6 +450,10 @@ public:
 
     int32_t oldQty = 0;
     Level& level = get_level_by_price(price);
+
+    if (side * level.total < 0) {
+      return _out.push(CancelRejected(id));
+    }
 
     if(level.cancel<side>(id, oldQty) == false) {
       return _out.push(CancelRejected(id));
