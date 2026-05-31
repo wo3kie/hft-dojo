@@ -8,22 +8,268 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
+#include <cassert>
+#include <cstdint>
+
 #include "assert.hpp"
 #include "common.hpp"
 #include "events.hpp"
-#include "flat_queue.hpp"
 
-#include "orders.hpp"
+/*
+ * Side
+ */
+
+typedef int8_t Side;
+constexpr Side Sell = -1;
+constexpr Side Buy = 1;
+
+static constexpr Price MinPrice = 1;
+static constexpr Price MaxPrice = 128 * 1024 * 1024;
+
+static constexpr Qty MinQty = 1;
+static constexpr Qty MaxQty = 32 * 1024 * 1024;
+
+/*
+ * Order
+ */
+
+struct Order {
+  static constexpr OrderId InvalidId = 0;
+
+  OrderId id{Order::InvalidId};
+  Qty qty{0};
+};
+
+/*
+ * Orders
+ */
+
+class Orders {
+public:
+  static constexpr int8_t SENTINEL = 8;
+
+  Orders() {
+    for(int8_t i = 0; i < 8 + 1; i += 1) {
+      _buffer[i]._value.id = 0;
+      _buffer[i]._value.qty = 0;
+      _buffer[i]._next = SENTINEL;
+      _buffer[i]._prev = SENTINEL;
+    }
+  }
+
+  bool empty() const noexcept {
+    return _size == 0;
+  }
+
+  bool full() const noexcept {
+    return _size == 8;
+  }
+
+  Order& front() noexcept {
+    return _buffer[_buffer[SENTINEL]._next]._value;
+  }
+
+  bool insert(int32_t id, int32_t qty, int8_t slot) noexcept {
+    if(_buffer[slot]._value.id != 0) {
+      return false;
+    }
+
+    _buffer[slot]._value.id = id;
+    _buffer[slot]._value.qty = qty;
+
+    const int8_t tail = _buffer[SENTINEL]._prev;
+
+    _buffer[slot]._next = SENTINEL;
+    _buffer[slot]._prev = tail;
+
+    _buffer[tail]._next = slot;
+    _buffer[SENTINEL]._prev = slot;
+
+    _size += 1;
+    return true;
+  }
+
+  bool update(int32_t id, int32_t& oldQty, int32_t newQty, int8_t slot) noexcept {
+    if(_buffer[slot]._value.id != id) {
+      return false;
+    }
+
+    oldQty = _buffer[slot]._value.qty;
+    _buffer[slot]._value.qty = newQty;
+
+    return true;
+  }
+
+  bool cancel(int32_t id, int32_t& oldQty, int8_t slot) noexcept {
+    if(_buffer[slot]._value.id != id) {
+      return false;
+    }
+
+    oldQty = _buffer[slot]._value.qty;
+
+    const int8_t prev = _buffer[slot]._prev;
+    const int8_t next = _buffer[slot]._next;
+
+    _buffer[prev]._next = next;
+    _buffer[next]._prev = prev;
+
+    _buffer[slot]._value.id = 0;
+    _buffer[slot]._value.qty = 0;
+    _buffer[slot]._next = SENTINEL;
+    _buffer[slot]._prev = SENTINEL;
+
+    _size -= 1;
+    return true;
+  }
+
+  void pop() noexcept {
+    const int8_t slot = _buffer[SENTINEL]._next;
+    const int8_t next = _buffer[slot]._next;
+
+    _buffer[SENTINEL]._next = next;
+    _buffer[next]._prev = SENTINEL;
+
+    _buffer[slot]._value.id = 0;
+    _buffer[slot]._value.qty = 0;
+    _buffer[slot]._next = SENTINEL;
+    _buffer[slot]._prev = SENTINEL;
+
+    _size -= 1;
+  }
+
+  int8_t head() const noexcept {
+    return _buffer[SENTINEL]._next;
+  }
+
+  int8_t tail() const noexcept {
+    return _buffer[SENTINEL]._prev;
+  }
+
+private:
+  struct _Node {
+    Order _value;
+    int8_t _next;
+    int8_t _prev;
+  };
+
+  int8_t _size{0};
+  _Node _buffer[8 + /* sentinel */ 1]; 
+};
 
 /*
  * Level
  */
 
 struct Level final: noncopyable, nonmovable {
+  Level() {
+  }
+
+  bool empty() const noexcept {
+    return _buffer.empty();
+  }
+
+  bool full() const noexcept {
+    return _buffer.full();
+  }
+
+  Order& front() noexcept {
+    return _buffer.front();
+  }
+
+  template<Side side>
+  bool push(int32_t id, int32_t qty, int32_t slot) noexcept {
+    if(_buffer.insert(id, qty, slot) == false) {
+      return false;
+    }
+
+    if constexpr(side == Sell) {
+      total -= qty;
+    } else {
+      total += qty;
+    }
+
+    return true;
+  }
+
+  template<Side side>
+  int32_t push(int32_t id, int32_t qty) noexcept {
+    if(full()) {
+      return false;
+    }
+
+    for(int32_t slot = id & 7, iter = 0; iter < 8; iter += 1, slot = (slot + 3) & 7) {
+      if(push<side>(id, qty, slot)) {
+        return slot;
+      }
+    }
+
+    return -1;
+  }
+
+  template<Side side>
+  bool update(int32_t id, int32_t& oldQty, int32_t newQty, int32_t slot) noexcept {
+    if(_buffer.update(id, oldQty, newQty, slot)) {
+      if constexpr(side == Sell) {
+        total += oldQty;
+        total -= newQty;
+      } else {
+        total -= oldQty;
+        total += newQty;
+      }
+
+      return true;
+    }
+
+    return false;
+  }
+
+  template<Side side>
+  bool update(int32_t id, int32_t& oldQty, int32_t newQty) noexcept {
+    for(int32_t iter = 0, slot = id & 7; iter < 8; iter += 1, slot = (slot + 3) & 7) {
+      if(update<side>(id, oldQty, newQty, slot)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  template<Side side>
+  bool cancel(int32_t id, int32_t& oldQty, int32_t slot) noexcept {
+    if(_buffer.cancel(id, oldQty, slot)) {
+      if constexpr(side == Sell) {
+        total += oldQty;
+      } else {
+        total -= oldQty;
+      }
+
+      return true;
+    }
+
+    return false;
+  }
+
+  template<Side side>
+  bool cancel(int32_t id, int32_t& oldQty) noexcept {
+    int32_t slot = id & 7;
+
+    for(int32_t iter = 0, slot = id & 7; iter < 8; iter += 1, slot = (slot + 3) & 7) {
+      if(cancel<side>(id, oldQty, slot)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  void pop() noexcept {
+    _buffer.pop();
+  }
+
   static constexpr Index MaxOrders = 8;
 
   Qty total{0};
-  Orders8 orders;
+  Orders _buffer;
 };
 
 /*
@@ -34,24 +280,24 @@ struct OrderBook final: noncopyable, nonmovable {
 private:
   static constexpr Index Size = 256;
 
-public:  
+public:
   static constexpr Index Shift = 8;
   static constexpr Index Levels = ((Size / 2 - 1) / Shift) * Shift; // 124
-    
+
   explicit OrderBook(QueueOut& out, Price centerPrice = Levels + 1)
     : _out(out) 
   {
-     centerPrice = (((centerPrice - 1) / Shift) * Shift) + 1;
+    centerPrice = (((centerPrice - 1) / Shift) * Shift) + 1;
     _minIndex = 0;
-    _minPrice = std::max(centerPrice - Levels, Order::MinPrice);
-    _maxPrice = std::min(_minPrice + Levels + Levels, Order::MaxPrice);
+    _minPrice = std::max(centerPrice - Levels, MinPrice);
+    _maxPrice = std::min(_minPrice + Levels + Levels, MaxPrice);
 
     _bestSellPrice = _maxPrice + 1;
     _bestBuyPrice = _minPrice - 1;
 
-    Assert(_bestSellPrice > _bestBuyPrice);
-    Assert(_bestSellPrice <= _maxPrice + 1);
-    Assert(_bestBuyPrice >= _minPrice - 1);
+    assert(_bestSellPrice > _bestBuyPrice);
+    assert(_bestSellPrice <= _maxPrice + 1);
+    assert(_bestBuyPrice >= _minPrice - 1);
   }
 
   Price get_min_price() const noexcept {
@@ -92,13 +338,13 @@ public:
       _bestBuyPrice -= 1 * (Price)condition;
     }
 
-    Assert(_bestSellPrice > _bestBuyPrice);
-    Assert(_bestSellPrice <= _maxPrice + 1);
-    Assert(_bestBuyPrice >= _minPrice - 1);
+    assert(_bestSellPrice > _bestBuyPrice);
+    assert(_bestSellPrice <= _maxPrice + 1);
+    assert(_bestBuyPrice >= _minPrice - 1);
   }
 
   Level& get_level_by_price(Price price) noexcept {
-    Assert(_check_price(price));
+    assert(_check_price(price));
     return get_level_by_index(_minIndex + (price - _minPrice));
   }
 
@@ -107,108 +353,124 @@ public:
   }
 
   template<Side side>
-  void insert_order(OrderId orderId, Price price, Qty qty) noexcept {
+  void insert_order(OrderId id, Price price, Qty qty) noexcept {
     if(_check_price(price) == false) {
-      return _out.push(CreateRejected(orderId, qty));
+      return _out.push(CreateRejected(id, qty));
     }
 
     Level& level = get_level_by_price(price);
 
     if constexpr(side == Sell) {
-      Assert(level.total <= 0);
+      assert(level.total <= 0);
     } else {
-      Assert(level.total >= 0);
+      assert(level.total >= 0);
     }
 
-    if(level.orders.full()) {
-      return _out.push(CreateRejected(orderId, qty));
+    if(level.full()) {
+      return _out.push(CreateRejected(id, qty));
     }
 
-    const Index index = level.orders.push(orderId & 7, orderId, qty);
+    const Index index = level.push<side>(id, qty);
 
     if constexpr(side == Sell) {
-      level.total -= qty;
       _bestSellPrice = std::min(_bestSellPrice, price);
       _bestBuyPrice = std::min(_bestBuyPrice, _bestSellPrice - 1);
     } else {
-      level.total += qty;
       _bestBuyPrice = std::max(_bestBuyPrice, price);
       _bestSellPrice = std::max(_bestSellPrice, _bestBuyPrice + 1);
     }
 
-    _out.push(CreateAccepted(orderId, index, qty));
+    _out.push(CreateAccepted(id, index, qty));
 
-    Assert(_bestSellPrice > _bestBuyPrice);
-    Assert(_bestSellPrice <= _maxPrice + 1);
-    Assert(_bestBuyPrice >= _minPrice - 1);
+    assert(_bestSellPrice > _bestBuyPrice);
+    assert(_bestSellPrice <= _maxPrice + 1);
+    assert(_bestBuyPrice >= _minPrice - 1);
   }
 
   template<Side side>
-  void update_order(OrderId orderId, Price price, Index slot, Qty newQty) noexcept {
+  void update_order(OrderId id, Price price, Qty newQty, Index slot) noexcept {
     if(_check_price(price) == false) {
-      return _out.push(UpdateRejected(orderId, newQty));
+      return _out.push(UpdateRejected(id, newQty));
     }
 
     int32_t oldQty = 0;
     Level& level = get_level_by_price(price);
 
-    if (level.orders.update(slot, orderId, oldQty, newQty) == false) {
-      return _out.push(UpdateRejected(orderId, newQty));
+    if(level.update<side>(id, oldQty, newQty, slot) == false) {
+      return _out.push(UpdateRejected(id, newQty));
     }
 
-    if constexpr(side == Sell) {
-      level.total += oldQty;
-      level.total -= newQty;
-    } else {
-      level.total -= oldQty;
-      level.total += newQty;
-    }
-
-    _out.push(UpdateAccepted(orderId));
+    _out.push(UpdateAccepted(id));
   }
 
   template<Side side>
-  void cancel_order(OrderId orderId, Price price, Index slot) noexcept {
+  void update_order(OrderId id, Price price, Qty newQty) noexcept {
     if(_check_price(price) == false) {
-      return _out.push(CancelRejected(orderId));
+      return _out.push(UpdateRejected(id, newQty));
     }
 
     int32_t oldQty = 0;
     Level& level = get_level_by_price(price);
-    
-    if (level.orders.cancel(slot, orderId, oldQty) == false) {
-      return _out.push(CancelRejected(orderId));
+
+    if(level.update<side>(id, oldQty, newQty) == false) {
+      return _out.push(UpdateRejected(id, newQty));
     }
 
-    if constexpr(side == Sell) {
-      level.total += oldQty;
-    } else {
-      level.total -= oldQty;
+    _out.push(UpdateAccepted(id));
+  }
+
+  template<Side side>
+  void cancel_order(OrderId id, Price price, Index slot) noexcept {
+    if(_check_price(price) == false) {
+      return _out.push(CancelRejected(id));
     }
 
-    _out.push(CancelAccepted(orderId));
+    int32_t oldQty = 0;
+    Level& level = get_level_by_price(price);
+
+    if(level.cancel<side>(id, oldQty, slot) == false) {
+      return _out.push(CancelRejected(id));
+    }
+
+    _out.push(CancelAccepted(id));
+  }
+
+  template<Side side>
+  void cancel_order(OrderId id, Price price) noexcept {
+    if(_check_price(price) == false) {
+      return _out.push(CancelRejected(id));
+    }
+
+    int32_t oldQty = 0;
+    Level& level = get_level_by_price(price);
+
+    if(level.cancel<side>(id, oldQty) == false) {
+      return _out.push(CancelRejected(id));
+    }
+
+    _out.push(CancelAccepted(id));
   }
 
   void shift(Price lastPrice) noexcept {
     const int32_t diff = lastPrice - get_center_price();
 
     if(diff > OrderBook::Shift) {
-      if (_maxPrice + Shift <= Order::MaxPrice) {
+      if(_maxPrice + Shift <= MaxPrice) {
         _shiftUp();
       }
     }
 
     if(diff < -OrderBook::Shift) {
-      if (_minPrice - Shift >= Order::MinPrice) {
+      if(_minPrice - Shift >= MinPrice) {
         _shiftDown();
       }
-    }  
+    }
 
-    Assert(_bestSellPrice > _bestBuyPrice);
-    Assert(_bestSellPrice <= _maxPrice + 1);
-    Assert(_bestBuyPrice >= _minPrice - 1);
-    Assert(_minPrice >= Order::MinPrice);
-    Assert(_maxPrice <= Order::MaxPrice);
+    assert(_bestSellPrice > _bestBuyPrice);
+    assert(_bestSellPrice <= _maxPrice + 1);
+    assert(_bestBuyPrice >= _minPrice - 1);
+    assert(_minPrice >= MinPrice);
+    assert(_maxPrice <= MaxPrice);
   }
 
 private:
@@ -217,12 +479,12 @@ private:
   }
 
   bool _check_qty(Qty qty) const noexcept {
-    return (qty >= Order::MinQty) && (qty <= Order::MaxQty);
+    return (qty >= MinQty) && (qty <= MaxQty);
   }
 
   void _expire_levels(Level& level, Price price) noexcept {
-    for(level.total = 0; level.orders.empty() == false; level.orders.pop()) {
-      _out.push(LevelExpired(price, level.orders.front().id));
+    for(level.total = 0; level.empty() == false; level.pop()) {
+      _out.push(LevelExpired(price, level.front().id));
     }
   }
 
@@ -278,24 +540,23 @@ private:
 
 struct TradeEngine final: noncopyable, nonmovable {
   static constexpr Index Levels = OrderBook::Levels;
-  static constexpr Index OrdersPerLevel = Level::MaxOrders; 
+  static constexpr Index OrdersPerLevel = Level::MaxOrders;
 
   explicit TradeEngine(QueueOut& out, Price centerPrice = OrderBook::Levels + 1)
     : _out(out)
-    , _orderBook(out, centerPrice) 
-  {
+    , _orderBook(out, centerPrice) {
   }
 
-  bool _check_order_id(OrderId orderId) const noexcept {
-    return orderId != Order::InvalidId;
+  bool _check_order_id(OrderId id) const noexcept {
+    return id != Order::InvalidId;
   }
 
   bool _check_price(Price price) const noexcept {
-    return (price >= Order::MinPrice) && (price <= Order::MaxPrice);
+    return (price >= MinPrice) && (price <= MaxPrice);
   }
 
   bool _check_qty(Qty qty) const noexcept {
-    return (qty >= Order::MinQty) && (qty <= Order::MaxQty);
+    return (qty >= MinQty) && (qty <= MaxQty);
   }
 
   bool _check_slot(Index slot) const noexcept {
@@ -303,60 +564,82 @@ struct TradeEngine final: noncopyable, nonmovable {
   }
 
   template<Side side>
-  void insert_order(OrderId orderId, Price price, Qty qty) noexcept {
+  void insert_order(OrderId id, Price price, Qty qty) noexcept {
 #ifndef NDEBUG
-    if(!(_check_order_id(orderId) && _check_price(price) && _check_qty(qty))) {
-      return _out.push(CreateRejected(orderId, qty));
+    if(! (_check_order_id(id) && _check_price(price) && _check_qty(qty))) {
+      return _out.push(CreateRejected(id, qty));
     }
 #endif
 
-    qty = _trade<side>(orderId, price, qty);
+    qty = _trade<side>(id, price, qty);
 
     if(qty != 0) {
-      _orderBook.insert_order<side>(orderId, price, qty);
+      _orderBook.insert_order<side>(id, price, qty);
     }
   }
 
   template<Side side>
-  void insert_order_ioc(OrderId orderId, Price price, Qty qty) noexcept {
+  void insert_order_ioc(OrderId id, Price price, Qty qty) noexcept {
 #ifndef NDEBUG
-    if(!(_check_order_id(orderId) && _check_price(price) && _check_qty(qty))) {
-      return _out.push(CreateRejected(orderId, qty));
+    if(! (_check_order_id(id) && _check_price(price) && _check_qty(qty))) {
+      return _out.push(CreateRejected(id, qty));
     }
 #endif
 
-    qty = _trade<side>(orderId, price, qty);
+    qty = _trade<side>(id, price, qty);
 
     if(UNLIKELY(qty != 0)) {
-      _out.push(CreateRejected(orderId, qty));
+      _out.push(CreateRejected(id, qty));
     }
   }
 
   template<Side side>
-  void insert_mkt_order_ioc(OrderId orderId, Qty qty) noexcept {
-    insert_order_ioc<side>(orderId, (side == Sell) ? Order::MinPrice : Order::MaxPrice, qty);
+  void insert_mkt_order_ioc(OrderId id, Qty qty) noexcept {
+    insert_order_ioc<side>(id, (side == Sell) ? MinPrice : MaxPrice, qty);
   }
 
   template<Side side>
-  void update_order(OrderId orderId, Price price, Index slot, Qty newQty) noexcept {
+  void update_order(OrderId id, Price price, Qty newQty, Index slot) noexcept {
 #ifndef NDEBUG
-    if (!(_check_order_id(orderId) && _check_price(price) && _check_slot(slot) && _check_qty(newQty))) {
-      return _out.push(UpdateRejected(orderId, newQty));
-    }
-  #endif
-
-    _orderBook.update_order<side>(orderId, price, slot, newQty);
-  }
-
-  template<Side side>
-  void cancel_order(OrderId orderId, Price price, Index slot) noexcept {
-#ifndef NDEBUG
-    if (!(_check_order_id(orderId) && _check_price(price) && _check_slot(slot))) {
-      return _out.push(CancelRejected(orderId));
+    if(! (_check_order_id(id) && _check_price(price) && _check_slot(slot) && _check_qty(newQty))) {
+      return _out.push(UpdateRejected(id, newQty));
     }
 #endif
 
-    _orderBook.cancel_order<side>(orderId, price, slot);
+    _orderBook.update_order<side>(id, price, newQty, slot);
+  }
+
+  template<Side side>
+  void update_order(OrderId id, Price price, Qty newQty) noexcept {
+#ifndef NDEBUG
+    if(! (_check_order_id(id) && _check_price(price) && _check_qty(newQty))) {
+      return _out.push(UpdateRejected(id, newQty));
+    }
+#endif
+
+    _orderBook.update_order<side>(id, price, newQty);
+  }
+
+  template<Side side>
+  void cancel_order(OrderId id, Price price, Index slot) noexcept {
+#ifndef NDEBUG
+    if(! (_check_order_id(id) && _check_price(price) && _check_slot(slot))) {
+      return _out.push(CancelRejected(id));
+    }
+#endif
+
+    _orderBook.cancel_order<side>(id, price, slot);
+  }
+
+  template<Side side>
+  void cancel_order(OrderId id, Price price) noexcept {
+#ifndef NDEBUG
+    if(! (_check_order_id(id) && _check_price(price))) {
+      return _out.push(CancelRejected(id));
+    }
+#endif
+
+    _orderBook.cancel_order<side>(id, price);
   }
 
   Price min_price() const noexcept {
@@ -369,15 +652,15 @@ struct TradeEngine final: noncopyable, nonmovable {
 
   Price max_price() const noexcept {
     return _orderBook.get_max_price();
-  }  
-    
+  }
+
   QueueOut& out() noexcept {
     return _out;
   }
 
 private:
   template<Side side>
-  Qty _trade(OrderId orderId, Price priceLimit, Qty qty) noexcept {
+  Qty _trade(OrderId id, Price priceLimit, Qty qty) noexcept {
     const auto check_price = [](Price price, Price priceLimit) -> bool {
       if constexpr(side == Sell) {
         return price >= priceLimit;
@@ -393,26 +676,26 @@ private:
 
     while((qty != 0) && check_price(price, priceLimit)) {
       Level& level = _orderBook.get_level_by_price(price);
-      Assert((level.total * side) <= 0);
+      assert((level.total * side) <= 0);
 
       while((qty != 0) && (level.total != 0)) {
-        Order& order = level.orders.front();
+        Order& order = level.front();
         const Qty min = std::min(qty, order.qty);
-        
+
         qty -= min;
         order.qty -= min;
         level.total += side * min;
-        
+
         centerPrice = price;
-        _out.push(Trade(price, min, orderId, order.id));
+        _out.push(Trade(price, min, id, order.id));
 
         if(UNLIKELY(order.qty != 0)) {
           continue;
         }
 
         order.id = 0;
-        level.orders.pop();
-        _orderBook.update_best_price<-side>(level.orders.empty());
+        level.pop();
+        _orderBook.update_best_price<-side>(level.empty());
       }
 
       price += side;
