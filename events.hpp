@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <immintrin.h>
 #include <iostream>
+#include <sstream>
 #include <thread>
 
 #include "./ring_buffer_spsc.hpp"
@@ -84,44 +85,36 @@ Event LevelsCreated(int32_t fromPrice, int32_t toPrice) {
   return {.m1 = EventType::ELevelCreated, .m2 = fromPrice, .m3 = toPrice};
 }
 
-std::ostream& operator<<(std::ostream& os, const Event& event) {
+std::string to_string(const Event& event) {
+  std::ostringstream os;
+  
   if(event.m1 > 0) {
-    return os << "Trade: price=" << event.m1 << ", qty=" << event.m2 << ", maker=" << event.m3 << ", taker=" << event.m4;
+    os << "Trade: price=" << event.m1 << " qty=" << event.m2 << " maker=" << event.m3 << " taker=" << event.m4;
+  } else if(event.m1 == EventType::ECreateAccepted) {
+    os << "CreateAccepted: id=" << event.m2 << " slot=" << event.m3 << " qty=" << event.m4;
+  } else if(event.m1 == EventType::ECreateRejected) {
+    os << "CreateRejected: id=" << event.m2 << " size=" << event.m3;
+  } else if(event.m1 == EventType::EUpdateAccepted) {
+    os << "UpdateAccepted: id=" << event.m2;
+  } else if(event.m1 == EventType::EUpdateRejected) {
+    os << "UpdateRejected: id=" << event.m2 << " size=" << event.m3;
+  } else if(event.m1 == EventType::ECancelAccepted) {
+    os << "CancelAccepted: id=" << event.m2;
+  } else if(event.m1 == EventType::ECancelRejected) {
+    os << "CancelRejected: id=" << event.m2;
+  } else if(event.m1 == EventType::ELevelExpired) {
+    os << "LevelExpired: price=" << event.m2 << " id=" << event.m3;
+  } else if(event.m1 == EventType::ELevelCreated) {
+    os << "LevelsCreated: fromPrice=" << event.m2 << " toPrice=" << event.m3;
+  } else {
+    os << "UnknownEvent: m1=" << event.m1 << " m2=" << event.m2 << " m3=" << event.m3 << " m4=" << event.m4;
   }
+  
+  return os.str();
+}
 
-  if(event.m1 == EventType::ECreateAccepted) {
-    return os << "CreateAccepted: id=" << event.m2 << ", slot=" << event.m3 << ", qty=" << event.m4;
-  }
-
-  if(event.m1 == EventType::ECreateRejected) {
-    return os << "CreateRejected: id=" << event.m2 << ", size=" << event.m3;
-  }
-
-  if(event.m1 == EventType::EUpdateAccepted) {
-    return os << "UpdateAccepted: id=" << event.m2;
-  }
-
-  if(event.m1 == EventType::EUpdateRejected) {
-    return os << "UpdateRejected: id=" << event.m2 << ", size=" << event.m3;
-  }
-
-  if(event.m1 == EventType::ECancelAccepted) {
-    return os << "CancelAccepted: id=" << event.m2;
-  }
-
-  if(event.m1 == EventType::ECancelRejected) {
-    return os << "CancelRejected: id=" << event.m2;
-  }
-
-  if(event.m1 == EventType::ELevelExpired) {
-    return os << "LevelExpired: price=" << event.m2 << ", id=" << event.m3;
-  }
-
-  if(event.m1 == EventType::ELevelCreated) {
-    return os << "LevelsCreated: fromPrice=" << event.m2 << ", toPrice=" << event.m3;
-  }
-
-  return os << "UnknownEvent: m1=" << event.m1 << ", m2=" << event.m2 << ", m3=" << event.m3 << ", m4=" << event.m4;
+std::ostream& operator<<(std::ostream& os, const Event& event) {
+  return os << to_string(event);
 }
 
 /*
@@ -166,11 +159,16 @@ struct QueueOut {
     return count;
   }
 
-  void log(const std::string& prefix = "") {
+  std::size_t log(const std::string& prefix = "") {
+    std::size_t count = 0;
+
     while(_queue.empty_approx() == false) {
+      count += 1;
       const Event event = _queue.pop();
       std::cout << prefix << event << std::endl;
     }
+
+    return count;
   }
 
   RingBufferSPSC<Event, 1024> _queue;
