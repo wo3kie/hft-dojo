@@ -14,6 +14,7 @@
 #include "assert.hpp"
 #include "common.hpp"
 #include "events.hpp"
+#include "flat_queue_oa.hpp"
 
 /*
  * Side
@@ -56,116 +57,80 @@ struct Order {
  * Orders
  */
 
-class Orders {
+class Orders : noncopyable, nonmovable {
 public:
   static constexpr int8_t SENTINEL = 8;
-  
+
   Orders() {
-    for(int8_t i = 0; i < 8 + 1; i += 1) {
-      _buffer[i]._value.id = 0;
-      _buffer[i]._value.qty = 0;
-      _buffer[i]._next = SENTINEL;
-      _buffer[i]._prev = SENTINEL;
+    for(int8_t i = 0; i < 8; i += 1) {
+      Order& order = _buffer[i];
+      order.id = 0;
+      order.qty = 0;
     }
   }
 
   bool empty() const noexcept {
-    return _size == 0;
+    return _buffer.empty();
   }
 
   bool full() const noexcept {
-    return _size == 8;
+    return _buffer.full();
   }
 
   Order& front() noexcept {
-    return _buffer[_buffer[SENTINEL]._next]._value;
+    return _buffer.front();
   }
 
   bool insert(int32_t id, int32_t qty, int8_t slot) noexcept {
-    if(_buffer[slot]._value.id != 0) {
+    Order& order = _buffer[slot];
+
+    if(order.id != 0) {
       return false;
-  }
+    }
 
-    _buffer[slot]._value.id = id;
-    _buffer[slot]._value.qty = qty;
-
-    const int8_t tail = _buffer[SENTINEL]._prev;
-
-    _buffer[slot]._next = SENTINEL;
-    _buffer[slot]._prev = tail;
-
-    _buffer[tail]._next = slot;
-    _buffer[SENTINEL]._prev = slot;
-
-    _size += 1;
+    _buffer.insert(slot, Order{id, qty});
     return true;
   }
 
   bool update(int32_t id, int32_t& oldQty, int32_t newQty, int8_t slot) noexcept {
-    if(_buffer[slot]._value.id != id) {
+    Order& order = _buffer[slot];
+
+    if(order.id != id) {
       return false;
     }
 
-    oldQty = _buffer[slot]._value.qty;
-    _buffer[slot]._value.qty = newQty;
+    oldQty = order.qty;
+    order.qty = newQty;
 
     return true;
   }
 
   bool cancel(int32_t id, int32_t& oldQty, int8_t slot) noexcept {
-    if(_buffer[slot]._value.id != id) {
+    Order& order = _buffer[slot];
+
+    if(order.id != id) {
       return false;
     }
 
-    oldQty = _buffer[slot]._value.qty;
+    oldQty = order.qty;
+    order.id = 0;
+    order.qty = 0;
+    _buffer.remove(slot);
 
-    const int8_t prev = _buffer[slot]._prev;
-    const int8_t next = _buffer[slot]._next;
-
-    _buffer[prev]._next = next;
-    _buffer[next]._prev = prev;
-
-    _buffer[slot]._value.id = 0;
-    _buffer[slot]._value.qty = 0;
-    _buffer[slot]._next = SENTINEL;
-    _buffer[slot]._prev = SENTINEL;
-
-    _size -= 1;
     return true;
   }
 
   void pop() noexcept {
-    const int8_t slot = _buffer[SENTINEL]._next;
-    const int8_t next = _buffer[slot]._next;
+    Order& order = _buffer.front();
+    assert(order.id != 0);
 
-    _buffer[SENTINEL]._next = next;
-    _buffer[next]._prev = SENTINEL;
-
-    _buffer[slot]._value.id = 0;
-    _buffer[slot]._value.qty = 0;
-    _buffer[slot]._next = SENTINEL;
-    _buffer[slot]._prev = SENTINEL;
-
-    _size -= 1;
-  }
-
-  int8_t head() const noexcept {
-    return _buffer[SENTINEL]._next;
-  }
-
-  int8_t tail() const noexcept {
-    return _buffer[SENTINEL]._prev;
+    order.id = 0;
+    order.qty = 0;
+    _buffer.pop();
   }
 
 private:
-  struct _Node {
-    Order _value;
-    int8_t _next;
-    int8_t _prev;
-  };
-
-  int8_t _size{0};
-  _Node _buffer[8 + /* sentinel */ 1]; 
+  FlatQueue_OA<Order, 8> _buffer;
 };
 
 /*
