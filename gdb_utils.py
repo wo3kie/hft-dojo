@@ -1,34 +1,5 @@
 import gdb # type: ignore
 
-class PrintFlatQueue(gdb.Command):
-    def __init__(self):
-        super(PrintFlatQueue, self).__init__("print_flat_queue", gdb.COMMAND_USER)
-
-    def invoke(self, arg, from_tty):
-        val = gdb.parse_and_eval(arg)
-        head = int(val["_head"])
-        buffer = val["_buffer"]
-
-        N = 4
-        elems = []
-
-        while head != -1:
-            storage_head = buffer[head]
-            elems.append(str(storage_head["value"]))
-            head = int(storage_head["next"])
-
-        if (N == -1) or (len(elems) <= 2 * N):
-            shown = elems
-        else:
-            shown = elems[:N] + ["..."] + elems[-N:]
-
-        type = val.type.template_argument(0)
-        size = int(val.type.template_argument(1))
-
-        print(f"FlatQueue<{type}, {size}> [ {", ".join(shown)} ]")
-
-PrintFlatQueue()
-
 class PrintRingBuffer(gdb.Command):
     def __init__(self):
         super(PrintRingBuffer, self).__init__("print_ring_buffer", gdb.COMMAND_USER)
