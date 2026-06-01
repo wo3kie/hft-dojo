@@ -43,6 +43,12 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   }
   ```
   
+- **flat_queue** - A fixed‑capacity, array‑based queue with a linked‑list structure. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast enqueue and dequeue operations without dynamic memory allocation. 
+
+  - **flat_queue** - uses a sentinel node to manage the queue, which simplifies the logic and allows for efficient insertions and deletions. It maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
+
+  - **flat_queue_oa** - An open‑addressing variant of the flat queue. It uses a different approach to manage free slots, which can be more efficient in certain scenarios, especially when slot ids can be cached.
+
 - **gdb_utils** - GDB helpers for inspecting the internal state of the data structures in this repository.
 
   ```{r, engine='bash'}
