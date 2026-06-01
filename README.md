@@ -1,11 +1,9 @@
 ### Copyright (C) 2026 Łukasz Czerwiński
 
 # HFTDojo
-HFT‑Dojo is a compact training ground for low‑latency systems programming. Each module is a self‑contained kata focused on one idea: predictable execution, minimal abstractions, and data structures that behave well under pressure. The repository is not a framework and not a library — it is a collection of precise, inspectable building blocks that illustrate how high‑performance components are designed, reasoned about, and debugged.
+HFT‑Dojo is a compact training ground for low‑latency systems programming. The repository is not a framework and not a library — it is a collection of precise, inspectable building blocks that illustrate how high‑performance components are designed, reasoned about, and debugged.
 
 The exercises cover the full spectrum of latency‑sensitive techniques: branchless logic, fixed‑capacity containers, atomic ring buffers, cache‑aware layouts, and the foundations of a trade engine. Every piece is intentionally small, deterministic, and easy to explore in GDB. The goal is clarity, not completeness; understanding, not abstraction.
-
-HFT‑Dojo is a place to practice the craft: to read code that does exactly what it says, to experiment with micro‑optimizations, and to build intuition for how real‑time systems behave at the machine level. It’s a sandbox for learning how to write code that runs predictably fast, even under the most demanding conditions.
   
 ## Website
 https://github.com/wo3kie/hft-dojo
