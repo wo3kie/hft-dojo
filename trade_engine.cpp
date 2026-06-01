@@ -376,7 +376,7 @@ void test_micro_bench_insert() {
     }
   } insert(engine);
 
-  std::cout << "Micro benchmark (" << PROFILE << "): insert: " << Timer<32>(insert) / 8 << "ns" << std::endl;
+  std::cout << "Micro benchmark (" << PROFILE << "): insert: " << Timer<32>(insert) / 8 << " ns" << std::endl;
 }
 
 void test_micro_bench_trade() {
@@ -417,7 +417,7 @@ void test_micro_bench_trade() {
     }
   } trade(engine);
 
-  std::cout << "Micro benchmark (" << PROFILE << "): trade: " << Timer<32>(trade) / 8 << "ns" << std::endl;
+  std::cout << "Micro benchmark (" << PROFILE << "): trade: " << Timer<32>(trade) / 8 << " ns" << std::endl;
 }
 
 void benchmark(int32_t iters) {
@@ -485,7 +485,11 @@ void benchmark(int32_t iters) {
   } bench(engine, iters, events);
 
   Timer<1>(bench).log([iters, events](int ns, const std::string& msg) { 
-    std::cout << "Benchmark (" << PROFILE << ")(events=" << events << "): " << ns/1000000 << "ms / " << (ns/events) << "ns/event" << std::endl; 
+    std::cout << "Benchmark (" << PROFILE << ")(events=" << events << "): " 
+              << ns/1000000 << " ms :: " 
+              << (ns/events) << " ns/event :: " 
+              << (int)(1e9 * events/ns) << " events/s"
+              << std::endl; 
   });
 }
 
