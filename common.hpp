@@ -14,6 +14,7 @@
 #include <cxxabi.h>
 #include <limits>
 #include <random>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -61,6 +62,35 @@ struct Request {
   int32_t price; // 0 = market
   int32_t qty;   // >0 buy, <0 sell
 };
+
+std::string to_string(const Request& request) {
+  std::ostringstream os;
+
+  std::string type;
+
+  if (request.price == 0 && request.qty > 0) {
+    type = "Market side:tBuy";
+  } else if (request.price == 0 && request.qty < 0) {
+    type = "Market side:Sell";
+  } else if (request.price > 0 && request.qty > 0) {
+    type = "Limit side:Buy";
+  } else if (request.price > 0 && request.qty < 0) {
+    type = "Limit side:Sell";
+  } else if (request.price < 0 && request.qty == 0) {
+    type = "Cancel side:Sell";
+  } else if (request.price > 0 && request.qty == 0) {
+    type = "Cancel side:Buy";
+  } else {
+    type = "Unknown";
+  }
+
+  os << "Request: type=" << type << " id=" << request.id << " price=" << std::abs(request.price) << " qty=" << std::abs(request.qty);
+  return os.str();
+}
+
+std::ostream& operator<<(std::ostream& os, const Request& request) {
+  return os << to_string(request);
+}
 
 class RequestGenerator {
 public:
