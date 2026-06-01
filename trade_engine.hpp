@@ -23,11 +23,23 @@ typedef int8_t Side;
 constexpr Side Sell = -1;
 constexpr Side Buy = 1;
 
+/*
+ * Slot
+ */
+
+typedef bool Slot;
+constexpr Slot NoSlot = false;
+constexpr Slot HasSlot = true;
+
+/*
+ * Constants
+ */
+
 static constexpr Price MinPrice = 1;
 static constexpr Price MaxPrice = 128 * 1024 * 1024;
 
 static constexpr Qty MinQty = 1;
-static constexpr Qty MaxQty = 32 * 1024 * 1024;
+static constexpr Qty MaxQty = 64 * 1024 * 1024;
 
 /*
  * Order
@@ -193,7 +205,7 @@ struct Level final: noncopyable, nonmovable {
 
   template<Side side>
   int32_t push(int32_t id, int32_t qty) noexcept {
-    for(int32_t slot = id & 7, iter = 0; iter < 8; iter += 1, slot = (slot + 3) & 7) {
+    for(int32_t iter = 0,slot = id & 7; iter < 8; iter += 1, slot = (slot + 3) & 7) {
       if(push<side>(id, qty, slot)) {
         return slot;
       }
@@ -382,80 +394,54 @@ public:
     assert(_bestBuyPrice >= _minPrice - 1);
   }
 
-  template<Side side>
-  void update_order(OrderId id, Price price, Qty newQty, Index slot) noexcept {
+  template<Side side, Slot hasSlot = NoSlot>
+  void update_order(OrderId id, Price price, Qty newQty, Index slot = -1) noexcept {
     if(_check_price(price) == false) {
       return _out.push(UpdateRejected(id, newQty));
     }
 
-    int32_t oldQty = 0;
+    bool updated;
+    int32_t oldQty;
     Level& level = get_level_by_price(price);
 
-    if (side * level.total < 0) {
+    if (side * level.total <= 0) {
       return _out.push(UpdateRejected(id, newQty));
     }
 
-    if(level.update<side>(id, oldQty, newQty, slot) == false) {
+    if constexpr(hasSlot == NoSlot) {
+      updated = level.update<side>(id, oldQty, newQty);
+    } else {
+      updated = level.update<side>(id, oldQty, newQty, slot);
+    }
+
+    if(updated == false) {
       return _out.push(UpdateRejected(id, newQty));
     }
 
     _out.push(UpdateAccepted(id));
   }
 
-  template<Side side>
-  void update_order(OrderId id, Price price, Qty newQty) noexcept {
-    if(_check_price(price) == false) {
-      return _out.push(UpdateRejected(id, newQty));
-    }
-
-    int32_t oldQty = 0;
-    Level& level = get_level_by_price(price);
-
-    if (side * level.total < 0) {
-      return _out.push(UpdateRejected(id, newQty));
-    }
-
-    if(level.update<side>(id, oldQty, newQty) == false) {
-      return _out.push(UpdateRejected(id, newQty));
-    }
-
-    _out.push(UpdateAccepted(id));
-  }
-
-  template<Side side>
-  void cancel_order(OrderId id, Price price, Index slot) noexcept {
+  template<Side side, Slot hasSlot = NoSlot>
+  void cancel_order(OrderId id, Price price, Index slot = -1) noexcept {
     if(_check_price(price) == false) {
       return _out.push(CancelRejected(id));
     }
 
-    int32_t oldQty = 0;
+    bool canceled;
+    int32_t oldQty;
     Level& level = get_level_by_price(price);
 
-    if (side * level.total < 0) {
+    if (side * level.total <= 0) {
       return _out.push(CancelRejected(id));
     }
 
-    if(level.cancel<side>(id, oldQty, slot) == false) {
-      return _out.push(CancelRejected(id));
+    if constexpr(hasSlot == NoSlot) {
+      canceled = level.cancel<side>(id, oldQty);
+    } else {
+      canceled = level.cancel<side>(id, oldQty, slot);
     }
 
-    _out.push(CancelAccepted(id));
-  }
-
-  template<Side side>
-  void cancel_order(OrderId id, Price price) noexcept {
-    if(_check_price(price) == false) {
-      return _out.push(CancelRejected(id));
-    }
-
-    int32_t oldQty = 0;
-    Level& level = get_level_by_price(price);
-
-    if (side * level.total < 0) {
-      return _out.push(CancelRejected(id));
-    }
-
-    if(level.cancel<side>(id, oldQty) == false) {
+    if(canceled == false) {
       return _out.push(CancelRejected(id));
     }
 
@@ -617,7 +603,7 @@ struct TradeEngine final: noncopyable, nonmovable {
     }
 #endif
 
-    _orderBook.update_order<side>(id, price, newQty, slot);
+    _orderBook.update_order<side, HasSlot>(id, price, newQty, slot);
   }
 
   template<Side side>
@@ -628,7 +614,7 @@ struct TradeEngine final: noncopyable, nonmovable {
     }
 #endif
 
-    _orderBook.update_order<side>(id, price, newQty);
+    _orderBook.update_order<side, NoSlot>(id, price, newQty);
   }
 
   template<Side side>
@@ -639,7 +625,7 @@ struct TradeEngine final: noncopyable, nonmovable {
     }
 #endif
 
-    _orderBook.cancel_order<side>(id, price, slot);
+    _orderBook.cancel_order<side, HasSlot>(id, price, slot);
   }
 
   template<Side side>
@@ -650,7 +636,7 @@ struct TradeEngine final: noncopyable, nonmovable {
     }
 #endif
 
-    _orderBook.cancel_order<side>(id, price);
+    _orderBook.cancel_order<side, NoSlot>(id, price);
   }
 
   Price min_price() const noexcept {
