@@ -92,27 +92,25 @@ public:
     return true;
   }
 
-  bool update(int32_t id, int32_t& oldQty, int32_t newQty, int8_t slot) noexcept {
+  bool update(int32_t id, int32_t newQty, int8_t slot) noexcept {
     Order& order = _buffer[slot];
 
     if(order.id != id) {
       return false;
     }
 
-    oldQty = order.qty;
     order.qty = newQty;
 
     return true;
   }
 
-  bool cancel(int32_t id, int32_t& oldQty, int8_t slot) noexcept {
+  bool cancel(int32_t id, int8_t slot) noexcept {
     Order& order = _buffer[slot];
 
     if(order.id != id) {
       return false;
     }
 
-    oldQty = order.qty;
     order.id = 0;
     order.qty = 0;
     _buffer.remove(slot);
@@ -127,6 +125,10 @@ public:
     order.id = 0;
     order.qty = 0;
     _buffer.pop();
+  }
+
+  const Order& operator[](int32_t slot) const noexcept {
+    return _buffer[slot];
   }
 
 private:
@@ -191,8 +193,10 @@ struct Level final: noncopyable, nonmovable {
   }
 
   template<Side side>
-  bool update(int32_t id, int32_t& oldQty, int32_t newQty, int32_t slot) noexcept {
-    if(_buffer.update(id, oldQty, newQty, slot)) {
+  bool update(int32_t id, int32_t newQty, int32_t slot) noexcept {
+    const int32_t oldQty = _buffer[slot].qty;
+
+    if(_buffer.update(id, newQty, slot)) {
       if constexpr(side == Sell) {
         _total += oldQty;
         _total -= newQty;
@@ -208,9 +212,9 @@ struct Level final: noncopyable, nonmovable {
   }
 
   template<Side side>
-  bool update(int32_t id, int32_t& oldQty, int32_t newQty) noexcept {
+  bool update(int32_t id, int32_t newQty) noexcept {
     for(int32_t iter = 0, slot = id & 7; iter < 8; iter += 1, slot = (slot + 3) & 7) {
-      if(update<side>(id, oldQty, newQty, slot)) {
+      if(update<side>(id, newQty, slot)) {
         return true;
       }
     }
@@ -219,8 +223,10 @@ struct Level final: noncopyable, nonmovable {
   }
 
   template<Side side>
-  bool cancel(int32_t id, int32_t& oldQty, int32_t slot) noexcept {
-    if(_buffer.cancel(id, oldQty, slot)) {
+  bool cancel(int32_t id, int32_t slot) noexcept {
+    const int32_t oldQty = _buffer[slot].qty;
+
+    if(_buffer.cancel(id, slot)) {
       if constexpr(side == Sell) {
         _total += oldQty;
       } else {
@@ -234,9 +240,9 @@ struct Level final: noncopyable, nonmovable {
   }
 
   template<Side side>
-  bool cancel(int32_t id, int32_t& oldQty) noexcept {
+  bool cancel(int32_t id) noexcept {
     for(int32_t iter = 0, slot = id & 7; iter < 8; iter += 1, slot = (slot + 3) & 7) {
-      if(cancel<side>(id, oldQty, slot)) {
+      if(cancel<side>(id, slot)) {
         return true;
       }
     }
@@ -375,7 +381,6 @@ public:
     }
 
     bool updated;
-    int32_t oldQty;
     Level& level = get_level_by_price(price);
 
     if (side * level.get_total() <= 0) {
@@ -383,9 +388,9 @@ public:
     }
 
     if constexpr(hasSlot == NoSlot) {
-      updated = level.update<side>(id, oldQty, newQty);
+      updated = level.update<side>(id, newQty);
     } else {
-      updated = level.update<side>(id, oldQty, newQty, slot);
+      updated = level.update<side>(id, newQty, slot);
     }
 
     if(updated == false) {
@@ -402,7 +407,6 @@ public:
     }
 
     bool canceled;
-    int32_t oldQty;
     Level& level = get_level_by_price(price);
 
     if (side * level.get_total() <= 0) {
@@ -410,9 +414,9 @@ public:
     }
 
     if constexpr(hasSlot == NoSlot) {
-      canceled = level.cancel<side>(id, oldQty);
+      canceled = level.cancel<side>(id);
     } else {
-      canceled = level.cancel<side>(id, oldQty, slot);
+      canceled = level.cancel<side>(id, slot);
     }
 
     if(canceled == false) {
