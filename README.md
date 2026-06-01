@@ -24,23 +24,6 @@ cmake --build --preset release
 
 This builds benchmarks under `build/release/bin/`.
 
-## How to run tests?
-ctest --preset debug
-
-From the project root you can also run everything with one command:
-./test
-
-To run a single test binary through CTest:
-ctest --preset debug -R trade_engine
-
-You can pass extra CTest arguments through the wrapper, for example:
-./test -R trade_engine
-
-## How to run benchmarks?
-cmake --preset release
-cmake --build --preset release
-./build/release/bin/trade_engine_bench
-
 ## How to clean it?
 rm -rf build
 
