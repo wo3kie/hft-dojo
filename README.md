@@ -122,6 +122,16 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **trade_engine** - a minimalistic, single‑header matching engine built with zero external dependencies (no STL, no Boost, no runtime allocations). It implements limit orders, market orders, cancellations, and quantity updates, producing events in just a few nanoseconds. The entire design is intentionally branchless, cache‑friendly, and deterministic, making it suitable as a foundation for ultra‑low‑latency trading systems and research on high‑performance market microstructure.
   
+  - **Order** containing only an ID and quantity is far simpler than what an OMS typically maintains, but it is fully sufficient for a matching engine to execute trades.
+
+  - **Orders** — a compact container holding up to eight orders. Internally it is a doubly linked list built directly on top of a flat array, providing fast insert, update, and delete operations without dynamic allocation. A dedicated sentinel node simplifies the logic and enables branchless manipulation of list links.
+
+  - **Level** — represents a single price level and holds all orders queued at that price. When the OMS provides the correct `slot_id`, updates and cancels are resolved in constant time. If not, the engine falls back to an efficient open‑addressing hash probe to locate the order by `order_id`. Each level also tracks its aggregate quantity, which is essential for fast FOK/IOC validation.
+
+  - **OrderBook** — the structure responsible for holding all orders across price levels. It delegates create, update, and delete operations to its underlying components. The book can shift its price window up or down in place, allowing efficient trend‑following adjustments without reallocating data. Orders that fall outside the shifted window are treated as expired.
+
+  - **TradeEngine** — the high‑level orchestrator of the matching system. All internal parameters, such as the number of price levels and the capacity of each level, are chosen so the complete data structure resides entirely in a 32 KB L1 cache for maximum performance. Requests are submitted via API calls, and resulting events are delivered through a FIFO SPSC ring buffer. The engine handles limit orders, market orders, and advanced execution types like FOK and IOC.
+  
   ```{r, engine='cpp'}
   QueueOut out;
   TradeEngine engine(out, centerPrice);
@@ -134,6 +144,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   ```
 
   ```{r, engine='bash'}
+  $ # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
   $ ./trade_engine 
   Micro benchmark (Release): insert: 7ns
   Micro benchmark (Release): trade: 8ns
