@@ -14,15 +14,10 @@ C++20
 ## How to build it?
 cd hft-dojo
 cmake --preset debug
-cmake --build --preset debug
-
-This builds unit tests under `build/debug/bin/`.
-
-For an optimized build:
 cmake --preset release
-cmake --build --preset release
 
-This builds benchmarks under `build/release/bin/`.
+cmake --build --preset debug
+cmake --build --preset release
 
 ## How to clean it?
 rm -rf build
@@ -45,9 +40,9 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   
 - **flat_queue** - A fixed‑capacity, array‑based queue with a linked‑list structure. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast enqueue and dequeue operations without dynamic memory allocation. 
 
-  - **flat_queue** - uses a sentinel node to manage the queue, which simplifies the logic and allows for efficient insertions and deletions. It maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
+  - **flat_queue** - uses a sentinel node to manage the queue, for branchless insertions and deletions. It maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
 
-  - **flat_queue_oa** - An open‑addressing variant of the flat queue. It uses a different approach to manage free slots, which can be more efficient in certain scenarios, especially when slot ids can be cached.
+  - **flat_queue_oa** - An open‑addressing variant of the flat queue. It uses a different approach to manage free slots, which can be more efficient in certain scenarios, especially when slot ids can't be cached.
 
 - **gdb_utils** - GDB helpers for inspecting the internal state of the data structures in this repository.
 
@@ -66,13 +61,15 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
     
 - **map_reduce** - An implementation of the parallel map and serial reduce paradigm in C++.
   
-- **ring_buffer** - Single‑threaded ring buffer. It is designed for scenarios where only one thread is producing and consuming data, so it does not include any synchronization mechanisms. This makes it very fast and efficient for single‑threaded use cases.
-  
-- **ring_buffer_mutex** - Multi‑producer/multi‑consumer ring buffer using mutexes. It is designed for scenarios where multiple threads are producing and consuming data, so it uses mutexes to synchronize access to the buffer. This allows it to be used in multi‑threaded environments, but it may have higher latency compared to the single‑threaded version due to the overhead of locking and unlocking the mutexes.
-  
-- **ring_buffer_spsc** - Single‑producer/single‑consumer ring buffer using atomics. It is designed for scenarios where one thread is producing data and another thread is consuming data, so it uses atomic operations to synchronize access to the buffer. This allows it to be used in multi‑threaded environments while still maintaining low latency, as it avoids the overhead of mutexes.
-  
-- **ring_buffer_spmc** - Single‑producer/multiple‑consumer ring buffer using atomics. It is designed for scenarios where one thread is producing data and multiple threads are consuming data, so it uses atomic operations to synchronize access to the buffer. This allows it to be used in multi‑threaded environments while still maintaining low latency, as it avoids the overhead of mutexes.
+- **ring_buffer** - A collection of ring buffer implementations for different concurrency scenarios. Each implementation is optimized for a specific use case, providing efficient and low‑latency communication between threads.
+
+  - **ring_buffer** - Single‑threaded ring buffer. It is designed for scenarios where only one thread is producing and consuming data, so it does not include any synchronization mechanisms. This makes it very fast and efficient for single‑threaded use cases.
+    
+  - **ring_buffer_mutex** - Multi‑producer/multi‑consumer ring buffer using mutexes. It is designed for scenarios where multiple threads are producing and consuming data, so it uses mutexes to synchronize access to the buffer. This allows it to be used in multi‑threaded environments, but it may have higher latency compared to the single‑threaded version due to the overhead of locking and unlocking the mutexes.
+    
+  - **ring_buffer_spsc** - Single‑producer/single‑consumer ring buffer using atomics. It is designed for scenarios where one thread is producing data and another thread is consuming data, so it uses atomic operations to synchronize access to the buffer. This allows it to be used in multi‑threaded environments while still maintaining low latency, as it avoids the overhead of mutexes.
+    
+  - **ring_buffer_spmc** - Single‑producer/multiple‑consumer ring buffer using atomics. It is designed for scenarios where one thread is producing data and multiple threads are consuming data, so it uses atomic operations to synchronize access to the buffer. This allows it to be used in multi‑threaded environments while still maintaining low latency, as it avoids the overhead of mutexes.
   
 - **task_executor** - Executes a function in a separate thread (optional thread affinity). Result retrieved via `Channel::get` (optional thread affinity).
   
