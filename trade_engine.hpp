@@ -59,7 +59,7 @@ struct Order {
 class Orders {
 public:
   static constexpr int8_t SENTINEL = 8;
-
+  
   Orders() {
     for(int8_t i = 0; i < 8 + 1; i += 1) {
       _buffer[i]._value.id = 0;
@@ -84,7 +84,7 @@ public:
   bool insert(int32_t id, int32_t qty, int8_t slot) noexcept {
     if(_buffer[slot]._value.id != 0) {
       return false;
-    }
+  }
 
     _buffer[slot]._value.id = id;
     _buffer[slot]._value.qty = qty;
@@ -173,6 +173,8 @@ private:
  */
 
 struct Level final: noncopyable, nonmovable {
+  static constexpr Index MaxOrders = 8;
+
   Level() {
   }
 
@@ -182,6 +184,14 @@ struct Level final: noncopyable, nonmovable {
 
   bool full() const noexcept {
     return _buffer.full();
+  }
+
+  Qty get_total() const noexcept {
+    return _total;
+  }
+
+  void set_total(Qty total) noexcept {
+    _total = total;
   }
 
   Order& front() noexcept {
@@ -195,9 +205,9 @@ struct Level final: noncopyable, nonmovable {
     }
 
     if constexpr(side == Sell) {
-      total -= qty;
+      _total -= qty;
     } else {
-      total += qty;
+      _total += qty;
     }
 
     return true;
@@ -219,11 +229,11 @@ struct Level final: noncopyable, nonmovable {
   bool update(int32_t id, int32_t& oldQty, int32_t newQty, int32_t slot) noexcept {
     if(_buffer.update(id, oldQty, newQty, slot)) {
       if constexpr(side == Sell) {
-        total += oldQty;
-        total -= newQty;
+        _total += oldQty;
+        _total -= newQty;
       } else {
-        total -= oldQty;
-        total += newQty;
+        _total -= oldQty;
+        _total += newQty;
       }
 
       return true;
@@ -247,9 +257,9 @@ struct Level final: noncopyable, nonmovable {
   bool cancel(int32_t id, int32_t& oldQty, int32_t slot) noexcept {
     if(_buffer.cancel(id, oldQty, slot)) {
       if constexpr(side == Sell) {
-        total += oldQty;
+        _total += oldQty;
       } else {
-        total -= oldQty;
+        _total -= oldQty;
       }
 
       return true;
@@ -273,9 +283,8 @@ struct Level final: noncopyable, nonmovable {
     _buffer.pop();
   }
 
-  static constexpr Index MaxOrders = 8;
-
-  Qty total{0};
+private:
+  Qty _total{0};
   Orders _buffer;
 };
 
@@ -320,11 +329,11 @@ public:
   }
 
   template<Side side>
-  Price price_limit(Price priceLimit) const noexcept {
+  Price get_worst_price(Price price = (side == Sell ? MinPrice : MaxPrice)) const noexcept {
     if constexpr(side == Sell) {
-      return std::max(priceLimit, _minPrice);
+      return std::max(price, _minPrice);
     } else {
-      return std::min(priceLimit, _maxPrice);
+      return std::min(price, _maxPrice);
     }
   }
 
@@ -368,9 +377,9 @@ public:
     Level& level = get_level_by_price(price);
 
     if constexpr(side == Sell) {
-      assert(level.total <= 0);
+      assert(level.get_total() <= 0);
     } else {
-      assert(level.total >= 0);
+      assert(level.get_total() >= 0);
     }
 
     if(level.full()) {
@@ -404,7 +413,7 @@ public:
     int32_t oldQty;
     Level& level = get_level_by_price(price);
 
-    if (side * level.total <= 0) {
+    if (side * level.get_total() <= 0) {
       return _out.push(UpdateRejected(id, newQty));
     }
 
@@ -431,7 +440,7 @@ public:
     int32_t oldQty;
     Level& level = get_level_by_price(price);
 
-    if (side * level.total <= 0) {
+    if (side * level.get_total() <= 0) {
       return _out.push(CancelRejected(id));
     }
 
@@ -480,7 +489,7 @@ private:
   }
 
   void _expire_levels(Level& level, Price price) noexcept {
-    for(level.total = 0; level.empty() == false; level.pop()) {
+    for(level.set_total(0); level.empty() == false; level.pop()) {
       _out.push(LevelExpired(price, level.front().id));
     }
   }
@@ -544,20 +553,16 @@ struct TradeEngine final: noncopyable, nonmovable {
     , _orderBook(out, centerPrice) {
   }
 
-  bool _check_order_id(OrderId id) const noexcept {
-    return id != Order::InvalidId;
+  Price min_price() const noexcept {
+    return _orderBook.get_min_price();
   }
 
-  bool _check_price(Price price) const noexcept {
-    return (price >= MinPrice) && (price <= MaxPrice);
+  Price center_price() const noexcept {
+    return _orderBook.get_center_price();
   }
 
-  bool _check_qty(Qty qty) const noexcept {
-    return (qty >= MinQty) && (qty <= MaxQty);
-  }
-
-  bool _check_slot(Index slot) const noexcept {
-    return (slot >= 0) && (slot < OrdersPerLevel);
+  Price max_price() const noexcept {
+    return _orderBook.get_max_price();
   }
 
   template<Side side>
@@ -596,17 +601,6 @@ struct TradeEngine final: noncopyable, nonmovable {
   }
 
   template<Side side>
-  void update_order(OrderId id, Price price, Qty newQty, Index slot) noexcept {
-#ifndef NDEBUG
-    if(! (_check_order_id(id) && _check_price(price) && _check_slot(slot) && _check_qty(newQty))) {
-      return _out.push(UpdateRejected(id, newQty));
-    }
-#endif
-
-    _orderBook.update_order<side, HasSlot>(id, price, newQty, slot);
-  }
-
-  template<Side side>
   void update_order(OrderId id, Price price, Qty newQty) noexcept {
 #ifndef NDEBUG
     if(! (_check_order_id(id) && _check_price(price) && _check_qty(newQty))) {
@@ -618,14 +612,14 @@ struct TradeEngine final: noncopyable, nonmovable {
   }
 
   template<Side side>
-  void cancel_order(OrderId id, Price price, Index slot) noexcept {
+  void update_order(OrderId id, Price price, Qty newQty, Index slot) noexcept {
 #ifndef NDEBUG
-    if(! (_check_order_id(id) && _check_price(price) && _check_slot(slot))) {
-      return _out.push(CancelRejected(id));
+    if(! (_check_order_id(id) && _check_price(price) && _check_slot(slot) && _check_qty(newQty))) {
+      return _out.push(UpdateRejected(id, newQty));
     }
 #endif
 
-    _orderBook.cancel_order<side, HasSlot>(id, price, slot);
+    _orderBook.update_order<side, HasSlot>(id, price, newQty, slot);
   }
 
   template<Side side>
@@ -639,16 +633,15 @@ struct TradeEngine final: noncopyable, nonmovable {
     _orderBook.cancel_order<side, NoSlot>(id, price);
   }
 
-  Price min_price() const noexcept {
-    return _orderBook.get_min_price();
-  }
+  template<Side side>
+  void cancel_order(OrderId id, Price price, Index slot) noexcept {
+#ifndef NDEBUG
+    if(! (_check_order_id(id) && _check_price(price) && _check_slot(slot))) {
+      return _out.push(CancelRejected(id));
+    }
+#endif
 
-  Price center_price() const noexcept {
-    return _orderBook.get_center_price();
-  }
-
-  Price max_price() const noexcept {
-    return _orderBook.get_max_price();
+    _orderBook.cancel_order<side, HasSlot>(id, price, slot);
   }
 
   QueueOut& out() noexcept {
@@ -656,6 +649,22 @@ struct TradeEngine final: noncopyable, nonmovable {
   }
 
 private:
+  bool _check_order_id(OrderId id) const noexcept {
+    return id != Order::InvalidId;
+  }
+
+  bool _check_price(Price price) const noexcept {
+    return (price >= MinPrice) && (price <= MaxPrice);
+  }
+
+  bool _check_qty(Qty qty) const noexcept {
+    return (qty >= MinQty) && (qty <= MaxQty);
+  }
+
+  bool _check_slot(Index slot) const noexcept {
+    return (slot >= 0) && (slot < OrdersPerLevel);
+  }
+
   template<Side side>
   Qty _trade(OrderId id, Price priceLimit, Qty qty) noexcept {
     const auto check_price = [](Price price, Price priceLimit) -> bool {
@@ -669,19 +678,19 @@ private:
     Price price = _orderBook.get_best_price<-side>();
     Price centerPrice = _orderBook.get_center_price();
 
-    priceLimit = _orderBook.price_limit<side>(priceLimit);
+    priceLimit = _orderBook.get_worst_price<side>(priceLimit);
 
     while((qty != 0) && check_price(price, priceLimit)) {
       Level& level = _orderBook.get_level_by_price(price);
-      assert((level.total * side) <= 0);
+      assert((level.get_total() * side) <= 0);
 
-      while((qty != 0) && (level.total != 0)) {
+      while((qty != 0) && (level.get_total() != 0)) {
         Order& order = level.front();
         const Qty min = std::min(qty, order.qty);
 
         qty -= min;
         order.qty -= min;
-        level.total += side * min;
+        level.set_total(level.get_total() + side * min);
 
         centerPrice = price;
         _out.push(Trade(price, min, id, order.id));
@@ -690,7 +699,6 @@ private:
           continue;
         }
 
-        order.id = 0;
         level.pop();
         _orderBook.update_best_price<-side>(level.empty());
       }
