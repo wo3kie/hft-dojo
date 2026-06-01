@@ -132,6 +132,6 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   $ ./trade_engine 
   Micro benchmark (Release): insert: 7ns
   Micro benchmark (Release): trade: 8ns
-  Benchmark (Release)(iters=33000000): 875ms: 875624933ns
+  Benchmark (Release)(events=11877798): 264ms / 22ns/event
   ```
   
