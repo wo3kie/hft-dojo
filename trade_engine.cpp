@@ -422,18 +422,21 @@ void test_micro_bench_trade() {
 
 void benchmark(int32_t iters) {
   QueueOut out;
+  int32_t events = 0;
   TradeEngine engine(out);
 
   struct Benchmark {
-    Benchmark(TradeEngine& engine, int32_t iters)
+    Benchmark(TradeEngine& engine, int32_t iters, int32_t& events)
       : _iters(iters)
-      , _engine(engine) 
+      , _engine(engine)
+      , _events(events)
     {
     }
 
     int32_t _iters;
+    int32_t& _events;
     TradeEngine& _engine;
-    std::vector<Request> _events;
+    std::vector<Request> _requests;
 
     void setup() {
       RequestGenerator gen(
@@ -445,11 +448,13 @@ void benchmark(int32_t iters) {
         /* seed            */ 123
       );
 
-      _events = gen.generate(_iters);
+      _requests = gen.generate(_iters);
     }
 
     void run() {
-      for(const auto& e : _events) {
+      _events = 0;
+
+      for(const auto& e : _requests) {
         if (e.qty > 0) {
           if (e.price == 0) {
             _engine.insert_mkt_order_ioc<Buy>(e.id, e.qty);
@@ -470,17 +475,17 @@ void benchmark(int32_t iters) {
           }
         }
 
-        _engine.out().clear();
+        _events += _engine.out().clear();
       }
     }
 
     void teardown() {
     }
 
-  } bench(engine, iters);
+  } bench(engine, iters, events);
 
-  Timer<1>(bench).log([iters](int ns, const std::string& msg) { 
-    std::cout << "Benchmark (" << PROFILE << ")(iters=" << iters << "): " << ns/1000000 << "ms: " << ns << "ns" << std::endl; 
+  Timer<1>(bench).log([iters, events](int ns, const std::string& msg) { 
+    std::cout << "Benchmark (" << PROFILE << ")(events=" << events << "): " << ns/1000000 << "ms / " << (ns/events) << "ns/event" << std::endl; 
   });
 }
 
@@ -495,9 +500,9 @@ int main() {
   test_micro_bench_trade();
 
 #ifndef NDEBUG
-  benchmark(33'000);
+  benchmark(10'000);
 #else
-  benchmark(33'000'000);
+  benchmark(10'000'000);
 #endif
 
   return 0;
