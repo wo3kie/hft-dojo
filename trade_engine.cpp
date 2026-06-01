@@ -475,7 +475,11 @@ void benchmark(int32_t iters) {
           }
         }
 
+#ifndef NDEBUG
+        _events += _engine.out().log(to_string(e) + " => ");
+#else
         _events += _engine.out().clear();
+#endif
       }
     }
 
