@@ -155,10 +155,15 @@ struct QueueOut {
     return _queue.empty_approx();
   }
 
-  void clear() noexcept {
+  std::size_t clear() noexcept {
+    std::size_t count = 0;
+
     while(_queue.empty_approx() == false) {
+      count += 1;
       _queue.pop();
     }
+
+    return count;
   }
 
   void log(const std::string& prefix = "") {
