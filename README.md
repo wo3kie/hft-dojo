@@ -103,7 +103,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **trade_engine** - a minimalistic, single‑header matching engine built with zero external dependencies (no STL, no Boost, no runtime allocations). It implements limit orders, market orders, cancellations, and quantity updates, producing events in just a few nanoseconds. The entire design is intentionally branchless, cache‑friendly, and deterministic, making it suitable as a foundation for ultra‑low‑latency trading systems and research on high‑performance market microstructure.
   
-  - **Order** containing only an ID and quantity is far simpler than what an OMS typically maintains, but it is fully sufficient for a matching engine to execute trades.
+  - **Order** containing only an `id` and `quantity` is far simpler than what an OMS typically maintains, but it is fully sufficient for a matching engine to execute trades.
 
   - **Orders** — a compact container holding up to eight orders. Internally it is a doubly linked list built directly on top of a flat array, providing fast insert, update, and delete operations without dynamic allocation. A dedicated sentinel node simplifies the logic and enables branchless manipulation of list links.
 
