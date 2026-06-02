@@ -57,7 +57,7 @@ struct Order {
  * Orders
  */
 
-class Orders : noncopyable, nonmovable {
+class Orders: noncopyable, nonmovable {
 public:
   static constexpr int8_t SENTINEL = 8;
 
@@ -182,7 +182,7 @@ struct Level final: noncopyable, nonmovable {
 
   template<Side side>
   int32_t push(int32_t id, int32_t qty) noexcept {
-    for(int32_t iter = 0,slot = id & 7; iter < 8; iter += 1, slot = (slot + 3) & 7) {
+    for(int32_t iter = 0, slot = id & 7; iter < 8; iter += 1, slot = (slot + 3) & 7) {
       if(push<side>(id, qty, slot)) {
         return slot;
       }
@@ -278,14 +278,9 @@ public:
     _minIndex = 0;
     _minPrice = std::max(centerPrice - Levels, MinPrice);
     _maxPrice = std::min(_minPrice + Levels + Levels, MaxPrice);
-    _centerPrice = (_minPrice + _maxPrice) / 2;
 
-    _bestSellPrice = _maxPrice + 1;
-    _bestBuyPrice = _minPrice - 1;
-
-    assert(_bestSellPrice > _bestBuyPrice);
-    assert(_bestSellPrice <= _maxPrice + 1);
-    assert(_bestBuyPrice >= _minPrice - 1);
+    clear(_sellPricesMask);
+    clear(_buyPricesMask);
   }
 
   Price get_min_price() const noexcept {
@@ -297,7 +292,7 @@ public:
   }
 
   Price get_center_price() const noexcept {
-    return _centerPrice;
+    return (_minPrice + _maxPrice) / 2;
   }
 
   template<Side side>
@@ -312,23 +307,27 @@ public:
   template<Side side>
   Price get_best_price() const noexcept {
     if constexpr(side == Sell) {
-      return _bestSellPrice;
+      if(is_zero(_sellPricesMask) == false) {
+        return _maxPrice - ::get_price_bit(_sellPricesMask);
+      } else {
+        return _maxPrice + 1;
+      }
     } else {
-      return _bestBuyPrice;
+      if(is_zero(_buyPricesMask) == false) {
+        return _minPrice + ::get_price_bit(_buyPricesMask);
+      } else {
+        return _minPrice - 1;
+      }
     }
   }
 
   template<Side side>
-  void update_best_price(bool condition = true) noexcept {
+  void clear_price_bit(Price price) noexcept {
     if constexpr(side == Sell) {
-      _bestSellPrice += 1 * (Price)condition;
+      ::clear_price_bit(_sellPricesMask, _maxPrice - price);
     } else {
-      _bestBuyPrice -= 1 * (Price)condition;
+      ::clear_price_bit(_buyPricesMask, price - _minPrice);
     }
-
-    assert(_bestSellPrice > _bestBuyPrice);
-    assert(_bestSellPrice <= _maxPrice + 1);
-    assert(_bestBuyPrice >= _minPrice - 1);
   }
 
   Level& get_level_by_price(Price price) noexcept {
@@ -361,18 +360,12 @@ public:
     const Index slot = level.push<side>(id, qty);
 
     if constexpr(side == Sell) {
-      _bestSellPrice = std::min(_bestSellPrice, price);
-      _bestBuyPrice = std::min(_bestBuyPrice, _bestSellPrice - 1);
+      ::set_price_bit(_sellPricesMask, _maxPrice - price);
     } else {
-      _bestBuyPrice = std::max(_bestBuyPrice, price);
-      _bestSellPrice = std::max(_bestSellPrice, _bestBuyPrice + 1);
+      ::set_price_bit(_buyPricesMask, price - _minPrice);
     }
 
     _out.push(CreateAccepted(id, slot, qty));
-
-    assert(_bestSellPrice > _bestBuyPrice);
-    assert(_bestSellPrice <= _maxPrice + 1);
-    assert(_bestBuyPrice >= _minPrice - 1);
   }
 
   template<Side side, Slot hasSlot = NoSlot>
@@ -382,14 +375,12 @@ public:
     }
 
     Level& level = get_level_by_price(price);
-    
-    if (side * level.get_total() <= 0) {
+
+    if(side * level.get_total() <= 0) {
       return _out.push(UpdateRejected(id, newQty));
     }
 
-    const bool updated = (hasSlot == NoSlot) 
-                        ? level.update<side>(id, newQty) 
-                        : level.update<side>(id, newQty, slot);
+    const bool updated = (hasSlot == NoSlot) ? level.update<side>(id, newQty) : level.update<side>(id, newQty, slot);
 
     if(UNLIKELY(updated == false)) {
       return _out.push(UpdateRejected(id, newQty));
@@ -405,34 +396,30 @@ public:
     }
 
     Level& level = get_level_by_price(price);
-    
-    if (side * level.get_total() <= 0) {
+
+    if(side * level.get_total() <= 0) {
       return _out.push(CancelRejected(id));
     }
 
-    const bool canceled = (hasSlot == NoSlot) 
-                        ? level.cancel<side>(id) 
-                        : level.cancel<side>(id, slot);
+    const bool canceled = (hasSlot == NoSlot) ? level.cancel<side>(id) : level.cancel<side>(id, slot);
 
     if(UNLIKELY(canceled == false)) {
       return _out.push(CancelRejected(id));
     }
 
-    if constexpr(side == Sell) {
-      const bool empty = level.empty();
-      const bool top = price == _bestSellPrice;
-      _bestSellPrice += 1 * empty * top;
-    } else {
-      const bool empty = level.empty();
-      const bool top = price == _bestBuyPrice;
-      _bestBuyPrice -= 1 * empty * top;
+    if(level.empty()) {
+      if constexpr(side == Sell) {
+        ::clear_price_bit(_sellPricesMask, _maxPrice - price);
+      } else {
+        ::clear_price_bit(_buyPricesMask, price - _minPrice);
+      }
     }
 
     _out.push(CancelAccepted(id));
   }
 
   void shift(Price lastPrice) noexcept {
-    const int32_t diff = lastPrice - _centerPrice;
+    const int32_t diff = lastPrice - get_center_price();
 
     if(diff > OrderBook::Shift) {
       if(_maxPrice + Shift <= MaxPrice) {
@@ -446,9 +433,6 @@ public:
       }
     }
 
-    assert(_bestSellPrice > _bestBuyPrice);
-    assert(_bestSellPrice <= _maxPrice + 1);
-    assert(_bestBuyPrice >= _minPrice - 1);
     assert(_minPrice >= MinPrice);
     assert(_maxPrice <= MaxPrice);
   }
@@ -484,11 +468,9 @@ private:
     _minIndex += Shift;
     _minPrice += Shift;
     _maxPrice += Shift;
-    _centerPrice += Shift;
+    shift_left(_sellPricesMask, Shift);
+    shift_left(_buyPricesMask, Shift);
     _create_levels(_maxPrice - (Shift - 1), _maxPrice);
-
-    _bestSellPrice = std::max(_bestSellPrice, _minPrice);
-    _bestBuyPrice = std::max(_bestBuyPrice, _minPrice - 1);
   }
 
   void _shiftDown() noexcept {
@@ -496,22 +478,20 @@ private:
     _minIndex -= Shift;
     _minPrice -= Shift;
     _maxPrice -= Shift;
-    _centerPrice -= Shift;
+    shift_right(_sellPricesMask, Shift);
+    shift_right(_buyPricesMask, Shift);
     _create_levels(_minPrice + (Shift - 1), _minPrice);
-
-    _bestSellPrice = std::min(_bestSellPrice, _maxPrice + 1);
-    _bestBuyPrice = std::min(_bestBuyPrice, _maxPrice);
   }
 
 private:
   Index _minIndex;
   Price _minPrice;
 
-  Price _bestSellPrice;
-  Price _bestBuyPrice;
-
   Price _maxPrice;
   Price _centerPrice;
+
+  uint256_t _sellPricesMask;
+  uint256_t _buyPricesMask;
 
   QueueOut& _out;
 
@@ -528,7 +508,8 @@ struct TradeEngine final: noncopyable, nonmovable {
 
   explicit TradeEngine(QueueOut& out, Price centerPrice = OrderBook::Levels + 1)
     : _out(out)
-    , _orderBook(out, centerPrice) {
+    , _orderBook(out, centerPrice) 
+    {
   }
 
   Price min_price() const noexcept {
@@ -645,6 +626,8 @@ private:
 
   template<Side side>
   Qty _trade(OrderId id, Price priceLimit, Qty qty) noexcept {
+    priceLimit = _orderBook.get_worst_price<side>(priceLimit);
+
     const auto check_price = [](Price price, Price priceLimit) -> bool {
       if constexpr(side == Sell) {
         return price >= priceLimit;
@@ -653,40 +636,39 @@ private:
       }
     };
 
-    Price price = _orderBook.get_best_price<-side>();
-    Price centerPrice = _orderBook.get_center_price();
+    Price lastPrice = _orderBook.get_center_price();
 
-    priceLimit = _orderBook.get_worst_price<side>(priceLimit);
+    do {
+      const Price price = _orderBook.get_best_price<-side>();
 
-    while(check_price(price, priceLimit)) {
+      if(check_price(price, priceLimit) == false) {
+        break;
+      }
+
       Level& level = _orderBook.get_level_by_price(price);
-      assert((level.get_total() * side) <= 0);
+      assert((level.get_total() * side) < 0);
 
-      while(level.get_total() != 0) {
+      do {
         Order& order = level.front();
         const Qty min = std::min(qty, order.qty);
 
         qty -= min;
         order.qty -= min;
+        lastPrice = price;
         level.set_total(level.get_total() + side * min);
-
-        centerPrice = price;
         _out.push(Trade(price, min, id, order.id));
 
-        if(UNLIKELY(order.qty == 0)) {
+        if(order.qty == 0) {
           level.pop();
-          _orderBook.update_best_price<-side>(level.empty());
         }
 
-        if(UNLIKELY(qty == 0)) {
-          _orderBook.shift(centerPrice);
-          return qty;
+        if((order.qty == 0) && level.empty()) {
+          _orderBook.clear_price_bit<-side>(price);
         }
-      }
+      } while((qty != 0) && (level.empty() == false));
+    } while(qty != 0);
 
-      price += side;
-    }
-
+    _orderBook.shift(lastPrice);
     return qty;
   }
 
