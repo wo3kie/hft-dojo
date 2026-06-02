@@ -18,6 +18,38 @@
 
 constexpr int32_t ANY = 0;
 
+void test_bitmask() {
+  uint256_t mask;
+  clear(mask);
+  
+  set_price_bit(mask, 0);
+  Assert(get_price_bit(mask) == 0);
+
+  clear(mask);
+  set_price_bit(mask, 32);
+  Assert(get_price_bit(mask) == 32);
+
+  clear(mask);
+  set_price_bit(mask, 255);
+  Assert(get_price_bit(mask) == 255);
+  
+  clear(mask);
+  set_price_bit(mask, 1);
+  Assert(get_price_bit(mask) == 1);
+
+  set_price_bit(mask, 16);
+  Assert(get_price_bit(mask) == 16);
+  
+  set_price_bit(mask, 32);
+  Assert(get_price_bit(mask) == 32);
+  
+  clear_price_bit(mask, 32);
+  Assert(get_price_bit(mask) == 16);
+  
+  clear_price_bit(mask, 16);
+  Assert(get_price_bit(mask) == 1);
+}
+
 template<Side side>
 void test_insert(int32_t centerPrice) {
   QueueOut out;
@@ -288,6 +320,8 @@ void test_trend(int32_t centerPrice, int32_t trend = 1) {
 }
 
 void test(int32_t price) {
+    test_bitmask();
+
     test_insert<Sell>(price);
     test_insert<Buy>(price);
 
