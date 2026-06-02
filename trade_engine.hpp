@@ -278,6 +278,7 @@ public:
     _minIndex = 0;
     _minPrice = std::max(centerPrice - Levels, MinPrice);
     _maxPrice = std::min(_minPrice + Levels + Levels, MaxPrice);
+    _centerPrice = (_minPrice + _maxPrice) / 2;
 
     _bestSellPrice = _maxPrice + 1;
     _bestBuyPrice = _minPrice - 1;
@@ -296,7 +297,7 @@ public:
   }
 
   Price get_center_price() const noexcept {
-    return (_minPrice + _maxPrice) / 2;
+    return _centerPrice;
   }
 
   template<Side side>
@@ -431,7 +432,7 @@ public:
   }
 
   void shift(Price lastPrice) noexcept {
-    const int32_t diff = lastPrice - get_center_price();
+    const int32_t diff = lastPrice - _centerPrice;
 
     if(diff > OrderBook::Shift) {
       if(_maxPrice + Shift <= MaxPrice) {
@@ -483,6 +484,7 @@ private:
     _minIndex += Shift;
     _minPrice += Shift;
     _maxPrice += Shift;
+    _centerPrice += Shift;
     _create_levels(_maxPrice - (Shift - 1), _maxPrice);
 
     _bestSellPrice = std::max(_bestSellPrice, _minPrice);
@@ -494,6 +496,7 @@ private:
     _minIndex -= Shift;
     _minPrice -= Shift;
     _maxPrice -= Shift;
+    _centerPrice -= Shift;
     _create_levels(_minPrice + (Shift - 1), _minPrice);
 
     _bestSellPrice = std::min(_bestSellPrice, _maxPrice + 1);
@@ -508,6 +511,8 @@ private:
   Price _bestBuyPrice;
 
   Price _maxPrice;
+  Price _centerPrice;
+
   QueueOut& _out;
 
   Level _levels[Size];
@@ -656,10 +661,6 @@ private:
     while(check_price(price, priceLimit)) {
       Level& level = _orderBook.get_level_by_price(price);
       assert((level.get_total() * side) <= 0);
-
-      if (level.get_total() == 0) {
-        std::cout << "Level empty" << std::endl;
-      }
 
       while(level.get_total() != 0) {
         Order& order = level.front();
