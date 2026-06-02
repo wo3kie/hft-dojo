@@ -358,7 +358,7 @@ public:
       return _out.push(CreateRejected(id, qty));
     }
 
-    const Index index = level.push<side>(id, qty);
+    const Index slot = level.push<side>(id, qty);
 
     if constexpr(side == Sell) {
       _bestSellPrice = std::min(_bestSellPrice, price);
@@ -368,7 +368,7 @@ public:
       _bestSellPrice = std::max(_bestSellPrice, _bestBuyPrice + 1);
     }
 
-    _out.push(CreateAccepted(id, index, qty));
+    _out.push(CreateAccepted(id, slot, qty));
 
     assert(_bestSellPrice > _bestBuyPrice);
     assert(_bestSellPrice <= _maxPrice + 1);
