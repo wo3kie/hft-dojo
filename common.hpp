@@ -41,6 +41,134 @@ typedef int32_t Qty;
 typedef int32_t Price;
 typedef int32_t Index;
 
+typedef unsigned __int128 uint128_t;
+
+inline int ctz128(uint128_t x) noexcept {
+  const uint64_t lo = (uint64_t)x;
+
+  if(lo != 0ULL) {
+    return __builtin_ctzll(lo);
+  }
+
+  const uint64_t hi = (uint64_t)(x >> 64);
+
+  if(hi != 0ULL) {
+    return 64 + __builtin_ctzll(hi);
+  }
+
+  return 128;
+}
+
+inline int clz128(uint128_t x) noexcept {
+  const uint64_t hi = (uint64_t)(x >> 64);
+
+  if(hi != 0ULL) {
+    return __builtin_clzll(hi);
+  }
+
+  const uint64_t lo = (uint64_t)x;
+
+  if(lo != 0ULL) {
+    return 64 + __builtin_clzll(lo);
+  }
+
+  return 128;
+}
+
+typedef unsigned __int128 uint128_t;
+
+struct uint256_t {
+  uint128_t data[2];
+};
+
+inline void clear(uint256_t& x) noexcept {
+  x.data[0] = 0;
+  x.data[1] = 0;
+}
+
+inline bool is_zero(const uint256_t& x) noexcept {
+  return (x.data[0] == 0 && x.data[1] == 0);
+}
+
+inline void shift_left(uint256_t& x, uint32_t n) noexcept {
+  if(n == 0) {
+    return;
+  }
+
+  if(n < 128) {
+    x.data[1] = (x.data[1] << n) | (x.data[0] >> (128 - n));
+    x.data[0] = x.data[0] << n;
+  } else if(n < 256) {
+    x.data[1] = x.data[0] << (n - 128);
+    x.data[0] = 0;
+  } else {
+    x.data[1] = 0;
+    x.data[0] = 0;
+  }
+}
+
+inline void shift_right(uint256_t& x, uint32_t n) noexcept {
+  if(n == 0) {
+    return;
+  }
+
+  if(n < 128) {
+    x.data[0] = (x.data[0] >> n) | (x.data[1] << (128 - n));
+    x.data[1] = x.data[1] >> n;
+  } else if(n < 256) {
+    x.data[0] = x.data[1] >> (n - 128);
+    x.data[1] = 0;
+  } else {
+    x.data[1] = 0;
+    x.data[0] = 0;
+  }
+}
+
+inline int32_t ctz256(const uint256_t& x) noexcept {
+  const int32_t lo_ctz = ctz128(x.data[0]);
+
+  if(lo_ctz != 128) {
+    return lo_ctz;
+  }
+
+  const int32_t hi_ctz = ctz128(x.data[1]);
+
+  if(hi_ctz != 128) {
+    return 128 + hi_ctz;
+  }
+
+  return 256;
+}
+
+inline int32_t clz256(const uint256_t& x) noexcept {
+  const int32_t hi_clz = clz128(x.data[1]);
+
+  if(hi_clz != 128) {
+    return hi_clz;
+  }
+
+  const int32_t lo_clz = clz128(x.data[0]);
+
+  if(lo_clz != 128) {
+    return 128 + lo_clz;
+  }
+
+  return 256;
+}
+
+void set_price_bit(uint256_t& mask, uint8_t price) noexcept {
+  mask.data[price >> 7] |= (uint128_t)1 << (price & 127);
+}
+
+void clear_price_bit(uint256_t& mask, uint8_t price) noexcept {
+  mask.data[price >> 7] &= ~((uint128_t)1 << (price & 127));
+}
+
+uint8_t get_price_bit(uint256_t mask) noexcept {
+  assert(is_zero(mask) == false);
+  return 256 - 1 - clz256(mask);
+}
+
 struct noncopyable {
   noncopyable() = default;
   ~noncopyable() = default;
