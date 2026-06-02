@@ -380,20 +380,17 @@ public:
       return _out.push(UpdateRejected(id, newQty));
     }
 
-    bool updated;
     Level& level = get_level_by_price(price);
-
+    
     if (side * level.get_total() <= 0) {
       return _out.push(UpdateRejected(id, newQty));
     }
 
-    if constexpr(hasSlot == NoSlot) {
-      updated = level.update<side>(id, newQty);
-    } else {
-      updated = level.update<side>(id, newQty, slot);
-    }
+    const bool updated = (hasSlot == NoSlot) 
+                        ? level.update<side>(id, newQty) 
+                        : level.update<side>(id, newQty, slot);
 
-    if(updated == false) {
+    if(UNLIKELY(updated == false)) {
       return _out.push(UpdateRejected(id, newQty));
     }
 
@@ -406,21 +403,28 @@ public:
       return _out.push(CancelRejected(id));
     }
 
-    bool canceled;
     Level& level = get_level_by_price(price);
-
+    
     if (side * level.get_total() <= 0) {
       return _out.push(CancelRejected(id));
     }
 
-    if constexpr(hasSlot == NoSlot) {
-      canceled = level.cancel<side>(id);
-    } else {
-      canceled = level.cancel<side>(id, slot);
+    const bool canceled = (hasSlot == NoSlot) 
+                        ? level.cancel<side>(id) 
+                        : level.cancel<side>(id, slot);
+
+    if(UNLIKELY(canceled == false)) {
+      return _out.push(CancelRejected(id));
     }
 
-    if(canceled == false) {
-      return _out.push(CancelRejected(id));
+    if constexpr(side == Sell) {
+      const bool empty = level.empty();
+      const bool top = price == _bestSellPrice;
+      _bestSellPrice += 1 * empty * top;
+    } else {
+      const bool empty = level.empty();
+      const bool top = price == _bestBuyPrice;
+      _bestBuyPrice -= 1 * empty * top;
     }
 
     _out.push(CancelAccepted(id));
@@ -537,7 +541,7 @@ struct TradeEngine final: noncopyable, nonmovable {
   template<Side side>
   void insert_order(OrderId id, Price price, Qty qty) noexcept {
 #ifndef NDEBUG
-    if(! (_check_order_id(id) && _check_price(price) && _check_qty(qty))) {
+    if(UNLIKELY(! (_check_order_id(id) && _check_price(price) && _check_qty(qty)))) {
       return _out.push(CreateRejected(id, qty));
     }
 #endif
@@ -552,7 +556,7 @@ struct TradeEngine final: noncopyable, nonmovable {
   template<Side side>
   void insert_order_ioc(OrderId id, Price price, Qty qty) noexcept {
 #ifndef NDEBUG
-    if(! (_check_order_id(id) && _check_price(price) && _check_qty(qty))) {
+    if(UNLIKELY(! (_check_order_id(id) && _check_price(price) && _check_qty(qty)))) {
       return _out.push(CreateRejected(id, qty));
     }
 #endif
@@ -572,7 +576,7 @@ struct TradeEngine final: noncopyable, nonmovable {
   template<Side side>
   void update_order(OrderId id, Price price, Qty newQty) noexcept {
 #ifndef NDEBUG
-    if(! (_check_order_id(id) && _check_price(price) && _check_qty(newQty))) {
+    if(UNLIKELY(! (_check_order_id(id) && _check_price(price) && _check_qty(newQty)))) {
       return _out.push(UpdateRejected(id, newQty));
     }
 #endif
@@ -583,7 +587,7 @@ struct TradeEngine final: noncopyable, nonmovable {
   template<Side side>
   void update_order(OrderId id, Price price, Qty newQty, Index slot) noexcept {
 #ifndef NDEBUG
-    if(! (_check_order_id(id) && _check_price(price) && _check_slot(slot) && _check_qty(newQty))) {
+    if(UNLIKELY(! (_check_order_id(id) && _check_price(price) && _check_slot(slot) && _check_qty(newQty)))) {
       return _out.push(UpdateRejected(id, newQty));
     }
 #endif
@@ -594,7 +598,7 @@ struct TradeEngine final: noncopyable, nonmovable {
   template<Side side>
   void cancel_order(OrderId id, Price price) noexcept {
 #ifndef NDEBUG
-    if(! (_check_order_id(id) && _check_price(price))) {
+    if(UNLIKELY(! (_check_order_id(id) && _check_price(price)))) {
       return _out.push(CancelRejected(id));
     }
 #endif
@@ -605,7 +609,7 @@ struct TradeEngine final: noncopyable, nonmovable {
   template<Side side>
   void cancel_order(OrderId id, Price price, Index slot) noexcept {
 #ifndef NDEBUG
-    if(! (_check_order_id(id) && _check_price(price) && _check_slot(slot))) {
+    if(UNLIKELY(! (_check_order_id(id) && _check_price(price) && _check_slot(slot)))) {
       return _out.push(CancelRejected(id));
     }
 #endif
@@ -649,11 +653,15 @@ private:
 
     priceLimit = _orderBook.get_worst_price<side>(priceLimit);
 
-    while((qty != 0) && check_price(price, priceLimit)) {
+    while(check_price(price, priceLimit)) {
       Level& level = _orderBook.get_level_by_price(price);
       assert((level.get_total() * side) <= 0);
 
-      while((qty != 0) && (level.get_total() != 0)) {
+      if (level.get_total() == 0) {
+        std::cout << "Level empty" << std::endl;
+      }
+
+      while(level.get_total() != 0) {
         Order& order = level.front();
         const Qty min = std::min(qty, order.qty);
 
@@ -664,18 +672,20 @@ private:
         centerPrice = price;
         _out.push(Trade(price, min, id, order.id));
 
-        if(UNLIKELY(order.qty != 0)) {
-          continue;
+        if(UNLIKELY(order.qty == 0)) {
+          level.pop();
+          _orderBook.update_best_price<-side>(level.empty());
         }
 
-        level.pop();
-        _orderBook.update_best_price<-side>(level.empty());
+        if(UNLIKELY(qty == 0)) {
+          _orderBook.shift(centerPrice);
+          return qty;
+        }
       }
 
       price += side;
     }
 
-    _orderBook.shift(centerPrice);
     return qty;
   }
 
