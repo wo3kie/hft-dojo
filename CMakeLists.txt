@@ -18,6 +18,7 @@ function(add_dojo_executable source_file)
 
   add_executable(${target_name} ${source_file})
   target_include_directories(${target_name} PRIVATE ${CMAKE_SOURCE_DIR})
+  add_test(NAME ${target_name} COMMAND $<TARGET_FILE:${target_name}>)
 endfunction()
 
 file(GLOB DOJO_EXECUTABLE_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/*.cpp")
