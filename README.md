@@ -37,7 +37,9 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
     Assert(a == b);
   }
   ```
-  
+
+- **branchless** - A collection of branchless functions like `min`, `max`... These functions are implemented using bitwise operations and arithmetic to avoid branching, which can improve performance in certain scenarios by reducing pipeline stalls.  
+    
 - **flat_list** - A fixed‑capacity, array‑based linked list. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions and deletions without dynamic memory allocation. 
     
 - **flat_queue** - A fixed‑capacity, array‑based queue with a linked‑list structure. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast enqueue and dequeue operations without dynamic memory allocation. 
@@ -137,4 +139,4 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   Benchmark (Release)(events=11877798): 265 ms :: 22 ns/event :: 44722752 events/s
   ```
     
-  - **uint256_t** — a custom 256‑bit unsigned integer type implemented in `uint256.hpp`. It is designed to be a simple wrapper around two 128‑bit integers, providing basic arithmetic and bitwise operations. The implementation is minimalistic, focusing on the specific needs of the trade engine, such as setting and getting price bits for the order book.
+- **uint256_t** — a custom 256‑bit unsigned integer type implemented in `uint256.hpp`. It is designed to be a simple wrapper around two 128‑bit integers, providing basic arithmetic and bitwise operations. The implementation is minimalistic, focusing on the specific needs of the trade engine, such as setting and getting price bits for the order book.
