@@ -1,5 +1,34 @@
 import gdb # type: ignore
 
+class PrintFlatList(gdb.Command):
+    def __init__(self):
+        super(PrintFlatList, self).__init__("print_flat_list", gdb.COMMAND_USER)
+
+    def invoke(self, arg, from_tty):
+        val = gdb.parse_and_eval(arg)
+        size = int(val.type.template_argument(1))
+        buffer = val["_buffer"]
+        head = int(buffer[size]["_next"])
+        tail = int(buffer[size]["_prev"])
+
+        N = 4
+        elems = []
+
+        while head != size:
+            node = buffer[head]
+
+            elems.append(str(node["_value"]))
+            head = node["_next"]
+
+        if (N == -1) or (len(elems) <= 2 * N):
+            shown = elems
+        else:
+            shown = elems[:N] + ["..."] + elems[-N:]
+
+        print(f"{val.type.strip_typedefs()} [ {", ".join(shown)} ]")
+
+PrintFlatList()
+
 class PrintRingBuffer(gdb.Command):
     def __init__(self):
         super(PrintRingBuffer, self).__init__("print_ring_buffer", gdb.COMMAND_USER)
@@ -89,8 +118,8 @@ class PrintQueue(gdb.Command):
         val = gdb.parse_and_eval(arg)
         type = str(val.type.strip_typedefs())
 
-        if type.startswith("FlatQueue<"):
-            PrintFlatQueue().invoke(arg, from_tty)
+        if type.startswith("FlatList<") or type.startswith("FlatQueue<") or type.startswith("FlatQueue_OA<"):
+            PrintFlatList().invoke(arg, from_tty)
         elif type.startswith("RingBuffer<"):
             PrintRingBuffer().invoke(arg, from_tty)
         elif type.startswith("RingBufferSPSC<"):
