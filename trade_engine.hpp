@@ -49,8 +49,6 @@ struct Order {
 
 class Orders: noncopyable, nonmovable {
 public:
-  static constexpr int8_t SENTINEL = 8;
-
   Orders() {
     for(int8_t i = 0; i < 8; i += 1) {
       Order& order = _buffer[i];
