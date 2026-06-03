@@ -1,5 +1,6 @@
 import gdb # type: ignore
 
+
 class PrintFlatList(gdb.Command):
     def __init__(self):
         super(PrintFlatList, self).__init__("print_flat_list", gdb.COMMAND_USER)
@@ -29,6 +30,7 @@ class PrintFlatList(gdb.Command):
 
 PrintFlatList()
 
+
 class PrintRingBuffer(gdb.Command):
     def __init__(self):
         super(PrintRingBuffer, self).__init__("print_ring_buffer", gdb.COMMAND_USER)
@@ -55,6 +57,7 @@ class PrintRingBuffer(gdb.Command):
         print(f"RingBuffer<{val.type.template_argument(0)}, {size}> [ {", ".join(shown)} ]")
 
 PrintRingBuffer()
+
 
 class PrintRingBufferSPSC(gdb.Command):
     def __init__(self):
@@ -83,6 +86,7 @@ class PrintRingBufferSPSC(gdb.Command):
 
 PrintRingBufferSPSC()
 
+
 class PrintRingBufferSPMC(gdb.Command):
     def __init__(self):
         super(PrintRingBufferSPMC, self).__init__("print_ring_buffer_spmc", gdb.COMMAND_USER)
@@ -110,6 +114,48 @@ class PrintRingBufferSPMC(gdb.Command):
 
 PrintRingBufferSPMC()
 
+
+class PrintUint256(gdb.Command):
+    def __init__(self):
+        super(PrintUint256, self).__init__("print_uint256", gdb.COMMAND_USER)
+
+    def invoke(self, arg, from_tty):
+        def _split_int128(val):
+            u64 = gdb.lookup_type("uint64_t")
+            ptr = val.address.cast(u64.pointer())
+            lo = int(ptr[0])
+            hi = int(ptr[1])
+            return lo, hi
+        
+        val = gdb.parse_and_eval(arg)
+        val = val.cast(val.type.strip_typedefs())
+
+        lo128 = val["data"][0]
+        hi128 = val["data"][1]
+
+        lo_lo, lo_hi = _split_int128(lo128)
+        hi_lo, hi_hi = _split_int128(hi128)
+        words = [lo_lo, lo_hi, hi_lo, hi_hi]
+
+        bits = []
+
+        for word_index in range(3, -1, -1):
+            w = words[word_index]
+            
+            if w == 0:
+                continue
+
+            base = word_index * 64
+
+            for bit in range(63, -1, -1):
+                if (w >> bit) & 1:
+                    bits.append(base + bit)
+
+        print("uint256_t (msb→lsb):", bits)
+
+PrintUint256()
+
+
 class PrintQueue(gdb.Command):
     def __init__(self):
         super(PrintQueue, self).__init__("pq", gdb.COMMAND_USER)
@@ -126,6 +172,8 @@ class PrintQueue(gdb.Command):
             PrintRingBufferSPSC().invoke(arg, from_tty)
         elif type.startswith("RingBufferSPMC<"):
             PrintRingBufferSPMC().invoke(arg, from_tty)
+        elif type.startswith("uint256_t"):
+            PrintUint256().invoke(arg, from_tty)
         else:
             print(f"Unsupported queue type: {type}")
         
