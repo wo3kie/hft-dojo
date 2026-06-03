@@ -414,13 +414,13 @@ public:
 
     if(diff > OrderBook::Shift) {
       if(_maxPrice + Shift <= MaxPrice) {
-        _shiftUp();
+        _shift_up();
       }
     }
 
     if(diff < -OrderBook::Shift) {
       if(_minPrice - Shift >= MinPrice) {
-        _shiftDown();
+        _shift_down();
       }
     }
 
@@ -454,38 +454,37 @@ private:
     _out.push(LevelsCreated(fromPrice, toPrice));
   }
 
-  void _shiftUp() noexcept {
+  void _shift_up() noexcept {
     _expire_levels<Buy>(_minPrice, _minPrice + (Shift - 1));
     _minIndex += Shift;
     _minPrice += Shift;
     _maxPrice += Shift;
     _sellPricesMask <<= Shift;
-    _buyPricesMask <<= Shift;
+    _buyPricesMask >>= Shift;
     _create_levels(_maxPrice - (Shift - 1), _maxPrice);
   }
 
-  void _shiftDown() noexcept {
+  void _shift_down() noexcept {
     _expire_levels<Sell>(_maxPrice, _maxPrice - (Shift - 1));
     _minIndex -= Shift;
     _minPrice -= Shift;
     _maxPrice -= Shift;
     _sellPricesMask >>= Shift;
-    _buyPricesMask >>= Shift;
+    _buyPricesMask <<= Shift;
     _create_levels(_minPrice + (Shift - 1), _minPrice);
   }
 
 private:
   Index _minIndex;
-  Price _minPrice;
+  Index ____padd0;
 
+  Price _minPrice;
   Price _maxPrice;
-  Price _centerPrice;
 
   uint256_t _sellPricesMask;
   uint256_t _buyPricesMask;
 
   QueueOut& _out;
-
   Level _levels[Size];
 };
 
