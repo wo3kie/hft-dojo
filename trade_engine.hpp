@@ -16,40 +16,30 @@
 #include "events.hpp"
 #include "flat_queue_oa.hpp"
 
-/*
- * Side
- */
-
-typedef int8_t Side;
-constexpr Side Sell = -1;
-constexpr Side Buy = 1;
 
 /*
- * Slot
+ * PriceBits
  */
 
-typedef bool Slot;
-constexpr Slot NoSlot = false;
-constexpr Slot HasSlot = true;
+void set_price_bit(uint256_t& mask, uint8_t price) noexcept {
+  mask.data[price >> 7] |= (uint128_t)1 << (price & 127);
+}
 
-/*
- * Constants
- */
+void clear_price_bit(uint256_t& mask, uint8_t price) noexcept {
+  mask.data[price >> 7] &= ~((uint128_t)1 << (price & 127));
+}
 
-static constexpr Price MinPrice = 1;
-static constexpr Price MaxPrice = 128 * 1024 * 1024;
-
-static constexpr Qty MinQty = 1;
-static constexpr Qty MaxQty = 64 * 1024 * 1024;
+uint8_t get_price_bit(uint256_t mask) noexcept {
+  assert(mask != uint256_t(0));
+  return 256 - 1 - clz256(mask);
+}
 
 /*
  * Order
  */
 
 struct Order {
-  static constexpr OrderId InvalidId = 0;
-
-  OrderId id{Order::InvalidId};
+  OrderId id{InvalidOrderId};
   Qty qty{0};
 };
 
@@ -84,7 +74,7 @@ public:
   bool insert(int32_t id, int32_t qty, int8_t slot) noexcept {
     Order& order = _buffer[slot];
 
-    if(order.id != 0) {
+    if(UNLIKELY(order.id != 0)) {
       return false;
     }
 
@@ -95,7 +85,7 @@ public:
   bool update(int32_t id, int32_t newQty, int8_t slot) noexcept {
     Order& order = _buffer[slot];
 
-    if(order.id != id) {
+    if(UNLIKELY(order.id != id)) {
       return false;
     }
 
@@ -107,12 +97,11 @@ public:
   bool cancel(int32_t id, int8_t slot) noexcept {
     Order& order = _buffer[slot];
 
-    if(order.id != id) {
+    if(UNLIKELY(order.id != id)) {
       return false;
     }
 
     order.id = 0;
-    order.qty = 0;
     _buffer.remove(slot);
 
     return true;
@@ -123,7 +112,6 @@ public:
     assert(order.id != 0);
 
     order.id = 0;
-    order.qty = 0;
     _buffer.pop();
   }
 
@@ -196,19 +184,19 @@ struct Level final: noncopyable, nonmovable {
   bool update(int32_t id, int32_t newQty, int32_t slot) noexcept {
     const int32_t oldQty = _buffer[slot].qty;
 
-    if(_buffer.update(id, newQty, slot)) {
-      if constexpr(side == Sell) {
-        _total += oldQty;
-        _total -= newQty;
-      } else {
-        _total -= oldQty;
-        _total += newQty;
-      }
-
-      return true;
+    if(UNLIKELY(_buffer.update(id, newQty, slot) == false)) {
+      return false;
+    }
+    
+    if constexpr(side == Sell) {
+      _total += oldQty;
+      _total -= newQty;
+    } else {
+      _total -= oldQty;
+      _total += newQty;
     }
 
-    return false;
+    return true;
   }
 
   template<Side side>
@@ -226,17 +214,17 @@ struct Level final: noncopyable, nonmovable {
   bool cancel(int32_t id, int32_t slot) noexcept {
     const int32_t oldQty = _buffer[slot].qty;
 
-    if(_buffer.cancel(id, slot)) {
-      if constexpr(side == Sell) {
-        _total += oldQty;
-      } else {
-        _total -= oldQty;
-      }
-
-      return true;
+    if(UNLIKELY(_buffer.cancel(id, slot) == false)) {
+      return false;
     }
 
-    return false;
+    if constexpr(side == Sell) {
+      _total += oldQty;
+    } else {
+      _total -= oldQty;
+    }
+
+    return true;
   }
 
   template<Side side>
@@ -275,12 +263,13 @@ public:
     : _out(out) 
   {
     centerPrice = (((centerPrice - 1) / Shift) * Shift) + 1;
+
     _minIndex = 0;
     _minPrice = std::max(centerPrice - Levels, MinPrice);
     _maxPrice = std::min(_minPrice + Levels + Levels, MaxPrice);
 
-    clear(_sellPricesMask);
-    clear(_buyPricesMask);
+    _sellPricesMask = 0;
+    _buyPricesMask = 0;
   }
 
   Price get_min_price() const noexcept {
@@ -307,13 +296,13 @@ public:
   template<Side side>
   Price get_best_price() const noexcept {
     if constexpr(side == Sell) {
-      if(is_zero(_sellPricesMask) == false) {
+      if(_sellPricesMask != uint256_t(0)) {
         return _maxPrice - ::get_price_bit(_sellPricesMask);
       } else {
         return _maxPrice + 1;
       }
     } else {
-      if(is_zero(_buyPricesMask) == false) {
+      if(_buyPricesMask != uint256_t(0)) {
         return _minPrice + ::get_price_bit(_buyPricesMask);
       } else {
         return _minPrice - 1;
@@ -353,7 +342,7 @@ public:
       assert(level.get_total() >= 0);
     }
 
-    if(level.full()) {
+    if(UNLIKELY(level.full())) {
       return _out.push(CreateRejected(id, qty));
     }
 
@@ -376,11 +365,13 @@ public:
 
     Level& level = get_level_by_price(price);
 
-    if(side * level.get_total() <= 0) {
+    if(UNLIKELY(side * level.get_total() <= 0)) {
       return _out.push(UpdateRejected(id, newQty));
     }
 
-    const bool updated = (hasSlot == NoSlot) ? level.update<side>(id, newQty) : level.update<side>(id, newQty, slot);
+    const bool updated = (hasSlot == NoSlot)
+                       ? level.update<side>(id, newQty) 
+                       : level.update<side>(id, newQty, slot);
 
     if(UNLIKELY(updated == false)) {
       return _out.push(UpdateRejected(id, newQty));
@@ -397,17 +388,19 @@ public:
 
     Level& level = get_level_by_price(price);
 
-    if(side * level.get_total() <= 0) {
+    if(UNLIKELY(side * level.get_total() <= 0)) {
       return _out.push(CancelRejected(id));
     }
 
-    const bool canceled = (hasSlot == NoSlot) ? level.cancel<side>(id) : level.cancel<side>(id, slot);
+    const bool canceled = (hasSlot == NoSlot)
+                       ? level.cancel<side>(id) 
+                       : level.cancel<side>(id, slot);
 
     if(UNLIKELY(canceled == false)) {
       return _out.push(CancelRejected(id));
     }
 
-    if(level.empty()) {
+    if(UNLIKELY(level.empty())) {
       if constexpr(side == Sell) {
         ::clear_price_bit(_sellPricesMask, _maxPrice - price);
       } else {
@@ -468,8 +461,8 @@ private:
     _minIndex += Shift;
     _minPrice += Shift;
     _maxPrice += Shift;
-    shift_left(_sellPricesMask, Shift);
-    shift_left(_buyPricesMask, Shift);
+    _sellPricesMask <<= Shift;
+    _buyPricesMask <<= Shift;
     _create_levels(_maxPrice - (Shift - 1), _maxPrice);
   }
 
@@ -478,8 +471,8 @@ private:
     _minIndex -= Shift;
     _minPrice -= Shift;
     _maxPrice -= Shift;
-    shift_right(_sellPricesMask, Shift);
-    shift_right(_buyPricesMask, Shift);
+    _sellPricesMask >>= Shift;
+    _buyPricesMask >>= Shift;
     _create_levels(_minPrice + (Shift - 1), _minPrice);
   }
 
@@ -534,7 +527,7 @@ struct TradeEngine final: noncopyable, nonmovable {
 
     qty = _trade<side>(id, price, qty);
 
-    if(qty != 0) {
+    if(UNLIKELY(qty != 0)) {
       _orderBook.insert_order<side>(id, price, qty);
     }
   }
@@ -609,7 +602,7 @@ struct TradeEngine final: noncopyable, nonmovable {
 
 private:
   bool _check_order_id(OrderId id) const noexcept {
-    return id != Order::InvalidId;
+    return id != InvalidOrderId;
   }
 
   bool _check_price(Price price) const noexcept {
@@ -660,12 +653,13 @@ private:
 
         if(order.qty == 0) {
           level.pop();
-        }
 
-        if((order.qty == 0) && level.empty()) {
-          _orderBook.clear_price_bit<-side>(price);
+          if (level.empty()){
+            _orderBook.clear_price_bit<-side>(price);
+            break;
+          }
         }
-      } while((qty != 0) && (level.empty() == false));
+      } while((qty != 0));
     } while(qty != 0);
 
     _orderBook.shift(lastPrice);
