@@ -133,7 +133,8 @@ struct Level final: noncopyable, nonmovable {
   }
 
   bool empty() const noexcept {
-    return _buffer.empty();
+    assert(_buffer.empty() == (get_total() == 0));
+    return (get_total() == 0);
   }
 
   bool full() const noexcept {
@@ -329,7 +330,7 @@ public:
 
   template<Side side>
   void insert_order(OrderId id, Price price, Qty qty) noexcept {
-    if(_check_price(price) == false) {
+    if(UNLIKELY(_check_price(price) == false)) {
       return _out.push(CreateRejected(id, qty));
     }
 
@@ -358,7 +359,7 @@ public:
 
   template<Side side, Slot hasSlot = NoSlot>
   void update_order(OrderId id, Price price, Qty newQty, Index slot = -1) noexcept {
-    if(_check_price(price) == false) {
+    if(UNLIKELY(_check_price(price) == false)) {
       return _out.push(UpdateRejected(id, newQty));
     }
 
@@ -381,7 +382,7 @@ public:
 
   template<Side side, Slot hasSlot = NoSlot>
   void cancel_order(OrderId id, Price price, Index slot = -1) noexcept {
-    if(_check_price(price) == false) {
+    if(UNLIKELY(_check_price(price) == false)) {
       return _out.push(CancelRejected(id));
     }
 
@@ -392,8 +393,8 @@ public:
     }
 
     const bool canceled = (hasSlot == NoSlot)
-                       ? level.cancel<side>(id) 
-                       : level.cancel<side>(id, slot);
+                        ? level.cancel<side>(id) 
+                        : level.cancel<side>(id, slot);
 
     if(UNLIKELY(canceled == false)) {
       return _out.push(CancelRejected(id));
@@ -415,18 +416,15 @@ public:
 
     if(diff > OrderBook::Shift) {
       if(_maxPrice + Shift <= MaxPrice) {
-        _shift_up();
+        return _shift_up();
       }
     }
 
     if(diff < -OrderBook::Shift) {
       if(_minPrice - Shift >= MinPrice) {
-        _shift_down();
+        return _shift_down();
       }
     }
-
-    assert(_minPrice >= MinPrice);
-    assert(_maxPrice <= MaxPrice);
   }
 
 private:
@@ -438,16 +436,26 @@ private:
     return (qty >= MinQty) && (qty <= MaxQty);
   }
 
+  template<Side side>
   void _expire_levels(Level& level, Price price) noexcept {
-    for(level.set_total(0); level.empty() == false; level.pop()) {
-      _out.push(LevelExpired(price, level.front().id));
+    for(/* empty */; level.empty() == false; level.pop()) {
+      const Order& order = level.front();
+      const int32_t id = order.id;
+      const int32_t qty = order.qty;
+
+      /*
+       * Keep invariant: _buffer.empty() == (get_total() == 0)
+       */
+
+      level.set_total(level.get_total() - side * qty);
+      _out.push(LevelExpired(price, id));
     }
   }
 
   template<Side side>
   void _expire_levels(Price fromPrice, Price toPrice) noexcept {
     for(Price price = fromPrice; price != toPrice + side; price += side) {
-      _expire_levels(get_level_by_price(price), price);
+      _expire_levels<side>(get_level_by_price(price), price);
     }
   }
 
