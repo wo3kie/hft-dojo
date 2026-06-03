@@ -656,7 +656,7 @@ private:
             break;
           }
         }
-      } while((qty != 0));
+      } while(qty != 0);
     } while(qty != 0);
 
     _orderBook.shift(lastPrice);
