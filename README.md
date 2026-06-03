@@ -12,12 +12,12 @@ https://github.com/wo3kie/hft-dojo
 C++20  
   
 ## How to build it?
-cd hft-dojo
-cmake --preset debug
-cmake --preset release
-
-cmake --build --preset debug
-cmake --build --preset release
+cd hft-dojo  
+cmake --preset debug  
+cmake --preset release  
+  
+cmake --build --preset debug  
+cmake --build --preset release  
 
 ## How to clean it?
 rm -rf build
@@ -38,6 +38,8 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   }
   ```
   
+- **flat_list** - A fixed‑capacity, array‑based linked list. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions and deletions without dynamic memory allocation. 
+    
 - **flat_queue** - A fixed‑capacity, array‑based queue with a linked‑list structure. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast enqueue and dequeue operations without dynamic memory allocation. 
 
   - **flat_queue** - uses a sentinel node to manage the queue, for branchless insertions and deletions. It maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
