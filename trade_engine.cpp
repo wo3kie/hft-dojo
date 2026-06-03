@@ -6,14 +6,14 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include "assert.hpp"
 #include "trade_engine.hpp"
+#include "assert.hpp"
 #include "timer.hpp"
 
 #ifdef NDEBUG
-  constexpr auto PROFILE = "Release";
+constexpr auto PROFILE = "Release";
 #else
-  constexpr auto PROFILE = "Debug";
+constexpr auto PROFILE = "Debug";
 #endif
 
 constexpr int32_t ANY = 0;
@@ -29,23 +29,26 @@ std::string to_string(const Request& request) {
 
   std::string type;
 
-  if (request.price == 0 && request.qty > 0) {
+  if(request.price == 0 && request.qty > 0) {
     type = "Market side:tBuy";
-  } else if (request.price == 0 && request.qty < 0) {
+  } else if(request.price == 0 && request.qty < 0) {
     type = "Market side:Sell";
-  } else if (request.price > 0 && request.qty > 0) {
+  } else if(request.price > 0 && request.qty > 0) {
     type = "Limit side:Buy";
-  } else if (request.price > 0 && request.qty < 0) {
+  } else if(request.price > 0 && request.qty < 0) {
     type = "Limit side:Sell";
-  } else if (request.price < 0 && request.qty == 0) {
+  } else if(request.price < 0 && request.qty == 0) {
     type = "Cancel side:Sell";
-  } else if (request.price > 0 && request.qty == 0) {
+  } else if(request.price > 0 && request.qty == 0) {
     type = "Cancel side:Buy";
   } else {
     type = "Unknown";
   }
 
-  os << "Request: type=" << type << " id=" << request.id << " price=" << std::abs(request.price) << " qty=" << std::abs(request.qty);
+  os << "Request: type=" << type << " id=" << request.id 
+      << " price=" << std::abs(request.price) 
+      << " qty=" << std::abs(request.qty);
+
   return os.str();
 }
 
@@ -55,7 +58,14 @@ std::ostream& operator<<(std::ostream& os, const Request& request) {
 
 class RequestGenerator {
 public:
-  RequestGenerator(int32_t centerPrice, int32_t levels, double laplaceScale, double marketProb, double cancelProb, uint32_t seed = 12345)
+  RequestGenerator(
+      int32_t centerPrice, //
+      int32_t levels,
+      double laplaceScale,
+      double marketProb,
+      double cancelProb,
+      double trend = 0.1,
+      uint32_t seed = 12345)
     : _center(centerPrice)
     , _levels(levels)
     , _laplaceScale(laplaceScale)
@@ -63,63 +73,71 @@ public:
     , _p_Cancels(cancelProb)
     , _rng(seed)
     , _uni(0.0, 1.0)
-    , _uniSign(-0.5, 0.5)
+    , _trend(trend)
+    , _uniSign(-0.5, 0.5) 
   {
   }
 
-std::vector<Request> generate(int32_t count) {
-  std::vector<Request> out(count);
-  std::unordered_map<int32_t, int32_t> idPrice;
-  std::unordered_map<int32_t, int32_t> idSide;
+  std::vector<Request> generate(int32_t count) {
+    std::vector<Request> out(count);
+    std::unordered_map<int32_t, int32_t> idPrice;
+    std::unordered_map<int32_t, int32_t> idSide;
 
-  for(int32_t i = 0; i < count; i++) {
-    auto &e = out[i];
-    e.id = int32_t(i + 1);
-    double u = _uni(_rng);
+    for(int32_t i = 0; i < count; i++) {
+      if (i == count / 2) {
+        _trend = -_trend;
+      }
 
-    if(u < _p_Cancels) {
-      e.id = std::max(1, i - int32_t(_uni(_rng) * 20));
-      e.price = idPrice[e.id] * idSide[e.id];
-      e.qty = 0;
-      continue;
-    }
+      auto& e = out[i];
+      e.id = int32_t(i + 1);
+      double u = _uni(_rng);
 
-    if(u < _p_Cancels + _p_Markets) {
-      e.price = 0;
+      if(u < _p_Cancels) {
+        e.id = std::max(1, i - int32_t(_uni(_rng) * 20));
+        e.price = idPrice[e.id] * idSide[e.id];
+        e.qty = 0;
+        continue;
+      }
+
+      if(u < _p_Cancels + _p_Markets) {
+        e.price = 0;
+        e.qty = 1 + int32_t(_uni(_rng) * 10);
+
+        if(_uni(_rng) > 0.5) {
+          e.qty = -e.qty;
+        }
+
+        continue;
+      }
+
       e.qty = 1 + int32_t(_uni(_rng) * 10);
 
       if(_uni(_rng) > 0.5) {
         e.qty = -e.qty;
       }
-      
-      continue;
+
+      double s = _uniSign(_rng);
+      double x = -_laplaceScale * ((s < 0.0) ? -1.0 : 1.0) * std::log(1.0 - 2.0 * std::abs(s));
+      double price = _center + int32_t(std::round(x));
+
+      e.price = std::max(_center - _levels, std::min(price, _center + _levels));
+
+      idPrice[e.id] = e.price;
+      idSide[e.id] = (e.qty > 0) ? 1 : -1;
+
+      _center += _trend;
     }
 
-    e.qty = 1 + int32_t(_uni(_rng) * 10);
-
-    if(_uni(_rng) > 0.5) {
-      e.qty = -e.qty;
-    }
-
-    double s = _uniSign(_rng);
-    double x = -_laplaceScale * ((s < 0.0) ? -1.0 : 1.0) * std::log(1.0 - 2.0 * std::abs(s));
-    int32_t price = _center + int32_t(std::round(x));
-
-    e.price = std::max(_center - _levels, std::min(price, _center + _levels));
-
-    idPrice[e.id] = e.price;
-    idSide[e.id] = (e.qty > 0) ? 1 : -1;
+    return out;
   }
 
-  return out;
-}
-
 private:
-  int32_t _center;
-  int32_t _levels;
+  double _center;
+  double _levels;
   double _laplaceScale;
   double _p_Markets;
   double _p_Cancels;
+  double _trend;
 
   std::mt19937 _rng;
   std::uniform_real_distribution<double> _uni;
@@ -129,7 +147,7 @@ private:
 void test_bitmask() {
   uint256_t mask;
   mask = 0;
-  
+
   set_price_bit(mask, 0);
   Assert(get_price_bit(mask) == 0);
 
@@ -144,17 +162,17 @@ void test_bitmask() {
   mask = 0;
   set_price_bit(mask, 255);
   Assert(get_price_bit(mask) == 255);
-  
+
   mask = 0;
   set_price_bit(mask, 1);
   Assert(get_price_bit(mask) == 1);
 
   set_price_bit(mask, 16);
   Assert(get_price_bit(mask) == 16);
-  
+
   set_price_bit(mask, 32);
   Assert(get_price_bit(mask) == 32);
-  
+
   set_price_bit(mask, 128);
   Assert(get_price_bit(mask) == 128);
 
@@ -169,9 +187,49 @@ void test_bitmask() {
 
   clear_price_bit(mask, 32);
   Assert(get_price_bit(mask) == 16);
-  
+
   clear_price_bit(mask, 16);
   Assert(get_price_bit(mask) == 1);
+}
+
+void test_price_bits() {
+  int32_t minIndex = 100;
+  int32_t minPrice = 100;
+  int32_t maxPrice = 200;
+
+  {
+    uint256_t buyPricesMask = 0;
+    uint256_t sellPricesMask = 0;
+
+    set_price_bit(sellPricesMask, maxPrice - 10);
+    set_price_bit(buyPricesMask, 120 - minPrice);
+
+    minIndex += 4;
+    minPrice += 4;
+    maxPrice += 4;
+    sellPricesMask <<= 4;
+    buyPricesMask >>= 4;
+
+    Assert(get_price_bit(sellPricesMask) == maxPrice - 10);
+    Assert(get_price_bit(buyPricesMask) == 120 - minPrice);
+  }
+
+  {
+    uint256_t buyPricesMask = 0;
+    uint256_t sellPricesMask = 0;
+
+    set_price_bit(sellPricesMask, maxPrice - 10);
+    set_price_bit(buyPricesMask, 120 - minPrice);
+
+    minIndex -= 4;
+    minPrice -= 4;
+    maxPrice -= 4;
+    sellPricesMask >>= 4;
+    buyPricesMask <<= 4;
+
+    Assert(get_price_bit(sellPricesMask) == maxPrice - 10);
+    Assert(get_price_bit(buyPricesMask) == 120 - minPrice);
+  }
 }
 
 template<Side side>
@@ -444,56 +502,56 @@ void test_trend(int32_t centerPrice, int32_t trend = 1) {
 }
 
 void test(int32_t price) {
-    test_bitmask();
+  test_bitmask();
+  test_price_bits();
 
-    test_insert<Sell>(price);
-    test_insert<Buy>(price);
+  test_insert<Sell>(price);
+  test_insert<Buy>(price);
 
-    test_insert_invalid_id<Sell>(price);
-    test_insert_invalid_id<Buy>(price);
+  test_insert_invalid_id<Sell>(price);
+  test_insert_invalid_id<Buy>(price);
 
-    test_insert_invalid_price<Sell>(price);
-    test_insert_invalid_price<Buy>(price);
+  test_insert_invalid_price<Sell>(price);
+  test_insert_invalid_price<Buy>(price);
 
-    test_insert_invalid_qty<Sell>(price);
-    test_insert_invalid_qty<Buy>(price);
+  test_insert_invalid_qty<Sell>(price);
+  test_insert_invalid_qty<Buy>(price);
 
-    test_insert_all<Sell>(price);
-    test_insert_all<Buy>(price);
+  test_insert_all<Sell>(price);
+  test_insert_all<Buy>(price);
 
-    test_update<Sell>(price);
-    test_update<Buy>(price);
+  test_update<Sell>(price);
+  test_update<Buy>(price);
 
-    test_update_invalid_id<Sell>(price);
-    test_update_invalid_id<Buy>(price);
+  test_update_invalid_id<Sell>(price);
+  test_update_invalid_id<Buy>(price);
 
-    test_update_invalid_price<Sell>(price);
-    test_update_invalid_price<Buy>(price);
+  test_update_invalid_price<Sell>(price);
+  test_update_invalid_price<Buy>(price);
 
-    test_update_invalid_qty<Sell>(price);
-    test_update_invalid_qty<Buy>(price);
+  test_update_invalid_qty<Sell>(price);
+  test_update_invalid_qty<Buy>(price);
 
-    test_update_deleted<Sell>(price);
-    test_update_deleted<Buy>(price);
+  test_update_deleted<Sell>(price);
+  test_update_deleted<Buy>(price);
 
-    test_delete<Sell>(price);
-    test_delete<Buy>(price);
+  test_delete<Sell>(price);
+  test_delete<Buy>(price);
 
-    test_delete_invalid_id<Sell>(price);
-    test_delete_invalid_id<Buy>(price);
+  test_delete_invalid_id<Sell>(price);
+  test_delete_invalid_id<Buy>(price);
 
-    test_delete_invalid_price<Sell>(price);
-    test_delete_invalid_price<Buy>(price);
+  test_delete_invalid_price<Sell>(price);
+  test_delete_invalid_price<Buy>(price);
 
-    test_double_delete<Sell>(price);
-    test_double_delete<Buy>(price);
+  test_double_delete<Sell>(price);
+  test_double_delete<Buy>(price);
 
-    test_trade_level<Sell>(price);
-    test_trade_level<Buy>(price);
+  test_trade_level<Sell>(price);
+  test_trade_level<Buy>(price);
 
-    test_trend(price, +1);
-    test_trend(price, -1);
-
+  test_trend(price, +1);
+  test_trend(price, -1);
 }
 
 void test_micro_bench_insert() {
@@ -522,14 +580,14 @@ void test_micro_bench_insert() {
     }
 
     void teardown() {
-      engine.cancel_order<Sell>(1, engine.center_price() + 1, 1&7);
-      engine.cancel_order<Sell>(2, engine.center_price() + 2, 2&7);
-      engine.cancel_order<Sell>(3, engine.center_price() + 3, 3&7);
-      engine.cancel_order<Sell>(4, engine.center_price() + 4, 4&7);
-      engine.cancel_order<Sell>(5, engine.center_price() + 5, 5&7);
-      engine.cancel_order<Sell>(6, engine.center_price() + 6, 6&7);
-      engine.cancel_order<Sell>(7, engine.center_price() + 7, 7&7);
-      engine.cancel_order<Sell>(8, engine.center_price() + 8, 8&7);
+      engine.cancel_order<Sell>(1, engine.center_price() + 1, 1 & 7);
+      engine.cancel_order<Sell>(2, engine.center_price() + 2, 2 & 7);
+      engine.cancel_order<Sell>(3, engine.center_price() + 3, 3 & 7);
+      engine.cancel_order<Sell>(4, engine.center_price() + 4, 4 & 7);
+      engine.cancel_order<Sell>(5, engine.center_price() + 5, 5 & 7);
+      engine.cancel_order<Sell>(6, engine.center_price() + 6, 6 & 7);
+      engine.cancel_order<Sell>(7, engine.center_price() + 7, 7 & 7);
+      engine.cancel_order<Sell>(8, engine.center_price() + 8, 8 & 7);
       engine.out().clear();
     }
   } insert(engine);
@@ -587,8 +645,7 @@ void benchmark(int32_t iters) {
     Benchmark(TradeEngine& engine, int32_t iters, int32_t& events)
       : _iters(iters)
       , _engine(engine)
-      , _events(events)
-    {
+      , _events(events) {
     }
 
     int32_t _iters;
@@ -598,13 +655,13 @@ void benchmark(int32_t iters) {
 
     void setup() {
       RequestGenerator gen(
-        /* centerPrice     */ 100,
-        /* windowHalfSize  */ 124,
-        /* laplaceScale b  */ 5.0,
-        /* marketProb      */ 0.05,
-        /* cancelProb      */ 0.25,
-        /* seed            */ 123
-      );
+          /* centerPrice     */ 100,
+          /* windowHalfSize  */ 124,
+          /* laplaceScale b  */ 5.0,
+          /* marketProb      */ 0.05,
+          /* cancelProb      */ 0.25,
+          /* trend           */ 0.10,
+          /* seed            */ 123);
 
       _requests = gen.generate(_iters);
     }
@@ -613,23 +670,23 @@ void benchmark(int32_t iters) {
       _events = 0;
 
       for(const auto& e : _requests) {
-        if (e.qty > 0) {
-          if (e.price == 0) {
+        if(e.qty > 0) {
+          if(e.price == 0) {
             _engine.insert_mkt_order_ioc<Buy>(e.id, e.qty);
           } else {
             _engine.insert_order<Buy>(e.id, e.price, e.qty);
           }
-        } else if (e.qty < 0) {
-          if (e.price == 0) {
+        } else if(e.qty < 0) {
+          if(e.price == 0) {
             _engine.insert_mkt_order_ioc<Sell>(e.id, -e.qty);
           } else {
             _engine.insert_order<Sell>(e.id, e.price, -e.qty);
           }
         } else {
-          if (e.price > 0) {
-            _engine.cancel_order<Buy>(e.id, e.price, e.id&7);
-          } else if (e.price < 0) {
-            _engine.cancel_order<Sell>(e.id, -e.price, e.id&7);
+          if(e.price > 0) {
+            _engine.cancel_order<Buy>(e.id, e.price, e.id & 7);
+          } else if(e.price < 0) {
+            _engine.cancel_order<Sell>(e.id, -e.price, e.id & 7);
           }
         }
 
@@ -646,12 +703,9 @@ void benchmark(int32_t iters) {
 
   } bench(engine, iters, events);
 
-  Timer<1>(bench).log([iters, events](int ns, const std::string& msg) { 
-    std::cout << "Benchmark (" << PROFILE << ")(events=" << events << "): " 
-              << ns/1000000 << " ms :: " 
-              << (ns/events) << " ns/event :: " 
-              << (int)(1e9 * events/ns) << " events/s"
-              << std::endl; 
+  Timer<1>(bench).log([iters, events](int ns, const std::string& msg) {
+    std::cout << "Benchmark (" << PROFILE << ")(events=" << events << "): " << ns / 1000000 << " ms :: " << (ns / events)
+              << " ns/event :: " << (int)(1e9 * events / ns) << " events/s" << std::endl;
   });
 }
 
@@ -661,7 +715,7 @@ int main() {
   test(1'000);
   test(MaxPrice - 32);
 #endif
-  
+
   test_micro_bench_insert();
   test_micro_bench_trade();
 
