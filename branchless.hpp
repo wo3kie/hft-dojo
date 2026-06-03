@@ -29,7 +29,7 @@ inline T max(T x, T y) noexcept {
 
 template<std::signed_integral T>
 inline bool in_range(T x, T lo, T hi) noexcept {
-  return (T)(x - lo) <= (T)(hi - lo);
+  return (x >= lo) && (x <= hi);
 }
 
 template<std::signed_integral T>
