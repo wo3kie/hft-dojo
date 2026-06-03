@@ -131,5 +131,5 @@ private:
 
 private:
   int8_t _free{0};
-  _Node _buffer[Capacity + /* sentinel */ 1];
+  _Node _buffer[Capacity + /* Sentinel */ 1];
 };
