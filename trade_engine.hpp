@@ -12,6 +12,7 @@
 #include <cstdint>
 
 #include "assert.hpp"
+#include "branchless.hpp"
 #include "common.hpp"
 #include "events.hpp"
 #include "flat_queue_oa.hpp"
@@ -263,8 +264,8 @@ public:
     centerPrice = (((centerPrice - 1) / Shift) * Shift) + 1;
 
     _minIndex = 0;
-    _minPrice = std::max(centerPrice - Levels, MinPrice);
-    _maxPrice = std::min(_minPrice + Levels + Levels, MaxPrice);
+    _minPrice = bl::max(centerPrice - Levels, MinPrice);
+    _maxPrice = bl::min(_minPrice + Levels + Levels, MaxPrice);
 
     _sellPricesMask = 0;
     _buyPricesMask = 0;
@@ -285,9 +286,9 @@ public:
   template<Side side>
   Price get_worst_price(Price price = (side == Sell ? MinPrice : MaxPrice)) const noexcept {
     if constexpr(side == Sell) {
-      return std::max(price, _minPrice);
+      return bl::max(price, _minPrice);
     } else {
-      return std::min(price, _maxPrice);
+      return bl::min(price, _maxPrice);
     }
   }
 
