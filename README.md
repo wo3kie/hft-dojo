@@ -132,11 +132,18 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   ```
 
   ```{r, engine='bash'}
-  $ # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
-  $ ./trade_engine 
-  Micro benchmark (Release): insert: 8 ns
-  Micro benchmark (Release): trade: 9 ns
-  Benchmark (Release)(events=11877798): 265 ms :: 22 ns/event :: 44722752 events/s
+  ~/hft-dojo/build/release$ # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
+  ~/hft-dojo/build/release$ for ((i=0; i<10; i++)) ; do ./trade_engine | grep Benchmark ; done
+  Benchmark (Release)(events=12561862): 249 ms :: 19 ns/event :: 50279376 events/s
+  Benchmark (Release)(events=12561862): 239 ms :: 19 ns/event :: 52518164 events/s
+  Benchmark (Release)(events=12561862): 237 ms :: 18 ns/event :: 52796424 events/s
+  Benchmark (Release)(events=12561862): 233 ms :: 18 ns/event :: 53821392 events/s
+  Benchmark (Release)(events=12561862): 230 ms :: 18 ns/event :: 54516315 events/s
+  Benchmark (Release)(events=12561862): 236 ms :: 18 ns/event :: 53209554 events/s
+  Benchmark (Release)(events=12561862): 244 ms :: 19 ns/event :: 51446796 events/s
+  Benchmark (Release)(events=12561862): 238 ms :: 19 ns/event :: 52602812 events/s
+  Benchmark (Release)(events=12561862): 243 ms :: 19 ns/event :: 51540000 events/s
+  Benchmark (Release)(events=12561862): 248 ms :: 19 ns/event :: 50551409 events/s
   ```
     
 - **uint256_t** — a custom 256‑bit unsigned integer type implemented in `uint256.hpp`. It is designed to be a simple wrapper around two 128‑bit integers, providing basic arithmetic and bitwise operations. The implementation is minimalistic, focusing on the specific needs of the trade engine, such as setting and getting price bits for the order book.
