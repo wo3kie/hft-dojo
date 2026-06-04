@@ -493,12 +493,37 @@ void test_trend(int32_t centerPrice, int32_t trend = 1) {
   for(int32_t iter = 0; iter != 3 * (maxPrice - minPrice); iter += 1, price = update_price(price, trend)) {
     engine.insert_order<Sell>(1000000 + price, price, 100);
     engine.out().clear();
-    // Assert(engine.out().pop() == CreateAccepted(1000000 + price, 0, 100));
 
     engine.insert_order<Buy>(2000000 + price, price, 100);
     engine.out().clear();
-    // Assert(engine.out().pop() == Trade(price, 100, 2000000 + price, 1000000 + price));
   }
+}
+
+template<Side side>
+void test_fok_trade(int32_t centerPrice) {
+  QueueOut out;
+  TradeEngine engine(out, centerPrice);
+
+  engine.insert_order<side>(1, centerPrice + side * 1, 100);
+  Assert(engine.out().pop() == CreateAccepted(1, ANY, 100));
+
+  engine.insert_order<side>(2, centerPrice + side * 2, 100);
+  Assert(engine.out().pop() == CreateAccepted(2, ANY, 100));
+
+  engine.insert_order<side>(3, centerPrice + side * 3, 100);
+  Assert(engine.out().pop() == CreateAccepted(3, ANY, 100));
+
+  engine.insert_order_fok<-side>(4, centerPrice, 400);
+  Assert(engine.out().pop() == CreateRejected(4, 400, Reason::FOK));
+
+  engine.insert_order<side>(5, centerPrice + side * 5, 100);
+  Assert(engine.out().pop() == CreateAccepted(5, ANY, 100));
+
+  engine.insert_order_fok<-side>(6, centerPrice, 400);
+  Assert(engine.out().pop() == Trade(ANY, 100, 6, ANY));
+  Assert(engine.out().pop() == Trade(ANY, 100, 6, ANY));
+  Assert(engine.out().pop() == Trade(ANY, 100, 6, ANY));
+  Assert(engine.out().pop() == Trade(ANY, 100, 6, ANY));
 }
 
 void test(int32_t price) {
@@ -552,6 +577,9 @@ void test(int32_t price) {
 
   test_trend(price, +1);
   test_trend(price, -1);
+
+  test_fok_trade<Sell>(price);
+  test_fok_trade<Buy>(price);
 }
 
 void test_micro_bench_insert() {
