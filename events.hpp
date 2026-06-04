@@ -16,6 +16,27 @@
 
 #include "./ring_buffer_spsc.hpp"
 
+struct Reason {
+  static constexpr int32_t Request = 0;
+  static constexpr int32_t Price = 1;
+  static constexpr int32_t Buffer = 2;
+  static constexpr int32_t Level = 3;
+  static constexpr int32_t Slot = 4;
+  static constexpr int32_t IOC = 5;
+};
+
+std::string to_string(int32_t reason) {
+  switch(reason) {
+    case Reason::Request: return "Request";
+    case Reason::Price: return "Price";
+    case Reason::Buffer: return "Buffer";
+    case Reason::Level: return "Level";
+    case Reason::Slot: return "Slot";
+    case Reason::IOC: return "IOC";
+    default: return "UnknownReason(" + std::to_string(reason) + ")";
+  }
+}
+
 enum EventType : int32_t {
   ETrade = -1,
 
@@ -57,24 +78,24 @@ Event CreateAccepted(int32_t id, int32_t slot, int32_t qty) {
   return {.m1 = EventType::ECreateAccepted, .m2 = id, .m3 = slot, .m4 = qty};
 }
 
-Event CreateRejected(int32_t id, int32_t size) {
-  return {.m1 = EventType::ECreateRejected, .m2 = id, .m3 = size};
+Event CreateRejected(int32_t id, int32_t size, int32_t reason = Reason::Request) {
+  return {.m1 = EventType::ECreateRejected, .m2 = id, .m3 = size, .m4 = reason};
 }
 
 Event CancelAccepted(int32_t id) {
   return {.m1 = EventType::ECancelAccepted, .m2 = id};
 }
 
-Event CancelRejected(int32_t id) {
-  return {.m1 = EventType::ECancelRejected, .m2 = id};
+Event CancelRejected(int32_t id, int32_t reason = Reason::Request) {
+  return {.m1 = EventType::ECancelRejected, .m2 = id, .m3 = reason};
 }
 
 Event UpdateAccepted(int32_t id) {
   return {.m1 = EventType::EUpdateAccepted, .m2 = id};
 }
 
-Event UpdateRejected(int32_t id, int32_t size) {
-  return {.m1 = EventType::EUpdateRejected, .m2 = id, .m3 = size};
+Event UpdateRejected(int32_t id, int32_t size, int32_t reason = Reason::Request) {
+  return {.m1 = EventType::EUpdateRejected, .m2 = id, .m3 = size, .m4 = reason};
 }
 
 Event LevelExpired(int32_t price, int32_t id) {
@@ -93,15 +114,15 @@ std::string to_string(const Event& event) {
   } else if(event.m1 == EventType::ECreateAccepted) {
     os << "CreateAccepted: id=" << event.m2 << " slot=" << event.m3 << " qty=" << event.m4;
   } else if(event.m1 == EventType::ECreateRejected) {
-    os << "CreateRejected: id=" << event.m2 << " size=" << event.m3;
+    os << "CreateRejected: id=" << event.m2 << " size=" << event.m3 << " reason=" << to_string(event.m4);
   } else if(event.m1 == EventType::EUpdateAccepted) {
     os << "UpdateAccepted: id=" << event.m2;
   } else if(event.m1 == EventType::EUpdateRejected) {
-    os << "UpdateRejected: id=" << event.m2 << " size=" << event.m3;
+    os << "UpdateRejected: id=" << event.m2 << " size=" << event.m3 << " reason=" << to_string(event.m4);
   } else if(event.m1 == EventType::ECancelAccepted) {
     os << "CancelAccepted: id=" << event.m2;
   } else if(event.m1 == EventType::ECancelRejected) {
-    os << "CancelRejected: id=" << event.m2;
+    os << "CancelRejected: id=" << event.m2 << " reason=" << to_string(event.m3);
   } else if(event.m1 == EventType::ELevelExpired) {
     os << "LevelExpired: price=" << event.m2 << " id=" << event.m3;
   } else if(event.m1 == EventType::ELevelCreated) {
