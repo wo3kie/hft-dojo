@@ -17,7 +17,6 @@
 #include "events.hpp"
 #include "flat_queue_oa.hpp"
 
-
 /*
  * PriceBits
  */
@@ -331,7 +330,7 @@ public:
   template<Side side>
   void insert_order(OrderId id, Price price, Qty qty) noexcept {
     if(UNLIKELY(_check_price(price) == false)) {
-      return _out.push(CreateRejected(id, qty));
+      return _out.push(CreateRejected(id, qty, Reason::Price));
     }
 
     Level& level = get_level_by_price(price);
@@ -343,7 +342,7 @@ public:
     }
 
     if(UNLIKELY(level.full())) {
-      return _out.push(CreateRejected(id, qty));
+      return _out.push(CreateRejected(id, qty, Reason::Buffer));
     }
 
     const Index slot = level.push<side>(id, qty);
@@ -360,13 +359,13 @@ public:
   template<Side side, Slot hasSlot = NoSlot>
   void update_order(OrderId id, Price price, Qty newQty, Index slot = -1) noexcept {
     if(UNLIKELY(_check_price(price) == false)) {
-      return _out.push(UpdateRejected(id, newQty));
+      return _out.push(UpdateRejected(id, newQty, Reason::Price));
     }
 
     Level& level = get_level_by_price(price);
 
     if(UNLIKELY(side * level.get_total() <= 0)) {
-      return _out.push(UpdateRejected(id, newQty));
+      return _out.push(UpdateRejected(id, newQty, Reason::Level));
     }
 
     const bool updated = (hasSlot == NoSlot)
@@ -374,7 +373,7 @@ public:
                        : level.update<side>(id, newQty, slot);
 
     if(UNLIKELY(updated == false)) {
-      return _out.push(UpdateRejected(id, newQty));
+      return _out.push(UpdateRejected(id, newQty, Reason::Slot));
     }
 
     _out.push(UpdateAccepted(id));
@@ -383,13 +382,13 @@ public:
   template<Side side, Slot hasSlot = NoSlot>
   void cancel_order(OrderId id, Price price, Index slot = -1) noexcept {
     if(UNLIKELY(_check_price(price) == false)) {
-      return _out.push(CancelRejected(id));
+      return _out.push(CancelRejected(id, Reason::Price));
     }
 
     Level& level = get_level_by_price(price);
 
     if(UNLIKELY(side * level.get_total() <= 0)) {
-      return _out.push(CancelRejected(id));
+      return _out.push(CancelRejected(id, Reason::Level));
     }
 
     const bool canceled = (hasSlot == NoSlot)
@@ -397,7 +396,7 @@ public:
                         : level.cancel<side>(id, slot);
 
     if(UNLIKELY(canceled == false)) {
-      return _out.push(CancelRejected(id));
+      return _out.push(CancelRejected(id, Reason::Slot));
     }
 
     if(UNLIKELY(level.empty())) {
@@ -468,8 +467,8 @@ private:
     _minIndex += Shift;
     _minPrice += Shift;
     _maxPrice += Shift;
-    _sellPricesMask <<= Shift;
-    _buyPricesMask >>= Shift;
+    _sellPricesMask.shl<Shift>();
+    _buyPricesMask.shr<Shift>();
     _create_levels(_maxPrice - (Shift - 1), _maxPrice);
   }
 
@@ -478,9 +477,9 @@ private:
     _minIndex -= Shift;
     _minPrice -= Shift;
     _maxPrice -= Shift;
-    _sellPricesMask >>= Shift;
-    _buyPricesMask <<= Shift;
-    _create_levels(_minPrice + (Shift - 1), _minPrice);
+    _sellPricesMask.shr<Shift>();
+    _buyPricesMask.shl<Shift>();
+    _create_levels(_minPrice, _minPrice + (Shift - 1));
   }
 
 private:
@@ -527,7 +526,7 @@ struct TradeEngine final: noncopyable, nonmovable {
   void insert_order(OrderId id, Price price, Qty qty) noexcept {
 #ifndef NDEBUG
     if(UNLIKELY(! (_check_order_id(id) && _check_price(price) && _check_qty(qty)))) {
-      return _out.push(CreateRejected(id, qty));
+      return _out.push(CreateRejected(id, qty, Reason::Request));
     }
 #endif
 
@@ -542,14 +541,14 @@ struct TradeEngine final: noncopyable, nonmovable {
   void insert_order_ioc(OrderId id, Price price, Qty qty) noexcept {
 #ifndef NDEBUG
     if(UNLIKELY(! (_check_order_id(id) && _check_price(price) && _check_qty(qty)))) {
-      return _out.push(CreateRejected(id, qty));
+      return _out.push(CreateRejected(id, qty, Reason::Request));
     }
 #endif
 
     qty = _trade<side>(id, price, qty);
 
     if(UNLIKELY(qty != 0)) {
-      _out.push(CreateRejected(id, qty));
+      _out.push(CreateRejected(id, qty, Reason::IOC));
     }
   }
 
@@ -562,7 +561,7 @@ struct TradeEngine final: noncopyable, nonmovable {
   void update_order(OrderId id, Price price, Qty newQty) noexcept {
 #ifndef NDEBUG
     if(UNLIKELY(! (_check_order_id(id) && _check_price(price) && _check_qty(newQty)))) {
-      return _out.push(UpdateRejected(id, newQty));
+      return _out.push(UpdateRejected(id, newQty, Reason::Request));
     }
 #endif
 
@@ -573,7 +572,7 @@ struct TradeEngine final: noncopyable, nonmovable {
   void update_order(OrderId id, Price price, Qty newQty, Index slot) noexcept {
 #ifndef NDEBUG
     if(UNLIKELY(! (_check_order_id(id) && _check_price(price) && _check_slot(slot) && _check_qty(newQty)))) {
-      return _out.push(UpdateRejected(id, newQty));
+      return _out.push(UpdateRejected(id, newQty, Reason::Request));
     }
 #endif
 
@@ -584,7 +583,7 @@ struct TradeEngine final: noncopyable, nonmovable {
   void cancel_order(OrderId id, Price price) noexcept {
 #ifndef NDEBUG
     if(UNLIKELY(! (_check_order_id(id) && _check_price(price)))) {
-      return _out.push(CancelRejected(id));
+      return _out.push(CancelRejected(id, Reason::Request));
     }
 #endif
 
@@ -595,7 +594,7 @@ struct TradeEngine final: noncopyable, nonmovable {
   void cancel_order(OrderId id, Price price, Index slot) noexcept {
 #ifndef NDEBUG
     if(UNLIKELY(! (_check_order_id(id) && _check_price(price) && _check_slot(slot)))) {
-      return _out.push(CancelRejected(id));
+      return _out.push(CancelRejected(id, Reason::Request));
     }
 #endif
 
