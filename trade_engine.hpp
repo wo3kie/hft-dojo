@@ -548,8 +548,29 @@ struct TradeEngine final: noncopyable, nonmovable {
   }
 
   template<Side side>
+  void insert_order_fok(OrderId id, Price priceLimit, Qty qty) noexcept {
+#ifndef NDEBUG
+    if(UNLIKELY(! (_check_order_id(id) && _check_price(priceLimit) && _check_qty(qty)))) {
+      return _out.push(CreateRejected(id, qty, Reason::Request));
+    }
+#endif
+
+    if(UNLIKELY(_check_fok<side>(priceLimit, qty) == false)) {
+      return _out.push(CreateRejected(id, qty, Reason::FOK));
+    }
+
+    qty = _trade<side>(id, priceLimit, qty);
+    assert(qty == 0);
+  }
+
+  template<Side side>
   void insert_mkt_order_ioc(OrderId id, Qty qty) noexcept {
     insert_order_ioc<side>(id, (side == Sell) ? MinPrice : MaxPrice, qty);
+  }
+
+  template<Side side>
+  void insert_mkt_order_fok(OrderId id, Qty qty) noexcept {
+    insert_order_fok<side>(id, (side == Sell) ? MinPrice : MaxPrice, qty);
   }
 
   template<Side side>
@@ -618,9 +639,7 @@ private:
   }
 
   template<Side side>
-  Qty _trade(OrderId id, Price priceLimit, Qty qty) noexcept {
-    priceLimit = _orderBook.get_bottom_price<side>(priceLimit);
-
+  bool _check_fok(Price priceLimit, Qty qty) noexcept {
     const auto check_price = [](Price price, Price priceLimit) -> bool {
       if constexpr(side == Sell) {
         return price >= priceLimit;
@@ -628,7 +647,36 @@ private:
         return price <= priceLimit;
       }
     };
+    
+    priceLimit = _orderBook.get_bottom_price<side>(priceLimit);
+    Price price = _orderBook.get_top_price<-side>();
+    
+    do {
+      if(check_price(price, priceLimit) == false) {
+        break;
+      }
 
+      Level& level = _orderBook.get_level_by_price(price);
+      assert((side * level.get_total()) <= 0);
+      
+      qty += side * level.get_total();
+      price += side;
+    } while(qty > 0);
+    
+    return (qty <= 0);
+  }
+
+  template<Side side>
+  Qty _trade(OrderId id, Price priceLimit, Qty qty) noexcept {
+    const auto check_price = [](Price price, Price priceLimit) -> bool {
+      if constexpr(side == Sell) {
+        return price >= priceLimit;
+      } else {
+        return price <= priceLimit;
+      }
+    };
+    
+    priceLimit = _orderBook.get_bottom_price<side>(priceLimit);
     Price lastPrice = _orderBook.get_center_price();
 
     do {
@@ -639,7 +687,7 @@ private:
       }
 
       Level& level = _orderBook.get_level_by_price(price);
-      assert((level.get_total() * side) < 0);
+      assert((side * level.get_total()) < 0);
 
       do {
         Order& order = level.front();
