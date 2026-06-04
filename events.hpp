@@ -23,6 +23,7 @@ struct Reason {
   static constexpr int32_t Level = 3;
   static constexpr int32_t Slot = 4;
   static constexpr int32_t IOC = 5;
+  static constexpr int32_t FOK = 6;
 };
 
 std::string to_string(int32_t reason) {
@@ -33,6 +34,7 @@ std::string to_string(int32_t reason) {
     case Reason::Level: return "Level";
     case Reason::Slot: return "Slot";
     case Reason::IOC: return "IOC";
+    case Reason::FOK: return "FOK";
     default: return "UnknownReason(" + std::to_string(reason) + ")";
   }
 }
