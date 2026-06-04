@@ -643,7 +643,7 @@ private:
 
       do {
         Order& order = level.front();
-        const Qty min = std::min(qty, order.qty);
+        const Qty min = bl::min(qty, order.qty);
 
         qty -= min;
         order.qty -= min;
