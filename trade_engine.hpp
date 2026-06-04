@@ -284,7 +284,7 @@ public:
   }
 
   template<Side side>
-  Price get_worst_price(Price price = (side == Sell ? MinPrice : MaxPrice)) const noexcept {
+  Price get_bottom_price(Price price = (side == Sell ? MinPrice : MaxPrice)) const noexcept {
     if constexpr(side == Sell) {
       return bl::max(price, _minPrice);
     } else {
@@ -293,7 +293,7 @@ public:
   }
 
   template<Side side>
-  Price get_best_price() const noexcept {
+  Price get_top_price() const noexcept {
     if constexpr(side == Sell) {
       if(_sellPricesMask != uint256_t(0)) {
         return _maxPrice - ::get_price_bit(_sellPricesMask);
@@ -334,12 +334,7 @@ public:
     }
 
     Level& level = get_level_by_price(price);
-
-    if constexpr(side == Sell) {
-      assert(level.get_total() <= 0);
-    } else {
-      assert(level.get_total() >= 0);
-    }
+    assert(side * level.get_total() >= 0);
 
     if(UNLIKELY(level.full())) {
       return _out.push(CreateRejected(id, qty, Reason::Buffer));
@@ -624,7 +619,7 @@ private:
 
   template<Side side>
   Qty _trade(OrderId id, Price priceLimit, Qty qty) noexcept {
-    priceLimit = _orderBook.get_worst_price<side>(priceLimit);
+    priceLimit = _orderBook.get_bottom_price<side>(priceLimit);
 
     const auto check_price = [](Price price, Price priceLimit) -> bool {
       if constexpr(side == Sell) {
@@ -637,7 +632,7 @@ private:
     Price lastPrice = _orderBook.get_center_price();
 
     do {
-      const Price price = _orderBook.get_best_price<-side>();
+      const Price price = _orderBook.get_top_price<-side>();
 
       if(check_price(price, priceLimit) == false) {
         break;
