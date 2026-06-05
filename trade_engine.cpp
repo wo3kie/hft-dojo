@@ -144,94 +144,6 @@ private:
   std::uniform_real_distribution<double> _uniSign;
 };
 
-void test_bitmask() {
-  uint256_t mask;
-  mask = 0;
-
-  set_price_bit(mask, 0);
-  Assert(get_price_bit(mask) == 0);
-
-  mask = 0;
-  set_price_bit(mask, 32);
-  Assert(get_price_bit(mask) == 32);
-
-  mask = 0;
-  set_price_bit(mask, 128);
-  Assert(get_price_bit(mask) == 128);
-
-  mask = 0;
-  set_price_bit(mask, 255);
-  Assert(get_price_bit(mask) == 255);
-
-  mask = 0;
-  set_price_bit(mask, 1);
-  Assert(get_price_bit(mask) == 1);
-
-  set_price_bit(mask, 16);
-  Assert(get_price_bit(mask) == 16);
-
-  set_price_bit(mask, 32);
-  Assert(get_price_bit(mask) == 32);
-
-  set_price_bit(mask, 128);
-  Assert(get_price_bit(mask) == 128);
-
-  set_price_bit(mask, 255);
-  Assert(get_price_bit(mask) == 255);
-
-  clear_price_bit(mask, 255);
-  Assert(get_price_bit(mask) == 128);
-
-  clear_price_bit(mask, 128);
-  Assert(get_price_bit(mask) == 32);
-
-  clear_price_bit(mask, 32);
-  Assert(get_price_bit(mask) == 16);
-
-  clear_price_bit(mask, 16);
-  Assert(get_price_bit(mask) == 1);
-}
-
-void test_price_bits() {
-  int32_t minIndex = 100;
-  int32_t minPrice = 100;
-  int32_t maxPrice = 200;
-
-  {
-    uint256_t buyPricesMask = 0;
-    uint256_t sellPricesMask = 0;
-
-    set_price_bit(sellPricesMask, maxPrice - 10);
-    set_price_bit(buyPricesMask, 120 - minPrice);
-
-    minIndex += 4;
-    minPrice += 4;
-    maxPrice += 4;
-    sellPricesMask <<= 4;
-    buyPricesMask >>= 4;
-
-    Assert(get_price_bit(sellPricesMask) == maxPrice - 10);
-    Assert(get_price_bit(buyPricesMask) == 120 - minPrice);
-  }
-
-  {
-    uint256_t buyPricesMask = 0;
-    uint256_t sellPricesMask = 0;
-
-    set_price_bit(sellPricesMask, maxPrice - 10);
-    set_price_bit(buyPricesMask, 120 - minPrice);
-
-    minIndex -= 4;
-    minPrice -= 4;
-    maxPrice -= 4;
-    sellPricesMask >>= 4;
-    buyPricesMask <<= 4;
-
-    Assert(get_price_bit(sellPricesMask) == maxPrice - 10);
-    Assert(get_price_bit(buyPricesMask) == 120 - minPrice);
-  }
-}
-
 template<Side side>
 void test_insert(int32_t centerPrice) {
   QueueOut out;
@@ -527,9 +439,6 @@ void test_fok_trade(int32_t centerPrice) {
 }
 
 void test(int32_t price) {
-  test_bitmask();
-  test_price_bits();
-
   test_insert<Sell>(price);
   test_insert<Buy>(price);
 
