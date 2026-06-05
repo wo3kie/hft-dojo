@@ -65,6 +65,8 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
     
 - **map_reduce** - An implementation of the parallel map and serial reduce paradigm in C++.
   
+- **price_bits** — a compact bitmask structure that tracks the occupancy of price levels in the order book. It provides efficient methods for setting, clearing, and querying bits, as well as counting leading zeros to quickly identify the best bid and ask levels.
+  
 - **ring_buffer** - A collection of ring buffer implementations for different concurrency scenarios. Each implementation is optimized for a specific use case, providing efficient and low‑latency communication between threads.
 
   - **ring_buffer** - Single‑threaded ring buffer. It is designed for scenarios where only one thread is producing and consuming data, so it does not include any synchronization mechanisms. This makes it very fast and efficient for single‑threaded use cases.
@@ -117,7 +119,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   - **Level** — represents a single price level and holds all orders queued at that price. When the OMS provides the correct `slot_id`, updates and cancels are resolved in constant time. If not, the engine falls back to an efficient open‑addressing hash probe to locate the order by `order_id`. Each level also tracks its aggregate quantity, which is essential for fast FOK/IOC validation.
 
   - **OrderBook** — the structure responsible for holding all orders across price levels. It delegates *create*, *update*, and *delete* operations to its underlying components. The book can shift its price window up or down in place, allowing efficient trend‑following adjustments without reallocating data. Orders that fall outside the shifted window are treated as expired. It uses bitmasks to track which price levels are active, enabling efficient retrieval of the best bid and ask levels in constant time.
-
+    
   - **TradeEngine** — the high‑level orchestrator of the matching system. All internal parameters, such as the number of price levels and the capacity of each level, are chosen so the complete data structure resides entirely in a 32 KB L1 cache for maximum performance. Requests are submitted via API calls, and resulting events are delivered through a FIFO SPSC ring buffer. The engine handles limit orders, market orders, and advanced execution types like FOK and IOC.
   
   ```{r, engine='cpp'}
@@ -145,5 +147,3 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   Benchmark (Release)(events=12561862): 243 ms :: 19 ns/event :: 51540000 events/s
   Benchmark (Release)(events=12561862): 248 ms :: 19 ns/event :: 50551409 events/s
   ```
-    
-- **uint256_t** — a custom 256‑bit unsigned integer type implemented in `uint256.hpp`. It is designed to be a simple wrapper around two 128‑bit integers, providing basic arithmetic and bitwise operations. The implementation is minimalistic, focusing on the specific needs of the trade engine, such as setting and getting price bits for the order book.
