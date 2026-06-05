@@ -19,8 +19,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "uint256.hpp"
-
 inline std::string demangle(const char* mangled_name) {
   int status = 0;
   char* demangled = abi::__cxa_demangle(mangled_name, nullptr, nullptr, &status);
