@@ -16,23 +16,7 @@
 #include "common.hpp"
 #include "events.hpp"
 #include "flat_queue_oa.hpp"
-
-/*
- * PriceBits
- */
-
-void set_price_bit(uint256_t& mask, uint8_t price) noexcept {
-  mask.data[price >> 7] |= (uint128_t)1 << (price & 127);
-}
-
-void clear_price_bit(uint256_t& mask, uint8_t price) noexcept {
-  mask.data[price >> 7] &= ~((uint128_t)1 << (price & 127));
-}
-
-uint8_t get_price_bit(uint256_t mask) noexcept {
-  assert(mask != uint256_t(0));
-  return 256 - 1 - clz256(mask);
-}
+#include "price_bits.hpp"
 
 /*
  * Order
@@ -266,9 +250,6 @@ public:
     _minIndex = 0;
     _minPrice = bl::max(centerPrice - Levels, MinPrice);
     _maxPrice = bl::min(_minPrice + Levels + Levels, MaxPrice);
-
-    _sellPricesMask = 0;
-    _buyPricesMask = 0;
   }
 
   Price get_min_price() const noexcept {
@@ -295,14 +276,14 @@ public:
   template<Side side>
   Price get_top_price() const noexcept {
     if constexpr(side == Sell) {
-      if(_sellPricesMask != uint256_t(0)) {
-        return _maxPrice - ::get_price_bit(_sellPricesMask);
+      if(!_sellPricesMask.empty()) {
+        return _maxPrice - _sellPricesMask.clz();
       } else {
         return _maxPrice + 1;
       }
     } else {
-      if(_buyPricesMask != uint256_t(0)) {
-        return _minPrice + ::get_price_bit(_buyPricesMask);
+      if(!_buyPricesMask.empty()) {
+        return _minPrice + _buyPricesMask.clz();
       } else {
         return _minPrice - 1;
       }
@@ -312,9 +293,9 @@ public:
   template<Side side>
   void clear_price_bit(Price price) noexcept {
     if constexpr(side == Sell) {
-      ::clear_price_bit(_sellPricesMask, _maxPrice - price);
+      _sellPricesMask.clear(_maxPrice - price);
     } else {
-      ::clear_price_bit(_buyPricesMask, price - _minPrice);
+      _buyPricesMask.clear(price - _minPrice);
     }
   }
 
@@ -343,9 +324,9 @@ public:
     const Index slot = level.push<side>(id, qty);
 
     if constexpr(side == Sell) {
-      ::set_price_bit(_sellPricesMask, _maxPrice - price);
+      _sellPricesMask.set(_maxPrice - price);
     } else {
-      ::set_price_bit(_buyPricesMask, price - _minPrice);
+      _buyPricesMask.set(price - _minPrice);
     }
 
     _out.push(CreateAccepted(id, slot, qty));
@@ -396,9 +377,9 @@ public:
 
     if(UNLIKELY(level.empty())) {
       if constexpr(side == Sell) {
-        ::clear_price_bit(_sellPricesMask, _maxPrice - price);
+        _sellPricesMask.clear(_maxPrice - price);
       } else {
-        ::clear_price_bit(_buyPricesMask, price - _minPrice);
+        _buyPricesMask.clear(price - _minPrice);
       }
     }
 
@@ -484,8 +465,8 @@ private:
   Price _minPrice;
   Price _maxPrice;
 
-  uint256_t _sellPricesMask;
-  uint256_t _buyPricesMask;
+  PriceBits<256> _sellPricesMask;
+  PriceBits<256> _buyPricesMask;
 
   QueueOut& _out;
   Level _levels[Size];
