@@ -138,7 +138,7 @@ struct Level final: noncopyable, nonmovable {
 
   template<Side side>
   bool push(int32_t id, int32_t qty, int32_t slot) noexcept {
-    if(_buffer.insert(id, qty, slot) == false) {
+    if(UNLIKELY(_buffer.insert(id, qty, slot) == false)) {
       return false;
     }
 
@@ -276,13 +276,13 @@ public:
   template<Side side>
   Price get_top_price() const noexcept {
     if constexpr(side == Sell) {
-      if(!_sellPricesMask.empty()) {
+      if(_sellPricesMask.empty() == false) {
         return _maxPrice - _sellPricesMask.clz();
       } else {
         return _maxPrice + 1;
       }
     } else {
-      if(!_buyPricesMask.empty()) {
+      if(_buyPricesMask.empty() == false) {
         return _minPrice + _buyPricesMask.clz();
       } else {
         return _minPrice - 1;
@@ -412,7 +412,7 @@ private:
   }
 
   template<Side side>
-  void _expire_levels(Level& level, Price price) noexcept {
+  void _expire_level(Level& level, Price price) noexcept {
     for(/* empty */; level.empty() == false; level.pop()) {
       const Order& order = level.front();
       const int32_t id = order.id;
@@ -430,7 +430,7 @@ private:
   template<Side side>
   void _expire_levels(Price fromPrice, Price toPrice) noexcept {
     for(Price price = fromPrice; price != toPrice + side; price += side) {
-      _expire_levels<side>(get_level_by_price(price), price);
+      _expire_level<side>(get_level_by_price(price), price);
     }
   }
 
@@ -633,7 +633,7 @@ private:
     Price price = _orderBook.get_top_price<-side>();
     
     do {
-      if(check_price(price, priceLimit) == false) {
+      if(UNLIKELY(check_price(price, priceLimit) == false)) {
         break;
       }
 
@@ -663,7 +663,7 @@ private:
     do {
       const Price price = _orderBook.get_top_price<-side>();
 
-      if(check_price(price, priceLimit) == false) {
+      if(UNLIKELY(check_price(price, priceLimit) == false)) {
         break;
       }
 
@@ -683,7 +683,7 @@ private:
         if(order.qty == 0) {
           level.pop();
 
-          if (level.empty()){
+          if (UNLIKELY(level.empty())){
             _orderBook.clear_price_bit<-side>(price);
             break;
           }
