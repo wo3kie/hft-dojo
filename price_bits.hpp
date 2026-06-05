@@ -10,27 +10,28 @@
 
 #include <cstdint>
 
-template<size_t Bits>
+template<uint32_t Bits>
 struct PriceBits final {
   static_assert(Bits % 64 == 0);
-  static constexpr size_t Chunks = Bits / 64;
+  static constexpr uint32_t Chunks = Bits / 64;
 
-  uint64_t data[Chunks]{};
+public:
+  PriceBits() = default;
 
   void set(uint32_t bit) noexcept {
-    const size_t idx = bit >> 6;
-    const size_t off = bit & 63;
+    const uint32_t idx = bit >> 6;
+    const uint32_t off = bit & 63;
     data[idx] |= (uint64_t(1) << off);
   }
 
   void clear(uint32_t bit) noexcept {
-    const size_t idx = bit >> 6;
-    const size_t off = bit & 63;
+    const uint32_t idx = bit >> 6;
+    const uint32_t off = bit & 63;
     data[idx] &= ~(uint64_t(1) << off);
   }
 
   bool empty() const noexcept {
-    for(size_t i = 0; i < Chunks; ++i) {
+    for(uint32_t i = 0; i < Chunks; ++i) {
       if(data[i] != 0) {
         return false;
       }
@@ -40,13 +41,13 @@ struct PriceBits final {
   }
 
   void reset() noexcept {
-    for(size_t i = 0; i < Chunks; ++i) {
+    for(uint32_t i = 0; i < Chunks; ++i) {
       data[i] = 0;
     }
   }
 
   uint32_t clz() const noexcept {
-    for(size_t i = Chunks; i-- > 0;) {
+    for(uint32_t i = Chunks; i-- > 0;) {
       const uint64_t x = data[i];
 
       if(x != 0) {
@@ -61,7 +62,7 @@ struct PriceBits final {
   }
 
   uint32_t ctz() const noexcept {
-    for(size_t i = 0; i < Chunks; ++i) {
+    for(uint32_t i = 0; i < Chunks; ++i) {
       const uint64_t x = data[i];
 
       if(x != 0) {
@@ -84,7 +85,7 @@ struct PriceBits final {
     } 
     
     if constexpr(N < 64) {
-      for(size_t i = Chunks; i-- > 1;) {
+      for(uint32_t i = Chunks; i-- > 1;) {
         const uint64_t lo = data[i - 1];
         const uint64_t hi = data[i];
         data[i] = (hi << N) | (lo >> (64 - N));
@@ -92,7 +93,7 @@ struct PriceBits final {
 
       data[0] <<= N;
     } else { 
-      for(size_t i = Chunks; i-- > 1;) {
+      for(uint32_t i = Chunks; i-- > 1;) {
         data[i] = data[i - 1];
       }
 
@@ -109,7 +110,7 @@ struct PriceBits final {
     } 
     
     if constexpr(N < 64) {
-      for(size_t i = 0; i < Chunks - 1; ++i) {
+      for(uint32_t i = 0; i < Chunks - 1; ++i) {
         const uint64_t lo = data[i];
         const uint64_t hi = data[i + 1];
         data[i] = (lo >> N) | (hi << (64 - N));
@@ -117,11 +118,14 @@ struct PriceBits final {
 
       data[Chunks - 1] >>= N;
     } else {
-      for(size_t i = 0; i < Chunks - 1; ++i) {
+      for(uint32_t i = 0; i < Chunks - 1; ++i) {
         data[i] = data[i + 1];
       }
 
       data[Chunks - 1] = 0;
     }
   }
+
+private:
+  uint64_t data[Chunks]{};
 };
