@@ -67,6 +67,8 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   
 - **price_bits** — a compact bitmask structure that tracks the occupancy of price levels in the order book. It provides efficient methods for setting, clearing, and querying bits, as well as counting leading zeros to quickly identify the best bid and ask levels.
   
+- **random** - A simple linear congruential generator (LCG) for producing pseudo‑random numbers. It is designed for scenarios where a fast and deterministic random number generator is needed, such as in testing and benchmarking.
+
 - **ring_buffer** - A collection of ring buffer implementations for different concurrency scenarios. Each implementation is optimized for a specific use case, providing efficient and low‑latency communication between threads.
 
   - **ring_buffer** - Single‑threaded ring buffer. It is designed for scenarios where only one thread is producing and consuming data, so it does not include any synchronization mechanisms. This makes it very fast and efficient for single‑threaded use cases.
