@@ -37,8 +37,8 @@ public:
   }
 
 public:
-  bool insert(const TKey& key) noexcept {
-    return _insert(key) != npos;
+  int32_t insert(const TKey& key) noexcept {
+    return _insert(key);
   }
 
   TKey* find(const TKey& key) noexcept {

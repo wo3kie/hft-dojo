@@ -29,7 +29,7 @@ void test_bs_tree() {
   std::shuffle(values.begin(), values.end(), lcg);
   
   for(int i = 0; i < N; ++i) {
-    Assert(tree.insert(values[i]));
+    Assert(tree.insert(values[i]) != -1);
   }
   
   for(int i = 0; i < N; ++i) {
