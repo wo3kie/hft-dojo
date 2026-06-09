@@ -48,6 +48,10 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
   - **flat_queue_oa** - An open‑addressing variant of the flat queue. It uses a different approach to manage free slots, which can be more efficient in certain scenarios, especially when slot ids can't be cached.
 
+- **flat_tree** - A fixed‑capacity, array‑based binary search tree. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions, deletions, and lookups without dynamic memory allocation. The tree maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
+  
+  - **flat_tree_bs** - The simplest binary-search variant of the flat tree without nodes balancing. It is designed for scenarios where the order of insertions and deletions is such that the tree remains reasonably balanced, or where the performance of unbalanced trees is acceptable.
+  
 - **gdb_utils** - GDB helpers for inspecting the internal state of the data structures in this repository.
 
   ```{r, engine='bash'}
