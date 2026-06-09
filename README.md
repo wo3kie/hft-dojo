@@ -69,6 +69,8 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
     
 - **map_reduce** - An implementation of the parallel map and serial reduce paradigm in C++.
   
+- **object_pool** - A fixed‑capacity pool of pre‑allocated objects. It is designed for scenarios where the maximum number of objects is known in advance, and it provides fast allocation and deallocation with one dynamic memory allocation. The pool maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
+
 - **price_bits** — a compact bitmask structure that tracks the occupancy of price levels in the order book. It provides efficient methods for setting, clearing, and querying bits, as well as counting leading zeros to quickly identify the best bid and ask levels.
   
 - **random** - A simple linear congruential generator (LCG) for producing pseudo‑random numbers. It is designed for scenarios where a fast and deterministic random number generator is needed, such as in testing and benchmarking.
