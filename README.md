@@ -50,7 +50,9 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **flat_tree** - A fixed‑capacity, array‑based binary search tree. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions, deletions, and lookups without dynamic memory allocation. The tree maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
   
-  - **flat_tree_bs** - The simplest binary-search variant of the flat tree without nodes balancing. It is designed for scenarios where the order of insertions and deletions is such that the tree remains reasonably balanced, or where the performance of unbalanced trees is acceptable.
+  - **flat_tree_bs** - The simplest binary-search variant of the flat tree without nodes balancing. It is designed as a base for the AVL‑balanced version, but it can be useful on its own in scenarios where the input data is mostly sorted or when the tree is used as a small auxiliary structure where balancing overhead may not be justified.
+
+  - **flat_tree_avl** - An AVL‑balanced variant of the flat tree. It maintains the AVL balance property, which ensures that the tree remains balanced after insertions and deletions, providing O(log n) time complexity for lookups, insertions, and deletions. This makes it suitable for scenarios where the input data is random or when the tree is used as a primary data structure for storing and retrieving elements efficiently. It is implemented as a subclass of the binary‑search variant, reusing its core logic and adding the necessary rotations and balance factor updates to maintain the AVL property.
   
 - **gdb_utils** - GDB helpers for inspecting the internal state of the data structures in this repository.
 
