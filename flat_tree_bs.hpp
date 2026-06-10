@@ -9,6 +9,8 @@
  */
 
 #include <functional>
+#include <set>
+#include <vector>
 
 #include "common.hpp"
 #include "object_pool.hpp"
@@ -30,13 +32,9 @@ struct FlatTreeBS: noncopyable, nonmovable {
   using Node = _Node<TKey>;
 
 public:
-  FlatTreeBS() noexcept {
-  }
-
-  explicit FlatTreeBS(TCompare cmp) noexcept
-    : FlatTreeBS() 
+  explicit FlatTreeBS(TCompare cmp = TCompare()) noexcept
+    : _cmp(cmp) 
   {
-    _cmp = cmp;
   }
 
 public:
@@ -63,6 +61,10 @@ public:
 
     return newSize != oldSize;
   }  
+
+  constexpr int32_t capacity() const noexcept {
+    return Capacity;
+  }
 
   public:
   int32_t _insert(const TKey& key) noexcept {
@@ -230,109 +232,26 @@ public:
     return _pool[nodeId];
   }
 
+  /* extension */ bool _debug_equal(const std::set<TKey>& other) const noexcept {
+    std::vector<TKey> keys;
+
+    const auto insert_keys_inorder = [this](auto&& self, int32_t nodeId, std::vector<TKey>& keys) noexcept {
+      if(nodeId == -1) {
+        return;
+      }
+
+      const Node& node = _pool[nodeId];
+      self(self, node._leftId, keys);
+      keys.push_back(node._key);
+      self(self,node._rightId, keys);
+    };
+
+    insert_keys_inorder(insert_keys_inorder, _rootId, keys);
+    return std::equal(keys.begin(), keys.end(), other.begin(), other.end());
+  }
+
 public:
   TCompare _cmp{};
   int32_t _rootId{-1};
   ObjectPool<Node, Capacity> _pool;
 };
-
-/*
- * Non-intrusive forward iterator for testing purposes. Not intended for production use.
- */
-
-template<typename TKey, int32_t Capacity, typename TCompare>
-struct FlatTreeBSIterator {
-  using Node = _Node<TKey>;
-
-  using iterator_category = std::forward_iterator_tag;
-  using value_type = TKey;
-  using difference_type = std::ptrdiff_t;
-  using pointer = TKey*;
-  using reference = TKey&;
-
-  FlatTreeBS<TKey, Capacity, TCompare>* _tree{nullptr};
-  int32_t _nodeId{-1};
-
-  FlatTreeBSIterator& operator++() noexcept {
-    if(_nodeId == -1) {
-      return *this;
-    }
-
-    assert(_node(_nodeId)._leftId == -1 || _node(_node(_nodeId)._leftId)._parentId == _nodeId);
-    assert(_node(_nodeId)._rightId == -1 || _node(_node(_nodeId)._rightId)._parentId == _nodeId);
-
-    Node& node = _node(_nodeId);
-
-    if(node._rightId != -1) {    
-      _nodeId = node._rightId;
-
-      while(_node(_nodeId)._leftId != -1) {
-        _nodeId = _node(_nodeId)._leftId;
-      }
-    } else {
-      int32_t parentId = node._parentId;
-
-      while(parentId != -1 && _node(parentId)._rightId == _nodeId) {
-        _nodeId = parentId;
-        parentId = _node(parentId)._parentId;
-      }
-
-      _nodeId = parentId;
-    }
-
-    return *this;
-  }
-
-  FlatTreeBSIterator operator++(int) noexcept {
-    FlatTreeBSIterator tmp = *this;
-    ++(*this);
-    return tmp;
-  }
-
-  TKey& operator*() noexcept {
-    return _tree->_node(_nodeId)._key;
-  }
-
-  bool operator==(const FlatTreeBSIterator& other) const noexcept {
-    return _tree == other._tree && _nodeId == other._nodeId;
-  }
-
-  bool operator!=(const FlatTreeBSIterator& other) const noexcept {
-    return !(*this == other);
-  }
-
-  Node& _node(int32_t nodeId) noexcept {
-    assert(nodeId != -1);
-    return _tree->_node(nodeId);
-  }
-};
-
-namespace std {
-
-template<typename TKey, int32_t Capacity, typename TCompare>
-::FlatTreeBSIterator<TKey, Capacity, TCompare> begin(FlatTreeBS<TKey, Capacity, TCompare>& tree) noexcept {
-    ::FlatTreeBSIterator<TKey, Capacity, TCompare> it;
-    it._tree = &tree;
-    it._nodeId = -1;
-
-    if(tree._rootId != -1) {
-      it._nodeId = tree._rootId;
-
-      while(tree._pool[it._nodeId]._leftId != -1) {
-        it._nodeId = tree._pool[it._nodeId]._leftId;
-      }
-    }
-
-    return it;
-}
-
-template<typename TKey, int32_t Capacity, typename TCompare>
-::FlatTreeBSIterator<TKey, Capacity, TCompare> end(FlatTreeBS<TKey, Capacity, TCompare>& tree) noexcept {
-    ::FlatTreeBSIterator<TKey, Capacity, TCompare> it;
-    it._tree = &tree;
-    it._nodeId = -1;
-
-    return it;
-}
-
-} // namespace std
