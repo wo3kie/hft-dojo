@@ -69,13 +69,11 @@ public:
   void _rotate_left(int32_t nodeId) {
     const int32_t rightId = this->_node(nodeId)._rightId;
     const int32_t rightLeft = this->_node(rightId)._leftId;
-    
     const int32_t parentId = this->_node(nodeId)._parentId;
+    
     this->_node(rightId)._parentId = parentId;
-
     this->_node(rightId)._leftId = nodeId;
     this->_node(nodeId)._parentId = rightId;
-
     this->_node(nodeId)._rightId = rightLeft;
     
     if (rightLeft != -1) {
@@ -97,13 +95,11 @@ public:
   void _rotate_right(int32_t nodeId) {
     const int32_t leftId = this->_node(nodeId)._leftId;
     const int32_t leftRight = this->_node(leftId)._rightId;
-    
     const int32_t parentId = this->_node(nodeId)._parentId;
+    
     this->_node(leftId)._parentId = parentId;
-
     this->_node(leftId)._rightId = nodeId;
     this->_node(nodeId)._parentId = leftId;
-
     this->_node(nodeId)._leftId = leftRight;
     
     if (leftRight != -1) {
