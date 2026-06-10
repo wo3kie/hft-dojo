@@ -8,14 +8,16 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <new>
+#include <type_traits>
 
 #include "common.hpp"
 
-template<typename T, std::size_t MaxSize>
+template<typename T, std::size_t Capacity>
   requires std::is_trivially_destructible_v<T>
 struct ObjectPool: noncopyable, nonmovable {
 public:
@@ -24,36 +26,50 @@ public:
   static constexpr index_t npos = static_cast<index_t>(-1);
 
   ObjectPool() {
-    _buffer = static_cast<T*>(::operator new(sizeof(T) * MaxSize));
-    _free = new index_t[MaxSize];
+    _size = 0;
 
-    for(index_t i = 0; i < MaxSize; ++i) {
-      _free[i] = i;
+    if constexpr (Capacity <= 1024) {
+      _buffer = {};
+      _free = {};
+    } else {
+      _buffer = new T[Capacity];
+      _free = new index_t[Capacity];
     }
 
-    _size = 0;
+    for(index_t i = 0; i < Capacity; ++i) {
+      _free[i] = i;
+    }
   }
 
   ~ObjectPool() {
-    ::operator delete(_buffer);
-    delete[] _free;
+    if constexpr (Capacity > 1024) {
+      delete[] _buffer;
+      delete[] _free;
+    }
   }
 
-  template<typename... Args>
-  index_t allocate(Args&&... args) noexcept {
+  index_t allocate() noexcept {
     if(full()) {
       return npos;
     }
 
-    const index_t slot = _free[_size++];
-    new(_buffer + slot) T(std::forward<Args>(args)...);
+    return _free[_size++];
+  }
+
+  template<typename... Args>
+  index_t allocate(Args&&... args) noexcept {
+    index_t slot = allocate();
+   
+    if(slot != npos) {
+      new(&_buffer[slot]) T(std::forward<Args>(args)...);
+    }
+   
     return slot;
   }
 
   void deallocate(index_t slot) noexcept {
     assert(empty() == false);
     
-    _buffer[slot].~T();
     _free[--_size] = slot;
   }
 
@@ -70,11 +86,11 @@ public:
   }
 
   bool full() const noexcept {
-    return _size == MaxSize;
+    return _size == Capacity;
   }
 
   index_t capacity() const noexcept {
-    return MaxSize;
+    return Capacity;
   }
 
   index_t size() const noexcept {
@@ -82,7 +98,7 @@ public:
   }
 
 private:
-  T* _buffer{nullptr};
-  index_t* _free{nullptr};
   index_t _size{0};
+  std::conditional_t<Capacity <= 1024, std::array<T, Capacity>, T*> _buffer;
+  std::conditional_t<Capacity <= 1024, std::array<index_t, Capacity>, index_t*> _free;
 };
