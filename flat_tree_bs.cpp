@@ -35,22 +35,26 @@ void test_tree_bs() {
     Assert(tree.insert(values[i]) != -1);
     Assert(set.insert(values[i]).second);
 
-    Assert(std::equal(set.begin(), set.end(), tree.begin(), tree.end()));
+    Assert(std::equal(set.begin(), set.end(), std::begin(tree), std::end(tree)));
   }
   
+  std::shuffle(values.begin(), values.end(), lcg);
+
   for(int i = 0; i < N; ++i) {
-    Assert(tree.find(values[i]));
+    Assert(tree.find(values[i]) != -1);
   }
   
+  std::shuffle(values.begin(), values.end(), lcg);
+
   for(int i = 0; i < N; ++i) {
-    Assert(tree.erase(values[i]));
+    Assert(tree.erase(tree.find(values[i])));
     Assert(set.erase(values[i]) == 1);
-    Assert(std::equal(set.begin(), set.end(), tree.begin(), tree.end()));
+    Assert(std::equal(set.begin(), set.end(), std::begin(tree), std::end(tree)));
   }
 }
 
 int main() {
-  
+
   for(unsigned i = 0; i < 1024; ++i) {
     test_tree_bs<1>();
     test_tree_bs<2>();
