@@ -60,7 +60,7 @@ struct FlatTreeBS: noncopyable, nonmovable {
       return *this;
     }
 
-    iterator& operator++(int) noexcept {
+    iterator operator++(int) noexcept {
       iterator tmp = *this;
       ++(*this);
       return tmp;
@@ -98,7 +98,17 @@ public:
   }
 
   TKey* find(const TKey& key) noexcept {
-    return (_rootId == npos) ? nullptr : &_buffer[_find(key)]._key;
+    if(_rootId == npos) {
+      return nullptr;
+    }
+
+    const int32_t nodeId = _find(key);
+
+    if (nodeId == npos) {
+      return nullptr;
+    }
+
+    return &_buffer[nodeId]._key;
   }
 
   bool erase(const TKey& key) noexcept {
