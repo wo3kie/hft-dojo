@@ -62,6 +62,10 @@ public:
     return newSize != oldSize;
   }  
 
+  int32_t size() const noexcept {
+    return _pool.size();
+  }
+
   constexpr int32_t capacity() const noexcept {
     return Capacity;
   }
