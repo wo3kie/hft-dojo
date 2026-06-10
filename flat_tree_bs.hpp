@@ -23,6 +23,62 @@ struct FlatTreeBS: noncopyable, nonmovable {
     int32_t _parentId{npos};
   };
 
+  struct iterator {
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = TKey;
+    using difference_type = std::ptrdiff_t;
+    using pointer = TKey*;
+    using reference = TKey&;
+
+    FlatTreeBS* _tree{nullptr};
+    int32_t _nodeId{npos};
+
+    iterator& operator++() noexcept {
+      if(_nodeId == npos) {
+        return *this;
+      }
+
+      Node& node = _tree->_buffer[_nodeId];
+
+      if(node._rightId != npos) {
+        _nodeId = node._rightId;
+
+        while(_tree->_buffer[_nodeId]._leftId != npos) {
+          _nodeId = _tree->_buffer[_nodeId]._leftId;
+        }
+      } else {
+        int32_t parentId = node._parentId;
+
+        while(parentId != npos && _tree->_buffer[parentId]._rightId == _nodeId) {
+          _nodeId = parentId;
+          parentId = _tree->_buffer[parentId]._parentId;
+        }
+
+        _nodeId = parentId;
+      }
+
+      return *this;
+    }
+
+    iterator& operator++(int) noexcept {
+      iterator tmp = *this;
+      ++(*this);
+      return tmp;
+    }
+
+    TKey& operator*() noexcept {
+      return _tree->_buffer[_nodeId]._key;
+    }
+
+    bool operator==(const iterator& other) const noexcept {
+      return _tree == other._tree && _nodeId == other._nodeId;
+    }
+
+    bool operator!=(const iterator& other) const noexcept {
+      return !(*this == other);
+    }
+  };
+
 public:
   FlatTreeBS() noexcept {
     for(int32_t i = 0; i < Capacity; ++i) {
@@ -51,6 +107,30 @@ public:
 
   TKey* get_by_slot(int32_t slot_id) noexcept {
     return (slot_id == npos) ? nullptr : &_buffer[slot_id]._key;
+  }
+
+  iterator begin() noexcept {
+    iterator it;
+    it._tree = this;
+    it._nodeId = npos;
+
+    if(_rootId != npos) {
+      it._nodeId = _rootId;
+
+      while(_buffer[it._nodeId]._leftId != npos) {
+        it._nodeId = _buffer[it._nodeId]._leftId;
+      }
+    }
+
+    return it;
+  }
+
+  iterator end() noexcept {
+    iterator it;
+    it._tree = this;
+    it._nodeId = npos;
+
+    return it;
   }
 
 protected:
@@ -161,6 +241,7 @@ protected:
         _rootId = childId;
       } else {
         Node& parent = _buffer[node._parentId];
+
         if(parent._leftId == nodeId) {
           parent._leftId = childId;
         } else {
@@ -172,56 +253,67 @@ protected:
       return true;
     }
 
-    int32_t minNodeId = node._rightId;
+    Node& left = _buffer[node._leftId];
+    Node& right = _buffer[node._rightId];
 
-    while(_buffer[minNodeId]._leftId != npos) {
-      minNodeId = _buffer[minNodeId]._leftId;
-    }
+    if (right._leftId == npos) {
+      right._leftId = node._leftId;
+      left._parentId = node._rightId;
 
-    Node& minNode = _buffer[minNodeId];
+      right._parentId = node._parentId;
 
-    if(minNodeId == _buffer[minNode._parentId]._leftId) {
+      if(nodeId == _rootId) {
+        _rootId = node._rightId;
+      } else {
+        Node& parent = _buffer[node._parentId];
+
+        if(parent._leftId == nodeId) {
+          parent._leftId = node._rightId;
+        } else {
+          parent._rightId = node._rightId;
+        }
+      }
+
+      deallocate(nodeId);
+      return true;
+    } else {
+      int32_t minNodeId = node._rightId;
+      
+      while(_buffer[minNodeId]._leftId != npos) {
+        minNodeId = _buffer[minNodeId]._leftId;
+      }
+      
+      Node& minNode = _buffer[minNodeId];
+
+      minNode._leftId = node._leftId;
+      left._parentId = minNodeId;
+
       _buffer[minNode._parentId]._leftId = minNode._rightId;
 
-      if(minNode._rightId != npos) {
+      if (minNode._rightId != npos) {
         _buffer[minNode._rightId]._parentId = minNode._parentId;
       }
-    } else {
-      _buffer[minNode._parentId]._rightId = minNode._rightId;
 
-      if(minNode._rightId != npos) {
-        _buffer[minNode._rightId]._parentId = minNode._parentId;
-      }
-    }
+      minNode._rightId = node._rightId;
+      right._parentId = minNodeId;
 
-    minNode._leftId = node._leftId;
+      minNode._parentId = node._parentId;
 
-    if(minNode._leftId != npos) {
-      _buffer[minNode._leftId]._parentId = minNodeId;
-    }
-
-    minNode._rightId = node._rightId;
-
-    if(minNode._rightId != npos) {
-      _buffer[minNode._rightId]._parentId = minNodeId;
-    }
-
-    minNode._parentId = node._parentId;
-
-    if(nodeId == _rootId) {
-      _rootId = minNodeId;
-    } else {
-      Node& parent = _buffer[node._parentId];
-
-      if(parent._leftId == nodeId) {
-        parent._leftId = minNodeId;
+      if(nodeId == _rootId) {
+        _rootId = minNodeId;
       } else {
-        parent._rightId = minNodeId;
-      }
-    }
+        Node& parent = _buffer[node._parentId];
 
-    deallocate(nodeId);
-    return true;
+        if(parent._leftId == nodeId) {
+          parent._leftId = minNodeId;
+        } else {
+          parent._rightId = minNodeId;
+        }
+      }
+
+      deallocate(nodeId);
+      return true;
+    }
   }
 
 protected:

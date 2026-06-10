@@ -6,6 +6,7 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
+#include <algorithm>
 #include <set>
 #include <unordered_set>
 
@@ -16,8 +17,10 @@
 #include "timer.hpp"
 
 template<unsigned N>
-void test_bs_tree() {
+void test_tree_bs() {
   LCG lcg;
+
+  std::set<int>set;
   FlatTreeBS<int, N> tree;
 
   std::vector<int> values;
@@ -30,6 +33,9 @@ void test_bs_tree() {
   
   for(int i = 0; i < N; ++i) {
     Assert(tree.insert(values[i]) != -1);
+    Assert(set.insert(values[i]).second);
+
+    Assert(std::equal(set.begin(), set.end(), tree.begin(), tree.end()));
   }
   
   for(int i = 0; i < N; ++i) {
@@ -38,21 +44,22 @@ void test_bs_tree() {
   
   for(int i = 0; i < N; ++i) {
     Assert(tree.erase(values[i]));
+    Assert(set.erase(values[i]) == 1);
+    Assert(std::equal(set.begin(), set.end(), tree.begin(), tree.end()));
   }
 }
 
 int main() {
-  test_bs_tree<1>();
-  test_bs_tree<2>();
-  test_bs_tree<4>();
-  test_bs_tree<8>();
-  test_bs_tree<16>();
-  test_bs_tree<32>();
-  test_bs_tree<64>();
-  test_bs_tree<128>();
-  test_bs_tree<256>();
-  test_bs_tree<512>();
-  test_bs_tree<1024>();
+  
+  for(unsigned i = 0; i < 1024; ++i) {
+    test_tree_bs<1>();
+    test_tree_bs<2>();
+    test_tree_bs<4>();
+    test_tree_bs<8>();
+    test_tree_bs<16>();
+    test_tree_bs<32>();
+    test_tree_bs<64>();
+  }
 
   return 0;
 }
