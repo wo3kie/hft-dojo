@@ -52,8 +52,52 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   
   - **flat_tree_bs** - The simplest binary-search variant of the flat tree without nodes balancing. It is designed as a base for the AVL‑balanced version, but it can be useful on its own in scenarios where the input data is mostly sorted or when the tree is used as a small auxiliary structure where balancing overhead may not be justified.
 
+  ```{r, engine='cpp'}
+  # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
+  Benchmark    FlatTreeBS: (Release)(iters=100000): 75 ms :: 750 ns/iter :: 1332363 iter/s
+  Benchmark    FlatTreeBS: (Release)(iters=100000): 80 ms :: 800 ns/iter :: 1249662 iter/s
+  Benchmark    FlatTreeBS: (Release)(iters=100000): 77 ms :: 776 ns/iter :: 1288588 iter/s
+  Benchmark    FlatTreeBS: (Release)(iters=100000): 78 ms :: 788 ns/iter :: 1267979 iter/s
+  Benchmark    FlatTreeBS: (Release)(iters=100000): 77 ms :: 773 ns/iter :: 1292312 iter/s
+  Benchmark    FlatTreeBS: (Release)(iters=100000): 76 ms :: 763 ns/iter :: 1310497 iter/s
+  Benchmark    FlatTreeBS: (Release)(iters=100000): 77 ms :: 776 ns/iter :: 1287738 iter/s
+  Benchmark    FlatTreeBS: (Release)(iters=100000): 77 ms :: 774 ns/iter :: 1291371 iter/s
+  Benchmark    FlatTreeBS: (Release)(iters=100000): 76 ms :: 767 ns/iter :: 1303581 iter/s
+  Benchmark    FlatTreeBS: (Release)(iters=100000): 77 ms :: 778 ns/iter :: 1284413 iter/s
+  ```
+
   - **flat_tree_avl** - An AVL‑balanced variant of the flat tree. It maintains the AVL balance property, which ensures that the tree remains balanced after insertions and deletions, providing O(log n) time complexity for lookups, insertions, and deletions. This makes it suitable for scenarios where the input data is random or when the tree is used as a primary data structure for storing and retrieving elements efficiently. It is implemented as a subclass of the binary‑search variant, reusing its core logic and adding the necessary rotations and balance factor updates to maintain the AVL property.
   
+  ```{r, engine='cpp'}
+  # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
+  Benchmark   FlatTreeAVL: (Release)(iters=100000): 5 ms :: 50 ns/iter :: 19888497 iter/s
+  Benchmark   FlatTreeAVL: (Release)(iters=100000): 5 ms :: 52 ns/iter :: 19162950 iter/s
+  Benchmark   FlatTreeAVL: (Release)(iters=100000): 4 ms :: 49 ns/iter :: 20275704 iter/s
+  Benchmark   FlatTreeAVL: (Release)(iters=100000): 5 ms :: 50 ns/iter :: 19784002 iter/s
+  Benchmark   FlatTreeAVL: (Release)(iters=100000): 5 ms :: 52 ns/iter :: 19193607 iter/s
+  Benchmark   FlatTreeAVL: (Release)(iters=100000): 4 ms :: 49 ns/iter :: 20353499 iter/s
+  Benchmark   FlatTreeAVL: (Release)(iters=100000): 4 ms :: 49 ns/iter :: 20064157 iter/s
+  Benchmark   FlatTreeAVL: (Release)(iters=100000): 5 ms :: 51 ns/iter :: 19413363 iter/s
+  Benchmark   FlatTreeAVL: (Release)(iters=100000): 5 ms :: 50 ns/iter :: 19876815 iter/s
+  Benchmark   FlatTreeAVL: (Release)(iters=100000): 5 ms :: 54 ns/iter :: 18275909 iter/s
+  ```
+
+  - **flat_tree_splay** - A splay‑tree variant of the flat tree. It is a self‑adjusting binary search tree that performs splaying operations to keep recently accessed elements near the root, which can improve access times for certain access patterns. It is designed for scenarios where there is a high degree of locality in the access patterns, as it can provide faster access to recently accessed elements compared to other balanced tree structures.
+
+  ```{r, engine='cpp'}
+  # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
+  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 84 ns/iter :: 11902457 iter/s
+  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 80 ns/iter :: 12440871 iter/s
+  Benchmark FlatTreeSplay: (Release)(iters=100000): 9 ms :: 98 ns/iter :: 10102301 iter/s
+  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 81 ns/iter :: 12284905 iter/s
+  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 87 ns/iter :: 11407291 iter/s
+  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 82 ns/iter :: 12100216 iter/s
+  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 81 ns/iter :: 12288132 iter/s
+  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 81 ns/iter :: 12270715 iter/s
+  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 82 ns/iter :: 12124596 iter/s
+  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 86 ns/iter :: 11621828 iter/s
+  ```
+
 - **gdb_utils** - GDB helpers for inspecting the internal state of the data structures in this repository.
 
   ```{r, engine='bash'}
@@ -144,8 +188,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   ```
 
   ```{r, engine='bash'}
-  ~/hft-dojo/build/release$ # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
-  ~/hft-dojo/build/release$ for ((i=0; i<10; i++)) ; do ./trade_engine | grep Benchmark ; done
+  # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
   Benchmark (Release)(events=12561862): 249 ms :: 19 ns/event :: 50279376 events/s
   Benchmark (Release)(events=12561862): 239 ms :: 19 ns/event :: 52518164 events/s
   Benchmark (Release)(events=12561862): 237 ms :: 18 ns/event :: 52796424 events/s
