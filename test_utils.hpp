@@ -193,14 +193,18 @@ void test_flat_tree() {
 }
 
 template<typename TContainer>
-void bench_flat_tree(int32_t iters) {
+void bench_flat_tree(int32_t iters, const std::string& label = ":") {
+  int32_t events = 0;
+
   struct Benchmark {
-    Benchmark(int32_t iters)
+    Benchmark(int32_t iters, int32_t& events)
       : _iters(iters)
+      , _events(events)
     {
     }
 
     int32_t _iters;
+    int32_t& _events;
     std::vector<Request> _requests;
 
     void setup() {
@@ -222,16 +226,17 @@ void bench_flat_tree(int32_t iters) {
       for(const auto& e : _requests) {
         tree.insert(e.price);
         tree.find(e.price);
+        _events += tree.size();
       }
     }
 
     void teardown() {
     }
 
-  } bench(iters);
+  } bench(iters, events);
 
-  Timer<1>(bench).log([iters](int ns, const std::string& msg) {
-    std::cout << "Benchmark (" << PROFILE << ")(iters=" << iters << "): " << ns / 1000000 << " ms :: " << (ns / iters)
+  Timer<1>(bench).log([iters, events, label](int ns, const std::string& msg) {
+    std::cout << "Benchmark " << label << " (" << PROFILE << ")(iters=" << iters << "): " << ns / 1000000 << " ms :: " << (ns / iters)
               << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
   });
 }
