@@ -6,6 +6,8 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
+#include <unordered_set>
+
 #include "flat_tree_bs.hpp"
 #include "test_utils.hpp"
 
@@ -21,16 +23,14 @@ int main() {
   }
 
 #ifdef NDEBUG
-  bench_flat_tree<FlatTreeBS<int, 1024>>(1'000'000);
-  bench_flat_tree<std::set<int>>(1'000'000);
+  bench_flat_tree<FlatTreeBS<int, 100'000>>(100'000, "   FlatTreeBS:");
+  // bench_flat_tree<std::set<int>>(100'000, "          set:");
+  // bench_flat_tree<std::unordered_set<int>>(100'000, "unordered_set:");
 #else
-  /* stack storage */
-  bench_flat_tree<FlatTreeBS<int, 1024>>(1'000);
-  bench_flat_tree<std::set<int>>(1'000);
-
   /* heap storage */
-  bench_flat_tree<FlatTreeBS<int, 1024>>(10'000);
-  bench_flat_tree<std::set<int>>(10'000);
+  bench_flat_tree<FlatTreeBS<int, 10'000>>(10'000, "   FlatTreeBS:");
+  bench_flat_tree<std::set<int>>(10'000, "          set:");
+  bench_flat_tree<std::unordered_set<int>>(10'000, "unordered_set:");
 #endif
 
   return 0;
