@@ -16,7 +16,6 @@
 template<typename TKey, int32_t Capacity, typename TCompare = std::less<TKey>>
 struct FlatTreeSplay: FlatTreeBS<TKey, Capacity, TCompare> {
 public:
-
   explicit FlatTreeSplay(TCompare cmp = TCompare()) noexcept
     : FlatTreeBS<TKey, Capacity, TCompare>(cmp) {
   }
@@ -32,7 +31,13 @@ public:
   }
 
   int32_t find(const TKey& key) noexcept {
-    return FlatTreeBS<TKey, Capacity, TCompare>::find(key);
+    const int32_t foundId = FlatTreeBS<TKey, Capacity, TCompare>::find(key);
+
+    if(foundId != -1) {
+      _rebalance(foundId);
+    }
+
+    return foundId;
   }
 
   TKey* get(int32_t slotId) noexcept {
@@ -55,13 +60,11 @@ public:
   void _rotate_left(int32_t nodeId) {
     const int32_t rightId = this->_node(nodeId)._rightId;
     const int32_t rightLeft = this->_node(rightId)._leftId;
-
     const int32_t parentId = this->_node(nodeId)._parentId;
-    this->_node(rightId)._parentId = parentId;
 
+    this->_node(rightId)._parentId = parentId;
     this->_node(rightId)._leftId = nodeId;
     this->_node(nodeId)._parentId = rightId;
-
     this->_node(nodeId)._rightId = rightLeft;
 
     if(rightLeft != -1) {
@@ -80,13 +83,11 @@ public:
   void _rotate_right(int32_t nodeId) {
     const int32_t leftId = this->_node(nodeId)._leftId;
     const int32_t leftRight = this->_node(leftId)._rightId;
-
     const int32_t parentId = this->_node(nodeId)._parentId;
-    this->_node(leftId)._parentId = parentId;
 
+    this->_node(leftId)._parentId = parentId;
     this->_node(leftId)._rightId = nodeId;
     this->_node(nodeId)._parentId = leftId;
-
     this->_node(nodeId)._leftId = leftRight;
 
     if(leftRight != -1) {
@@ -103,35 +104,39 @@ public:
   }
 
   void _rebalance(int32_t nodeId) {
-    while(this->_node(nodeId)._parentId != -1) {
-      int32_t parentId = this->_node(nodeId)._parentId;
-      int32_t grandId = this->_node(parentId)._parentId;
+    while(true) {
+      const int32_t parentId = this->_node(nodeId)._parentId;
+      
+      if(parentId == -1) {
+        break;
+      }
 
-      if(grandId == -1) {
+      const int32_t grandId = this->_node(parentId)._parentId;
+
+      if(grandId == -1) { // Zig
         if(this->_node(parentId)._leftId == nodeId) {
-          if(this->_node(parentId)._leftId != -1){
-            _rotate_right(parentId);
-          }
+          _rotate_right(parentId);
         } else {
-          if(this->_node(parentId)._rightId != -1){
-            _rotate_left(parentId);
-          }
+          _rotate_left(parentId);
         }
-      } else if((this->_node(grandId)._leftId == parentId) && (this->_node(parentId)._leftId == nodeId)) {
-        _rotate_right(grandId);
-        _rotate_right(parentId);
-      } else if((this->_node(grandId)._rightId == parentId) && (this->_node(parentId)._rightId == nodeId)) {
-        _rotate_left(grandId);
-        _rotate_left(parentId);
-      } else if((this->_node(grandId)._leftId == parentId) && (this->_node(parentId)._rightId == nodeId)) {
-        _rotate_left(parentId);
-        _rotate_right(grandId);
       } else {
-        _rotate_right(parentId);
-        _rotate_left(grandId);
+        const bool parentIsLeftChild = (this->_node(grandId)._leftId == parentId);
+        const bool nodeIsLeftChild = (this->_node(parentId)._leftId == nodeId);
+
+        if(parentIsLeftChild && nodeIsLeftChild) { // Zig-Zig (LL)
+          _rotate_right(grandId);
+          _rotate_right(parentId);
+        } else if(! parentIsLeftChild && ! nodeIsLeftChild) { // Zig-Zig (RR)
+          _rotate_left(grandId);
+          _rotate_left(parentId);
+        } else if(parentIsLeftChild && ! nodeIsLeftChild) { // Zig-Zag (LR)
+          _rotate_left(parentId);
+          _rotate_right(grandId);
+        } else { // Zig-Zag (RL)
+          _rotate_right(parentId);
+          _rotate_left(grandId);
+        }
       }
     }
-    
-    this->_rootId = nodeId;
   }
 };
