@@ -19,6 +19,8 @@
 #include <sstream>
 #include <unordered_map>
 #include <random>
+#include <ranges>
+#include <utility>
 #include <vector>
 
 #include "assert.hpp"
@@ -241,6 +243,52 @@ void test_flat_tree() {
 }
 
 template<typename TContainer>
+void bench_flat_queue(const std::string& label = ":") {
+   
+  struct Benchmark {
+    Benchmark()
+    {
+    }
+
+    LCG _lcg;
+    TContainer _queue;
+    std::vector<int> _values;
+    
+    void setup() {
+      for(int i = 0; i < _queue.capacity(); ++i) {
+        _values.push_back(_lcg());
+      }      
+    }
+    
+    void run() {
+      volatile int32_t no_opt = 0;
+
+      for(const auto& [i, v] : std::ranges::views::enumerate(_values)) {
+        _queue.push(i, v);
+        no_opt += _queue.front();
+        _queue.pop();
+        no_opt += (_queue.empty()) ? (0) : (_queue.front());
+      }
+
+      do_not_optimize(no_opt);
+    }
+
+    void teardown() {
+      while(! _queue.empty()) {
+        _queue.pop();
+      }
+    }
+  } bench;
+
+  Timer<1>(bench).log([iters = TContainer::capacity(), label](int ns, const std::string& msg) {
+    std::cout << "Benchmark (" << PROFILE << ")"
+              << std::setw(15) << std::right << label << ": "
+              << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
+              << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
+  });
+}
+
+template<typename TContainer>
 void bench_flat_list(int32_t iters, const std::string& label = ":") {
    
   struct Benchmark {
@@ -253,11 +301,8 @@ void bench_flat_list(int32_t iters, const std::string& label = ":") {
     int32_t _iters;
     TContainer _list;
     std::vector<int> _values;
-    volatile int32_t _no_opt = 0;
     
     void setup() {
-      _no_opt = 0;
-      
       for(int i = 0; i < _iters; ++i) {
         _values.push_back(i);
       }
@@ -266,18 +311,22 @@ void bench_flat_list(int32_t iters, const std::string& label = ":") {
     }
     
     void run() {
+      volatile int32_t no_opt = 0;
 
       for(const auto& v : _values) {
         _list.push_back(v);
-        _no_opt += _list.front();
+        no_opt += _list.front();
         _list.pop_front();
-        _no_opt += (_list.empty()) ? (0) : (_list.front());
+        no_opt += (_list.empty()) ? (0) : (_list.front());
       }
 
-      do_not_optimize(_no_opt);
+      do_not_optimize(no_opt);
     }
 
     void teardown() {
+      while(! _list.empty()) {
+        _list.pop_front();
+      }
     }
 
   } bench(iters);
@@ -292,27 +341,18 @@ void bench_flat_list(int32_t iters, const std::string& label = ":") {
 
 template<typename TContainer>
 void bench_flat_tree(int32_t iters, const std::string& label = ":") {
-  /*
-   * Prevent compiler from optimizing code away
-   */
-   
-  volatile int32_t no_opt = 0;
 
   struct Benchmark {
-    Benchmark(int32_t iters, volatile int32_t& no_opt)
+    Benchmark(int32_t iters)
       : _iters(iters)
-      , _no_opt(no_opt)
     {
     }
 
     int32_t _iters;
     TContainer _tree;
-    volatile int32_t& _no_opt;
     std::vector<Request> _requests;
 
     void setup() {
-      _no_opt = 0;
-
       RequestGenerator gen(
           /* centerPrice     */ 100,
           /* windowHalfSize  */ 124,
@@ -326,15 +366,16 @@ void bench_flat_tree(int32_t iters, const std::string& label = ":") {
     }
 
     void run() {
+      volatile int32_t no_opt = 0;
 
       for(const auto& e : _requests) {
         _tree.insert(e.price);
-        _no_opt += _tree.size();
+        no_opt += _tree.size();
         _tree.find(e.price);
-        _no_opt += _tree.size();
+        no_opt += _tree.size();
       }
 
-      do_not_optimize(_no_opt);
+      do_not_optimize(no_opt);
     }
 
     void teardown() {
@@ -343,9 +384,9 @@ void bench_flat_tree(int32_t iters, const std::string& label = ":") {
       }
     }
 
-  } bench(iters, no_opt);
+  } bench(iters);
 
-  Timer<1>(bench).log([iters, no_opt, label](int ns, const std::string& msg) {
+  Timer<1>(bench).log([iters, label](int ns, const std::string& msg) {
     std::cout << "Benchmark (" << PROFILE << ")"
               << std::setw(15) << std::right << label << ": "
               << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
