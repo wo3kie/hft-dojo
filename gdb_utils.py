@@ -10,7 +10,7 @@ class PrintFlatList(gdb.Command):
         elems = []
         val = gdb.parse_and_eval(arg)
         size = int(val.type.template_argument(1))
-        buffer = val["_buffer"]
+        buffer = val["_buffer"]["_buffer"]
         head = int(buffer[size]["_next"])
 
         while head != size:
@@ -38,7 +38,7 @@ class PrintRingBuffer(gdb.Command):
         elems = []
         val = gdb.parse_and_eval(arg)
         size = val.type.template_argument(1)
-        buffer = val["_buffer"]
+        buffer = val["_buffer"]["_buffer"]
         head = int(val["_head"])
         tail = int(val["_tail"])
 
@@ -65,7 +65,7 @@ class PrintRingBufferSPSC(gdb.Command):
         elems = []
         val = gdb.parse_and_eval(arg)
         size = val.type.template_argument(1)
-        buffer = val["_buffer"]
+        buffer = val["_buffer"]["_buffer"]
         head = int(val["_head"]["_M_i"])
         tail = int(val["_tail"]["_M_i"])
 
@@ -92,7 +92,7 @@ class PrintRingBufferSPMC(gdb.Command):
         elems = []
         val = gdb.parse_and_eval(arg)
         size = val.type.template_argument(1)
-        buffer = val["_buffer"]
+        buffer = val["_buffer"]["_buffer"]
         popped = int(val["_popped"]["_M_i"])
         pushed = int(val["_pushed"]["_M_i"])
 
