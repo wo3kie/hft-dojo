@@ -154,7 +154,7 @@ class PrintQueue(gdb.Command):
         val = gdb.parse_and_eval(arg)
         type = str(val.type.strip_typedefs())
 
-        if type.startswith("FlatList<") or type.startswith("FlatQueue<") or type.startswith("FlatQueue_OA<"):
+        if type.startswith("FlatList<") or type.startswith("FlatQueue<") or type.startswith("FlatQueue<"):
             PrintFlatList().invoke(arg, from_tty)
         elif type.startswith("RingBuffer<"):
             PrintRingBuffer().invoke(arg, from_tty)
