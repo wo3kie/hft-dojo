@@ -13,6 +13,8 @@
 #include <stdexcept>
 #include <utility>
 
+#include "storage.hpp"
+
 template<typename TValue, std::size_t Capacity>
 class RingBufferSPMC {
 public:
@@ -136,5 +138,5 @@ private:
   alignas(64) std::atomic<std::size_t> _pushed;
   alignas(64) std::atomic<std::size_t> _popped;
   alignas(64) std::atomic<std::size_t> _claim;
-  alignas(64) TValue _buffer[Capacity];
+  alignas(64) Storage<TValue, Capacity> _buffer;
 };
