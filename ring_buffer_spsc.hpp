@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <utility>
+#include "storage.hpp"
 
 /*
  * Circular Buffer, Single Producer Single Consumer, Lock Free
@@ -104,5 +105,5 @@ private:
 private:
   alignas(64) std::atomic<std::size_t> _head{0};
   alignas(64) std::atomic<std::size_t> _tail{0};
-  alignas(64) TValue _buffer[/* N+1 trick */ Capacity + 1];
+  alignas(64) Storage<TValue, /* N+1 trick */ Capacity + 1> _buffer;
 };
