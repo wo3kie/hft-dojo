@@ -6,29 +6,35 @@
 *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
 */
 
+#include <list>
+
 #include "flat_list.hpp"
-
-void test_flat_list() {
-  FlatList<int, 4> list;
-  assert(list.empty());
-
-  int8_t slot;
-  slot = list.push_front(1);
-  slot = list.push_back(2);
-  list.insert(slot, 3);
-
-  assert(list.front() == 1);
-  list.pop_front();
-
-  assert(list.front() == 2);
-  list.pop_front();
-
-  assert(list.front() == 3);
-  list.pop_front();
-
-  assert(list.empty());
-}
+#include "test_utils.hpp"
 
 int main() {
-  test_flat_list();
+  for(unsigned i = 0; i < 1024; ++i) {
+    test_flat_list<FlatList<int, 1>>();
+    test_flat_list<FlatList<int, 2>>();
+    test_flat_list<FlatList<int, 4>>();
+    test_flat_list<FlatList<int, 8>>();
+    test_flat_list<FlatList<int, 16>>();
+    test_flat_list<FlatList<int, 32>>();
+    test_flat_list<FlatList<int, 64>>();
+  }
+
+#ifdef NDEBUG
+  bench_flat_list<FlatList<int, 100'000>>(100'000, "FlatList");
+  bench_flat_list<FlatList<int, 100'000>>(100'000, "FlatList");
+  bench_flat_list<FlatList<int, 100'000>>(100'000, "FlatList");
+  bench_flat_list<FlatList<int, 100'000>>(100'000, "FlatList");
+  bench_flat_list<FlatList<int, 100'000>>(100'000, "FlatList");
+  bench_flat_list<std::list<int>>(100'000, "std::list");
+  bench_flat_list<std::list<int>>(100'000, "std::list");
+  bench_flat_list<std::list<int>>(100'000, "std::list");
+  bench_flat_list<std::list<int>>(100'000, "std::list");
+  bench_flat_list<std::list<int>>(100'000, "std::list");
+#else
+  bench_flat_list<FlatList<int, 10'000>>(10'000, "FlatList");
+  bench_flat_list<std::list<int>>(10'000, "std::list");
+#endif
 }
