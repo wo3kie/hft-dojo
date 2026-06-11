@@ -40,9 +40,22 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **branchless** - A collection of branchless functions like `min`, `max`... These functions are implemented using bitwise operations and arithmetic to avoid branching, which can improve performance in certain scenarios by reducing pipeline stalls.  
     
-- **flat_list** - A fixed‑capacity, array‑based linked list. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions and deletions without dynamic memory allocation. 
+- **flat_list** - A fixed‑capacity, array‑based linked list. It is designed for scenarios where the maximum number of elements is known in advance.
+
+  ```{r, engine='bash'}
+  Benchmark (Release)       FlatList: (iters=100000): 240 μs :: 2 ns/iter :: 416375204 iter/s
+  Benchmark (Release)       FlatList: (iters=100000): 241 μs :: 2 ns/iter :: 413703515 iter/s
+  Benchmark (Release)       FlatList: (iters=100000): 246 μs :: 2 ns/iter :: 405924879 iter/s
+  Benchmark (Release)       FlatList: (iters=100000): 304 μs :: 3 ns/iter :: 328945204 iter/s
+  Benchmark (Release)       FlatList: (iters=100000): 241 μs :: 2 ns/iter :: 414801786 iter/s
+  Benchmark (Release)      std::list: (iters=100000): 1043 μs :: 10 ns/iter :: 95800581 iter/s
+  Benchmark (Release)      std::list: (iters=100000): 1012 μs :: 10 ns/iter :: 98790507 iter/s
+  Benchmark (Release)      std::list: (iters=100000): 1097 μs :: 10 ns/iter :: 91133278 iter/s
+  Benchmark (Release)      std::list: (iters=100000): 942 μs :: 9 ns/iter :: 106128608 iter/s
+  Benchmark (Release)      std::list: (iters=100000): 1018 μs :: 10 ns/iter :: 98196136 iter/s
+  ```
     
-- **flat_queue_oa** - An open‑addressing variant of the flat queue. It uses a different approach to manage free slots, which can be more efficient in certain scenarios, especially when slot ids can't be cached.
+- **lat_queue** - An open‑addressing variant of the flat queue. It uses a different approach to manage free slots, which can be more efficient in certain scenarios, especially when slot ids can't be cached.
 
 - **flat_tree** - A fixed‑capacity, array‑based binary search tree. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions, deletions, and lookups without dynamic memory allocation. The tree maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
   
