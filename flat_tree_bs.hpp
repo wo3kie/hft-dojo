@@ -236,22 +236,23 @@ public:
     return _pool[nodeId];
   }
 
-  /* extension */ bool _debug_equal(const std::set<TKey>& other) const noexcept {
-    std::vector<TKey> keys;
+  /* extension */ bool _debug_equal(const std::set<TKey>& expected) const noexcept {
+    std::vector<TKey> actual;
 
-    const auto insert_keys_inorder = [this](auto&& self, int32_t nodeId, std::vector<TKey>& keys) noexcept {
+    const auto insert_keys_inorder = [this](auto&& self, int32_t nodeId, std::vector<TKey>& actual) noexcept {
       if(nodeId == -1) {
         return;
       }
 
       const Node& node = _pool[nodeId];
-      self(self, node._leftId, keys);
-      keys.push_back(node._key);
-      self(self,node._rightId, keys);
+      self(self, node._leftId, actual);
+      actual.push_back(node._key);
+      self(self,node._rightId, actual);
     };
 
-    insert_keys_inorder(insert_keys_inorder, _rootId, keys);
-    return std::equal(keys.begin(), keys.end(), other.begin(), other.end());
+    insert_keys_inorder(insert_keys_inorder, _rootId, actual);  
+
+    return std::equal(actual.begin(), actual.end(), expected.begin(), expected.end());
   }
 
 public:
