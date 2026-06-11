@@ -10,6 +10,9 @@
 
 #include <cstddef>
 #include <stdexcept>
+#include <utility>
+
+#include "storage.hpp"
 
 /*
  * RingBuffer
@@ -89,6 +92,5 @@ private:
 private:
   std::size_t _head{0};
   std::size_t _tail{0};
-
-  TValue _buffer[/* N+1 trick */ Capacity + 1];
+  Storage<TValue, /* N+1 trick */ Capacity + 1> _buffer;
 };
