@@ -8,15 +8,15 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
+#include <cassert>
 #include <cstdint>
+#include <type_traits>
+
+#include "storage.hpp"
 
 /*
  * FlatQueue SenTinel
  */
-
-#include <cassert>
-#include <cstdint>
-#include <type_traits>
 
 template<typename Value, int8_t Capacity>
 class FlatQueue {
@@ -131,5 +131,5 @@ private:
 
 private:
   int8_t _free{0};
-  _Node _buffer[Capacity + /* Sentinel */ 1];
+  Storage<_Node, Capacity + /* Sentinel */ 1> _buffer;
 };
