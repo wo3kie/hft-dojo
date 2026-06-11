@@ -1,7 +1,3 @@
-#include <cassert>
-#include <cstdint>
-#include <iterator>
-
 /*
  * Project:
  *      HFTDojo (https://github.com/wo3kie/hft-dojo)
@@ -9,6 +5,12 @@
  * Author:
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
+
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+
+#include "storage.hpp"
 
 template<typename Value, int8_t Capacity>
 class FlatList {
@@ -136,5 +138,5 @@ private:
 
 private:
   int8_t _free{0};
-  _Node _buffer[Capacity + /* Sentinel */ 1];
+  Storage<_Node, Capacity + /* Sentinel */ 1> _buffer;
 };
