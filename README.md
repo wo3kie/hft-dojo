@@ -42,11 +42,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
     
 - **flat_list** - A fixed‑capacity, array‑based linked list. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions and deletions without dynamic memory allocation. 
     
-- **flat_queue** - A fixed‑capacity, array‑based queue with a linked‑list structure. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast enqueue and dequeue operations without dynamic memory allocation. 
-
-  - **flat_queue** - uses a sentinel node to manage the queue, for branchless insertions and deletions. It maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
-
-  - **flat_queue_oa** - An open‑addressing variant of the flat queue. It uses a different approach to manage free slots, which can be more efficient in certain scenarios, especially when slot ids can't be cached.
+- **flat_queue_oa** - An open‑addressing variant of the flat queue. It uses a different approach to manage free slots, which can be more efficient in certain scenarios, especially when slot ids can't be cached.
 
 - **flat_tree** - A fixed‑capacity, array‑based binary search tree. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions, deletions, and lookups without dynamic memory allocation. The tree maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
   
