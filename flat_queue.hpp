@@ -64,6 +64,8 @@ public:
     assert(slot >= 0 && slot < Sentinel);
 
     slot = _allocate(slot);
+    _buffer[Sentinel]._size += 1;
+
     _Node& node = _buffer[slot];
     node._value = value;
 
@@ -74,8 +76,6 @@ public:
 
     _buffer[tail]._next = slot;
     _buffer[Sentinel]._prev = slot;
-
-    _buffer[Sentinel]._size += 1;
   }
 
   void remove(std::size_t slot) noexcept {
@@ -86,7 +86,6 @@ public:
     _buffer[next]._prev = prev;
 
     _deallocate(slot);
-
     _buffer[Sentinel]._size -= 1;
   }
 
@@ -98,7 +97,6 @@ public:
     _buffer[Sentinel]._next = next;
 
     _deallocate(head);
-
     _buffer[Sentinel]._size -= 1;
   }
 
