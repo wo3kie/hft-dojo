@@ -9,8 +9,8 @@ enable_testing()
 # Set output directory for all executables
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-# Require C++20 standard for all targets
-set(CMAKE_CXX_STANDARD 20)
+# Require C++23 standard for all targets
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 function(add_dojo_executable source_file)
