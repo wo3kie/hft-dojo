@@ -15,7 +15,7 @@
 #include "branchless.hpp"
 #include "common.hpp"
 #include "events.hpp"
-#include "flat_queue_oa.hpp"
+#include "flat_queue.hpp"
 #include "price_bits.hpp"
 
 /*
@@ -60,7 +60,7 @@ public:
       return false;
     }
 
-    _buffer.insert(slot, Order{id, qty});
+    _buffer.push(slot, Order{id, qty});
     return true;
   }
 
@@ -102,7 +102,7 @@ public:
   }
 
 private:
-  FlatQueue_OA<Order, 8> _buffer;
+  FlatQueue<Order, 8> _buffer;
 };
 
 /*
