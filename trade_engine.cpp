@@ -515,7 +515,10 @@ void benchmark(int32_t iters) {
   });
 }
 
+#include "flat_hash.hpp"
+
 int main() {
+
 #ifndef NDEBUG
   test(MinPrice + 32);
   test(1'000);
