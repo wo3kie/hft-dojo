@@ -11,6 +11,9 @@
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
+#include <iostream>
+#include <iomanip>
+#include <list>
 #include <set>
 #include <string>
 #include <sstream>
@@ -29,6 +32,11 @@ constexpr auto PROFILE = "Release";
 #else
 constexpr auto PROFILE = "Debug";
 #endif
+
+template <typename T>
+inline void do_not_optimize(const T& value) {
+    asm volatile("" : : "g"(value) : "memory");
+}
 
 struct Request {
   uint32_t id;
@@ -157,6 +165,46 @@ private:
 };
 
 template<typename TContainer>
+void test_flat_list() {
+  LCG lcg;
+
+  TContainer actual;
+  std::list<int> expected;
+
+  std::vector<int> values;
+
+  for(int i = 0; i < actual.capacity(); ++i) {
+    values.push_back(i);
+  }
+
+  std::shuffle(values.begin(), values.end(), lcg);
+  
+  for(int i = 0; i < actual.capacity(); ++i) {
+    actual.push_back(values[i]);
+    expected.push_back(values[i]);
+    Assert(actual._debug_equal(expected));
+  }
+  
+  for(int i = 0; i < actual.capacity(); ++i) {
+    actual.pop_front();
+    expected.pop_front();
+    Assert(actual._debug_equal(expected));
+  }
+  
+  for(int i = 0; i < actual.capacity(); ++i) {
+    actual.push_front(values[i]);
+    expected.push_front(values[i]);
+    Assert(actual._debug_equal(expected));
+  }
+
+  for(int i = 0; i < actual.capacity(); ++i) {
+    actual.pop_back();
+    expected.pop_back();
+    Assert(actual._debug_equal(expected));
+  }
+}
+
+template<typename TContainer>
 void test_flat_tree() {
   LCG lcg;
 
@@ -193,21 +241,78 @@ void test_flat_tree() {
 }
 
 template<typename TContainer>
+void bench_flat_list(int32_t iters, const std::string& label = ":") {
+   
+  struct Benchmark {
+    Benchmark(int32_t iters)
+      : _iters(iters)
+    {
+    }
+
+    LCG _lcg;
+    int32_t _iters;
+    TContainer _list;
+    std::vector<int> _values;
+    volatile int32_t _no_opt = 0;
+    
+    void setup() {
+      _no_opt = 0;
+      
+      for(int i = 0; i < _iters; ++i) {
+        _values.push_back(i);
+      }
+      
+      std::shuffle(_values.begin(), _values.end(), _lcg);
+    }
+    
+    void run() {
+
+      for(const auto& v : _values) {
+        _list.push_back(v);
+        _no_opt += _list.front();
+        _list.pop_front();
+        _no_opt += (_list.empty()) ? (0) : (_list.front());
+      }
+
+      do_not_optimize(_no_opt);
+    }
+
+    void teardown() {
+    }
+
+  } bench(iters);
+
+  Timer<1>(bench).log([iters, label](int ns, const std::string& msg) {
+    std::cout << "Benchmark (" << PROFILE << ")"
+              << std::setw(15) << std::right << label << ": "
+              << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
+              << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
+  });
+}
+
+template<typename TContainer>
 void bench_flat_tree(int32_t iters, const std::string& label = ":") {
-  int32_t events = 0;
+  /*
+   * Prevent compiler from optimizing code away
+   */
+   
+  volatile int32_t no_opt = 0;
 
   struct Benchmark {
-    Benchmark(int32_t iters, int32_t& events)
+    Benchmark(int32_t iters, volatile int32_t& no_opt)
       : _iters(iters)
-      , _events(events)
+      , _no_opt(no_opt)
     {
     }
 
     int32_t _iters;
-    int32_t& _events;
+    TContainer _tree;
+    volatile int32_t& _no_opt;
     std::vector<Request> _requests;
 
     void setup() {
+      _no_opt = 0;
+
       RequestGenerator gen(
           /* centerPrice     */ 100,
           /* windowHalfSize  */ 124,
@@ -221,22 +326,29 @@ void bench_flat_tree(int32_t iters, const std::string& label = ":") {
     }
 
     void run() {
-      TContainer tree;
 
       for(const auto& e : _requests) {
-        tree.insert(e.price);
-        tree.find(e.price);
-        _events += tree.size();
+        _tree.insert(e.price);
+        _no_opt += _tree.size();
+        _tree.find(e.price);
+        _no_opt += _tree.size();
       }
+
+      do_not_optimize(_no_opt);
     }
 
     void teardown() {
+      for(const auto& e : _requests) {
+        _tree.erase(_tree.find(e.price));
+      }
     }
 
-  } bench(iters, events);
+  } bench(iters, no_opt);
 
-  Timer<1>(bench).log([iters, events, label](int ns, const std::string& msg) {
-    std::cout << "Benchmark " << label << " (" << PROFILE << ")(iters=" << iters << "): " << ns / 1000000 << " ms :: " << (ns / iters)
+  Timer<1>(bench).log([iters, no_opt, label](int ns, const std::string& msg) {
+    std::cout << "Benchmark (" << PROFILE << ")"
+              << std::setw(15) << std::right << label << ": "
+              << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
               << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
   });
 }
