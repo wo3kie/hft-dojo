@@ -19,6 +19,22 @@
 #include <unordered_map>
 #include <vector>
 
+/*
+ * index_type_t
+ */
+
+template<std::size_t Capacity>
+struct index_type {
+  using type = std::conditional_t<Capacity<128, int8_t, std::conditional_t<Capacity<32768, int16_t, int32_t>>;
+};
+
+template<std::size_t Capacity>
+using index_type_t = typename index_type<Capacity>::type;
+
+/*
+ * demangle
+ */
+
 inline std::string demangle(const char* mangled_name) {
   int status = 0;
   char* demangled = abi::__cxa_demangle(mangled_name, nullptr, nullptr, &status);
