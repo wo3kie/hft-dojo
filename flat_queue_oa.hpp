@@ -12,6 +12,8 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "storage.hpp"
+
 /*
  * FlatQueue Open-Addressing
  */
@@ -115,5 +117,5 @@ private:
   }
 
 private:
-  _Node _buffer[Capacity + /* sentinel */ 1]; 
+  Storage<_Node, Capacity + /* Sentinel */ 1> _buffer;
 };
