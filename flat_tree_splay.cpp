@@ -24,13 +24,10 @@ int main() {
 
 #ifdef NDEBUG
   bench_flat_tree<FlatTreeSplay<int, 100'000>>(100'000, "FlatTreeSplay:");
-  // bench_flat_tree<std::set<int>>(100'000, "          set:");
-  // bench_flat_tree<std::unordered_set<int>>(100'000, "unordered_set:");
+  bench_flat_tree<std::set<int>>(100'000, "std::set:");
 #else
-  /* heap storage */
   bench_flat_tree<FlatTreeSplay<int, 10'000>>(10'000, "FlatTreeSplay:");
-  bench_flat_tree<std::set<int>>(10'000, "          set:");
-  bench_flat_tree<std::unordered_set<int>>(10'000, "unordered_set:");
+  bench_flat_tree<std::set<int>>(10'000, "std::set:");
 #endif
 
   return 0;
