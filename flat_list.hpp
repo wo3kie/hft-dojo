@@ -8,135 +8,178 @@
 
 #include <cassert>
 #include <cstdint>
-#include <iterator>
 
+#include "object_pool.hpp"
 #include "storage.hpp"
 
-template<typename Value, int8_t Capacity>
+template<typename Value, std::size_t Capacity>
 class FlatList {
 public:
-  static_assert(Capacity > 1 && Capacity < 127);
-  static_assert(std::is_nothrow_copy_assignable_v<Value>);
-  static constexpr int8_t Sentinel = Capacity;
+  using index_type = index_type_t<Capacity>;
 
 public:
-  FlatList() noexcept {
-    for(int8_t i = 0; i < Capacity; i++) {
-      _buffer[i]._next = i + 1;
-    }
-
-    _buffer[Capacity - 1]._next = -1;
-    _buffer[Sentinel]._next = Sentinel;
-    _buffer[Sentinel]._prev = Sentinel;
-    _buffer[Sentinel]._size = 0;
+  FlatList() noexcept 
+    : _head(-1)
+    , _tail(-1) 
+  {
   }
 
   bool empty() const noexcept {
-    return _buffer[Sentinel]._size == 0;
+    return _pool.empty();
   }
 
   bool full() const noexcept {
-    return _buffer[Sentinel]._size == Capacity;
+    return _pool.full();
   }
 
   Value& front() noexcept {
-    assert(! empty());
-    return _buffer[_buffer[Sentinel]._next]._value;
+    return _pool[_head]._value;
   }
 
   Value& back() noexcept {
-    assert(! empty());
-    return _buffer[_buffer[Sentinel]._prev]._value;
+    return _pool[_tail]._value;
   }
 
   Value& operator[](int8_t slot) noexcept {
-    assert(slot >= 0 && slot < Sentinel);
-    return _buffer[slot]._value;
+    return _pool[slot]._value;
   }
 
   const Value& operator[](int8_t slot) const noexcept {
-    assert(slot >= 0 && slot < Sentinel);
-    return _buffer[slot]._value;
+    return _pool[slot]._value;
   }
 
-  int8_t insert(int8_t prev, const Value& value) noexcept {
+index_type insert(index_type prev, const Value& value) noexcept {
     assert(! full());
-    assert(prev >= -1 && prev <= Sentinel);
 
-    const int8_t slot = _allocate();
-    _Node& node = _buffer[slot];
-    node._value = value;
-    int8_t next;
-
-    if(prev == -1) {
-      next = _buffer[Sentinel]._next;
-      _buffer[Sentinel]._next = slot;
-      node._prev = Sentinel;
-    } else {
-      next = _buffer[prev]._next;
-      _buffer[prev]._next = slot;
-      node._prev = prev;
+    if (UNLIKELY(prev == -1)) {
+      return push_front(value);
     }
 
-    node._next = next;
-    _buffer[next]._prev = slot;
+    if (UNLIKELY(prev == _tail)) {
+      return push_back(value);
+    }
 
-    _buffer[Sentinel]._size += 1;
+    const index_type next = _pool[prev]._next;
+    const index_type slot = _pool.allocate(value, prev, next);
+
+    _pool[prev]._next = slot;
+    _pool[next]._prev = slot;
+
     return slot;
   }
 
-  void remove(int8_t slot) noexcept {
-    assert(slot >= 0 && slot < Sentinel);
+  void remove(index_type slot) noexcept {
+    assert(! empty());
 
-    const int8_t prev = _buffer[slot]._prev;
-    const int8_t next = _buffer[slot]._next;
+    if (UNLIKELY(slot == -1)) {
+      return pop_front();
+    }
 
-    _buffer[prev]._next = next;
-    _buffer[next]._prev = prev;
+    if (UNLIKELY(slot == _tail)) {
+      return pop_back();
+    }
 
-    _deallocate(slot);
-    _buffer[Sentinel]._size -= 1;
+    const index_type prev = _pool[slot]._prev;
+    const index_type next = _pool[slot]._next;
+
+    _pool[prev]._next = next;
+    _pool[next]._prev = prev;
+
+    _pool.deallocate(slot);
   }
 
-  int8_t push_front(const Value& v) noexcept {
-    return insert(-1, v);
+  index_type push_front(const Value& value) noexcept {
+    assert(! full());
+
+    const index_type next = _head;
+    const index_type slot = _pool.allocate(value, -1, next);
+
+    _head = slot;
+
+    if(next != -1) {
+      _pool[next]._prev = slot;
+    } else {
+      _tail = slot;
+    }
+
+    return slot;
   }
 
-  int8_t push_back(const Value& v) noexcept {
-    return insert(_buffer[Sentinel]._prev, v);
+  index_type push_back(const Value& value) noexcept {
+    assert(! full());
+
+    const index_type prev = _tail;
+    const index_type slot = _pool.allocate(value, prev, -1);
+
+    if(prev != -1) {
+      _pool[prev]._next = slot;
+    } else {
+      _head = slot;
+    }
+
+    _tail = slot;
+    return slot;
   }
 
   void pop_front() noexcept {
     assert(! empty());
-    remove(_buffer[Sentinel]._next);
+
+    const index_type slot = _head;
+    const index_type next = _pool[slot]._next;
+
+    _head = next;
+
+    if(slot != _tail) {
+      _pool[next]._prev = -1;
+    } else {
+      _tail = -1;
+    }
+
+    _pool.deallocate(slot);
   }
 
   void pop_back() noexcept {
     assert(! empty());
-    remove(_buffer[Sentinel]._prev);
+
+    const index_type slot = _tail;
+    const index_type prev = _pool[slot]._prev;
+
+    if(slot != _head) {
+      _pool[prev]._next = -1;
+    } else {
+      _head = -1;
+    }
+
+    _tail = prev;
+    _pool.deallocate(slot);
+  }
+
+  constexpr std::size_t capacity() const noexcept {
+    return _pool.capacity();
+  }
+
+  /* extension */ bool _debug_equal(std::list<Value>& expected) const noexcept {
+    index_type head = _head;
+    std::list<Value> actual;
+
+    while(head != -1) {
+      actual.push_back(_pool[head]._value);
+      head = _pool[head]._next;
+    }
+
+    return actual == expected;
   }
 
 private:
   struct _Node {
     Value _value;
-    int8_t _next;
-    int8_t _prev;
-    int8_t _size; // only sentinel uses this
+    index_type _prev;
+    index_type _next;
   };
 
-  int8_t _allocate() noexcept {
-    const int8_t slot = _free;
-    _free = _buffer[slot]._next;
-    return slot;
-  }
-
-  void _deallocate(int8_t slot) noexcept {
-    _buffer[slot]._next = _free;
-    _buffer[slot]._prev = -1;
-    _free = slot;
-  }
-
 private:
-  int8_t _free{0};
-  Storage<_Node, Capacity + /* Sentinel */ 1> _buffer;
+  index_type _head;
+  index_type _tail;
+
+  ObjectPool<_Node, Capacity> _pool;
 };
