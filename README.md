@@ -40,6 +40,22 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **branchless** - A collection of branchless functions like `min`, `max`... These functions are implemented using bitwise operations and arithmetic to avoid branching, which can improve performance in certain scenarios by reducing pipeline stalls.  
     
+- **flat_hash** - A fixed‑capacity, array‑based open‑addressing hash map. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions, deletions, and lookups without dynamic memory allocation. The map maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
+
+  ```{r, engine='bash'}
+  # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
+  Benchmark (Release)            FlatHash: (iters=131072): 862 μs :: 6 ns/iter :: 152011244 iter/s
+  Benchmark (Release)            FlatHash: (iters=131072): 582 μs :: 4 ns/iter :: 224949499 iter/s
+  Benchmark (Release)            FlatHash: (iters=131072): 470 μs :: 3 ns/iter :: 278399762 iter/s
+  Benchmark (Release)            FlatHash: (iters=131072): 428 μs :: 3 ns/iter :: 306190766 iter/s
+  Benchmark (Release)            FlatHash: (iters=131072): 417 μs :: 3 ns/iter :: 314105160 iter/s
+  Benchmark (Release)  std::unordered_map: (iters=131072): 7150 μs :: 54 ns/iter :: 18329699 iter/s
+  Benchmark (Release)  std::unordered_map: (iters=131072): 6987 μs :: 53 ns/iter :: 18757748 iter/s
+  Benchmark (Release)  std::unordered_map: (iters=131072): 6904 μs :: 52 ns/iter :: 18984548 iter/s
+  Benchmark (Release)  std::unordered_map: (iters=131072): 6892 μs :: 52 ns/iter :: 19015448 iter/s
+  Benchmark (Release)  std::unordered_map: (iters=131072): 7530 μs :: 57 ns/iter :: 17404721 iter/s
+  ```
+
 - **flat_list** - A fixed‑capacity, array‑based linked list. It is designed for scenarios where the maximum number of elements is known in advance.
 
   ```{r, engine='bash'}
@@ -55,7 +71,15 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   Benchmark (Release)      std::list: (iters=100000): 1018 μs :: 10 ns/iter :: 98196136 iter/s
   ```
     
-- **lat_queue** - An open‑addressing variant of the flat queue. It uses a different approach to manage free slots, which can be more efficient in certain scenarios, especially when slot ids can't be cached.
+- **flat_queue** - An open‑addressing variant of the flat queue. It uses a different approach to manage free slots, which can be more efficient in certain scenarios, especially when slot ids can't be cached.
+
+  ```{r, engine='bash'}
+  Benchmark (Release)      FlatQueue: (iters=100000): 769 μs :: 7 ns/iter :: 129882443 iter/s
+  Benchmark (Release)      FlatQueue: (iters=100000): 578 μs :: 5 ns/iter :: 172757819 iter/s
+  Benchmark (Release)      FlatQueue: (iters=100000): 578 μs :: 5 ns/iter :: 172796328 iter/s
+  Benchmark (Release)      FlatQueue: (iters=100000): 590 μs :: 5 ns/iter :: 169407395 iter/s
+  Benchmark (Release)      FlatQueue: (iters=100000): 629 μs :: 6 ns/iter :: 158804771 iter/s
+  ```
 
 - **flat_tree** - A fixed‑capacity, array‑based binary search tree. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions, deletions, and lookups without dynamic memory allocation. The tree maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
   
