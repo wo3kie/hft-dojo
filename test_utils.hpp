@@ -243,6 +243,44 @@ void test_flat_tree() {
 }
 
 template<typename TContainer>
+void test_flat_hash(int32_t iters) {
+  LCG lcg;
+
+  TContainer hash;
+  std::unordered_map<int, int> umap;
+
+  std::vector<int> values;
+
+  for(int i = 0; i < iters; i += 2) {
+    values.push_back(i);
+    values.push_back(i);
+  }
+
+  std::shuffle(values.begin(), values.end(), lcg);
+
+  for(int i = 0; i < iters; ++i) {
+    hash.insert({values[i], values[i]});
+    umap.insert({values[i], values[i]});
+    Assert(hash._debug_equal(umap));
+  }
+  
+  std::shuffle(values.begin(), values.end(), lcg);
+
+  for(int i = 0; i < iters; ++i) {
+    Assert(hash.contains(values[i]));
+    Assert(umap.contains(values[i]));
+  }
+  
+  std::shuffle(values.begin(), values.end(), lcg);
+
+  for(int i = 0; i <  iters; ++i) {
+    hash.erase(hash.find(values[i]));
+    umap.erase(umap.find(values[i]));
+    Assert(hash._debug_equal(umap));
+  }
+}
+
+template<typename TContainer>
 void bench_ring_buffer(int32_t iters, const std::string& label = ":") {
    
   struct Benchmark {
@@ -278,8 +316,8 @@ void bench_ring_buffer(int32_t iters, const std::string& label = ":") {
   } bench(iters);
 
   Timer<1>(bench).log([iters, label](int ns, const std::string& msg) {
-    std::cout << "Benchmark (" << PROFILE << ")"
-              << std::setw(20) << std::right << label << ": "
+    std::cout << "Benchmark (" << PROFILE << "): "
+              << label << ": "
               << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
               << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
   });
@@ -325,8 +363,8 @@ void bench_flat_hash(int32_t iters, const std::string& label = ":") {
   } bench(iters);
 
   Timer<1>(bench).log([iters, label](int ns, const std::string& msg) {
-    std::cout << "Benchmark (" << PROFILE << ")"
-              << std::setw(20) << std::right << label << ": "
+    std::cout << "Benchmark (" << PROFILE << "): "
+              << label << ": "
               << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
               << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
   });
@@ -371,8 +409,8 @@ void bench_flat_queue(const std::string& label = ":") {
   } bench;
 
   Timer<1>(bench).log([iters = TContainer::capacity(), label](int ns, const std::string& msg) {
-    std::cout << "Benchmark (" << PROFILE << ")"
-              << std::setw(15) << std::right << label << ": "
+    std::cout << "Benchmark (" << PROFILE << "): "
+              << label << ": "
               << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
               << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
   });
@@ -422,8 +460,8 @@ void bench_flat_list(int32_t iters, const std::string& label = ":") {
   } bench(iters);
 
   Timer<1>(bench).log([iters, label](int ns, const std::string& msg) {
-    std::cout << "Benchmark (" << PROFILE << ")"
-              << std::setw(15) << std::right << label << ": "
+    std::cout << "Benchmark (" << PROFILE << "): "
+              << label << ": "
               << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
               << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
   });
@@ -477,8 +515,8 @@ void bench_flat_tree(int32_t iters, const std::string& label = ":") {
   } bench(iters);
 
   Timer<1>(bench).log([iters, label](int ns, const std::string& msg) {
-    std::cout << "Benchmark (" << PROFILE << ")"
-              << std::setw(15) << std::right << label << ": "
+    std::cout << "Benchmark (" << PROFILE << "): "
+              << label << ": "
               << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
               << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
   });
