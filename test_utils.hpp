@@ -243,6 +243,50 @@ void test_flat_tree() {
 }
 
 template<typename TContainer>
+void bench_ring_buffer(int32_t iters, const std::string& label = ":") {
+   
+  struct Benchmark {
+    Benchmark(int32_t iters)
+      : _iters(iters)
+    {
+    }
+
+    LCG _lcg;
+    int32_t _iters;
+    TContainer _buffer;
+    std::vector<int> _values;
+    
+    void setup() {
+      for(int i = 0; i < _iters; ++i) {
+        _values.push_back(_lcg());
+      }      
+    }
+    
+    void run() {
+      volatile int32_t no_opt = 0;
+
+      for(const auto v : _values) {
+        no_opt += _buffer.push(v);
+        no_opt += _buffer._ext_pop();
+      }
+
+      do_not_optimize(no_opt);
+    }
+
+    void teardown() {
+    }
+  } bench(iters);
+
+  Timer<1>(bench).log([iters, label](int ns, const std::string& msg) {
+    std::cout << "Benchmark (" << PROFILE << ")"
+              << std::setw(20) << std::right << label << ": "
+              << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
+              << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
+  });
+}
+
+
+template<typename TContainer>
 void bench_flat_hash(int32_t iters, const std::string& label = ":") {
    
   struct Benchmark {
