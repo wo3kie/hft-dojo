@@ -15,21 +15,22 @@
 #include "common.hpp"
 #include "object_pool.hpp"
 
-template<typename TKey>
-struct _Node {
-  TKey _key{};
 
-  int32_t _leftId{-1};
-  int32_t _rightId{-1};
-  int32_t _parentId{-1};
-  
-  /* for balanced tree */
-  int32_t _height{1};
-};
 
 template<typename TKey, int32_t Capacity, typename TCompare = std::less<TKey>>
 struct FlatTreeBS: noncopyable, nonmovable {
-  using Node = _Node<TKey>;
+  using index_type = index_type_t<Capacity>;
+
+  struct Node {
+    TKey _key{};
+
+    index_type _leftId{-1};
+    index_type _rightId{-1};
+    index_type _parentId{-1};
+    
+    /* for balanced tree */
+    index_type _height{1};
+  };
 
 public:
   explicit FlatTreeBS(TCompare cmp = TCompare()) noexcept
@@ -76,7 +77,7 @@ public:
       return (_rootId = _pool.allocate(key, -1, -1, -1));
     }
 
-    int32_t nodeId = _rootId;
+    index_type nodeId = _rootId;
 
     while(true) {
       Node& node = _pool[nodeId];
@@ -100,7 +101,7 @@ public:
   }
 
   int32_t _find(const TKey& key) noexcept {
-    int32_t nodeId = _rootId;
+    index_type nodeId = _rootId;
 
     while(nodeId != -1) {
       Node& node = _pool[nodeId];
@@ -137,13 +138,13 @@ public:
         }
       }
 
-      const int32_t parentId = node._parentId;
+      const index_type parentId = node._parentId;
       _pool.deallocate(nodeId);
       return parentId;
     }
 
     /* case 2 */ if(node._leftId == -1 || node._rightId == -1) {
-      int32_t childId = (node._leftId != -1) ? node._leftId : node._rightId;
+      index_type childId = (node._leftId != -1) ? node._leftId : node._rightId;
       Node& child = _node(childId);
       child._parentId = node._parentId;
 
@@ -159,7 +160,7 @@ public:
         }
       }
 
-      const int32_t parentId = node._parentId;
+      const index_type parentId = node._parentId;
       _pool.deallocate(nodeId);
       return parentId;
     }
@@ -185,20 +186,20 @@ public:
         }
       }
 
-      const int32_t parentId = node._parentId;
+      const index_type parentId = node._parentId;
       _pool.deallocate(nodeId);
       return parentId;
     } 
     
     /* case 4 */ /* if (right._leftId != -1) */ {
-      int32_t minNodeId = node._rightId;
+      index_type minNodeId = node._rightId;
       
       while(_node(minNodeId)._leftId != -1) {
         minNodeId = _node(minNodeId)._leftId;
       }
       
       Node& minNode = _node(minNodeId);
-      const int32_t minNodeParentId = minNode._parentId;
+      const index_type minNodeParentId = minNode._parentId;
 
       minNode._leftId = node._leftId;
       left._parentId = minNodeId;
@@ -232,7 +233,6 @@ public:
   }
 
   Node& _node(int32_t nodeId) noexcept {
-    assert(nodeId >= 0 && nodeId < Capacity);
     return _pool[nodeId];
   }
 
