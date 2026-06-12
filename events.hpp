@@ -164,7 +164,9 @@ struct QueueOut {
   }
 
   Event pop() noexcept {
-    return _queue.pop();
+    Event event;
+    _queue.pop(event);
+    return event;
   }
 
   bool empty() const noexcept {
@@ -176,7 +178,9 @@ struct QueueOut {
 
     while(_queue.empty_approx() == false) {
       count += 1;
-      _queue.pop();
+
+      Event event;
+      _queue.pop(event);
     }
 
     return count;
@@ -187,7 +191,10 @@ struct QueueOut {
 
     while(_queue.empty_approx() == false) {
       count += 1;
-      const Event event = _queue.pop();
+
+      Event event;
+      _queue.pop(event);
+
       std::cout << prefix << event << std::endl;
     }
 
