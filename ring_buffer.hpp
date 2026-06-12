@@ -68,7 +68,7 @@ public:
     return _index(_tail + 1) == _head;
   }
 
-  /* extension */ TValue pop() {
+  /* extension */ TValue _ext_pop() {
     TValue out;
 
     if(! pop(out)) {
