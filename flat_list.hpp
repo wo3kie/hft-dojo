@@ -8,11 +8,12 @@
 
 #include <cassert>
 #include <cstdint>
+#include <list>
 
 #include "object_pool.hpp"
 #include "storage.hpp"
 
-template<typename Value, std::size_t Capacity>
+template<typename Value, int32_t Capacity>
 class FlatList {
 public:
   using index_type = index_type_t<Capacity>;
@@ -40,15 +41,15 @@ public:
     return _pool[_tail]._value;
   }
 
-  Value& operator[](int8_t slot) noexcept {
+  Value& operator[](std::size_t slot) noexcept {
     return _pool[slot]._value;
   }
 
-  const Value& operator[](int8_t slot) const noexcept {
+  const Value& operator[](std::size_t slot) const noexcept {
     return _pool[slot]._value;
   }
 
-index_type insert(index_type prev, const Value& value) noexcept {
+int32_t insert(int32_t prev, const Value& value) noexcept {
     assert(! full());
 
     if (UNLIKELY(prev == -1)) {
@@ -68,7 +69,7 @@ index_type insert(index_type prev, const Value& value) noexcept {
     return slot;
   }
 
-  void remove(index_type slot) noexcept {
+  void remove(int32_t slot) noexcept {
     assert(! empty());
 
     if (UNLIKELY(slot == -1)) {
@@ -105,7 +106,7 @@ index_type insert(index_type prev, const Value& value) noexcept {
     return slot;
   }
 
-  index_type push_back(const Value& value) noexcept {
+  int32_t push_back(const Value& value) noexcept {
     assert(! full());
 
     const index_type prev = _tail;
@@ -154,7 +155,7 @@ index_type insert(index_type prev, const Value& value) noexcept {
     _pool.deallocate(slot);
   }
 
-  constexpr std::size_t capacity() const noexcept {
+  constexpr int32_t capacity() const noexcept {
     return _pool.capacity();
   }
 
