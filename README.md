@@ -44,64 +44,64 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
   ```{r, engine='bash'}
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
-  Benchmark (Release)            FlatHash: (iters=131072): 683 μs :: 5 ns/iter :: 191882977 iter/s
-  Benchmark (Release)            FlatHash: (iters=131072): 584 μs :: 4 ns/iter :: 224124428 iter/s
-  Benchmark (Release)            FlatHash: (iters=131072): 411 μs :: 3 ns/iter :: 318787424 iter/s
-  Benchmark (Release)            FlatHash: (iters=131072): 419 μs :: 3 ns/iter :: 312812790 iter/s
-  Benchmark (Release)            FlatHash: (iters=131072): 388 μs :: 2 ns/iter :: 337572563 iter/s
+  Benchmark (Release): FlatHash: (iters=131072): 676 μs :: 5 ns/iter :: 193781693 iter/s
+  Benchmark (Release): FlatHash: (iters=131072): 614 μs :: 4 ns/iter :: 213170957 iter/s
+  Benchmark (Release): FlatHash: (iters=131072): 457 μs :: 3 ns/iter :: 286590765 iter/s
+  Benchmark (Release): FlatHash: (iters=131072): 440 μs :: 3 ns/iter :: 297600072 iter/s
+  Benchmark (Release): FlatHash: (iters=131072): 441 μs :: 3 ns/iter :: 297108298 iter/s
   ```
 
 - **flat_list** - A fixed‑capacity, array‑based linked list. It is designed for scenarios where the maximum number of elements is known in advance.
 
   ```{r, engine='bash'}
-  Benchmark (Release)       FlatList: (iters=100000): 240 μs :: 2 ns/iter :: 416375204 iter/s
-  Benchmark (Release)       FlatList: (iters=100000): 241 μs :: 2 ns/iter :: 413703515 iter/s
-  Benchmark (Release)       FlatList: (iters=100000): 246 μs :: 2 ns/iter :: 405924879 iter/s
-  Benchmark (Release)       FlatList: (iters=100000): 304 μs :: 3 ns/iter :: 328945204 iter/s
-  Benchmark (Release)       FlatList: (iters=100000): 241 μs :: 2 ns/iter :: 414801786 iter/s
+  Benchmark (Release): FlatList: (iters=100000): 176 μs :: 1 ns/iter :: 567288982 iter/s
+  Benchmark (Release): FlatList: (iters=100000): 176 μs :: 1 ns/iter :: 566408573 iter/s
+  Benchmark (Release): FlatList: (iters=100000): 176 μs :: 1 ns/iter :: 566136008 iter/s
+  Benchmark (Release): FlatList: (iters=100000): 176 μs :: 1 ns/iter :: 567430617 iter/s
+  Benchmark (Release): FlatList: (iters=100000): 176 μs :: 1 ns/iter :: 566662133 iter/s
   ```
     
 - **flat_queue** - It uses an open‑addressing approach to manage free slots, which can be more efficient in certain scenarios, especially when slot `id`s can't be cached.
 
   ```{r, engine='bash'}
-  Benchmark (Release)      FlatQueue: (iters=100000): 769 μs :: 7 ns/iter :: 129882443 iter/s
-  Benchmark (Release)      FlatQueue: (iters=100000): 578 μs :: 5 ns/iter :: 172757819 iter/s
-  Benchmark (Release)      FlatQueue: (iters=100000): 578 μs :: 5 ns/iter :: 172796328 iter/s
-  Benchmark (Release)      FlatQueue: (iters=100000): 590 μs :: 5 ns/iter :: 169407395 iter/s
-  Benchmark (Release)      FlatQueue: (iters=100000): 629 μs :: 6 ns/iter :: 158804771 iter/s
+  Benchmark (Release): FlatQueue: (iters=100000): 581 μs :: 5 ns/iter :: 171927357 iter/s
+  Benchmark (Release): FlatQueue: (iters=100000): 579 μs :: 5 ns/iter :: 172554216 iter/s
+  Benchmark (Release): FlatQueue: (iters=100000): 579 μs :: 5 ns/iter :: 172557789 iter/s
+  Benchmark (Release): FlatQueue: (iters=100000): 599 μs :: 5 ns/iter :: 166870248 iter/s
+  Benchmark (Release): FlatQueue: (iters=100000): 579 μs :: 5 ns/iter :: 172422116 iter/s
   ```
 
 - **flat_tree_bs** - The simplest binary-search variant of the flat tree without nodes balancing. It is designed as a base for balanced versions, but it can be useful on its own in scenarios where the input data is mostly random.
 
   ```{r, engine='cpp'}
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
-  Benchmark    FlatTreeBS: (Release)(iters=100000): 77 ms :: 773 ns/iter :: 1292312 iter/s
-  Benchmark    FlatTreeBS: (Release)(iters=100000): 76 ms :: 763 ns/iter :: 1310497 iter/s
-  Benchmark    FlatTreeBS: (Release)(iters=100000): 77 ms :: 776 ns/iter :: 1287738 iter/s
-  Benchmark    FlatTreeBS: (Release)(iters=100000): 76 ms :: 767 ns/iter :: 1303581 iter/s
-  Benchmark    FlatTreeBS: (Release)(iters=100000): 77 ms :: 778 ns/iter :: 1284413 iter/s
+  Benchmark (Release): FlatTreeBS: (iters=100000): 69806 μs :: 698 ns/iter :: 1432525 iter/s
+  Benchmark (Release): FlatTreeBS: (iters=100000): 69219 μs :: 692 ns/iter :: 1444681 iter/s
+  Benchmark (Release): FlatTreeBS: (iters=100000): 71617 μs :: 716 ns/iter :: 1396311 iter/s
+  Benchmark (Release): FlatTreeBS: (iters=100000): 70392 μs :: 703 ns/iter :: 1420597 iter/s
+  Benchmark (Release): FlatTreeBS: (iters=100000): 68570 μs :: 685 ns/iter :: 1458362 iter/s
   ```
 
 - **flat_tree_avl** - An AVL‑balanced variant of the flat tree. It maintains the AVL balance property, which ensures that the tree remains balanced after insertions and deletions, providing O(log n) time complexity for insertions, lookups and deletions. It is implemented as a subclass of the binary‑search variant, reusing its core logic and adding the necessary rotations and balance factor updates to maintain the AVL property.
 
   ```{r, engine='cpp'}
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
-  Benchmark   FlatTreeAVL: (Release)(iters=100000): 5 ms :: 50 ns/iter :: 19888497 iter/s
-  Benchmark   FlatTreeAVL: (Release)(iters=100000): 4 ms :: 49 ns/iter :: 20275704 iter/s
-  Benchmark   FlatTreeAVL: (Release)(iters=100000): 4 ms :: 49 ns/iter :: 20064157 iter/s
-  Benchmark   FlatTreeAVL: (Release)(iters=100000): 5 ms :: 51 ns/iter :: 19413363 iter/s
-  Benchmark   FlatTreeAVL: (Release)(iters=100000): 5 ms :: 50 ns/iter :: 19876815 iter/s
+  Benchmark (Release): FlatTreeAVL: (iters=100000): 3455 μs :: 34 ns/iter :: 28943224 iter/s
+  Benchmark (Release): FlatTreeAVL: (iters=100000): 3433 μs :: 34 ns/iter :: 29121602 iter/s
+  Benchmark (Release): FlatTreeAVL: (iters=100000): 3555 μs :: 35 ns/iter :: 28124521 iter/s
+  Benchmark (Release): FlatTreeAVL: (iters=100000): 3604 μs :: 36 ns/iter :: 27745469 iter/s
+  Benchmark (Release): FlatTreeAVL: (iters=100000): 3430 μs :: 34 ns/iter :: 29152623 iter/s
   ```
 
 - **flat_tree_splay** - A splay‑tree variant of the flat tree. It is a self‑adjusting binary search tree that performs splaying operations to keep recently accessed elements near the root, which can improve access times for certain access patterns. It is designed for scenarios where there is a high degree of locality in the access patterns, as it can provide faster access to recently accessed elements compared to other balanced tree structures.
 
   ```{r, engine='cpp'}
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
-  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 80 ns/iter :: 12440871 iter/s
-  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 82 ns/iter :: 12100216 iter/s
-  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 81 ns/iter :: 12288132 iter/s
-  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 81 ns/iter :: 12270715 iter/s
-  Benchmark FlatTreeSplay: (Release)(iters=100000): 8 ms :: 82 ns/iter :: 12124596 iter/s
+  Benchmark (Release): FlatTreeSplay:: (iters=100000): 7348 μs :: 73 ns/iter :: 13608936 iter/s
+  Benchmark (Release): FlatTreeSplay:: (iters=100000): 7703 μs :: 77 ns/iter :: 12980603 iter/s
+  Benchmark (Release): FlatTreeSplay:: (iters=100000): 7379 μs :: 73 ns/iter :: 13551644 iter/s
+  Benchmark (Release): FlatTreeSplay:: (iters=100000): 7354 μs :: 73 ns/iter :: 13597701 iter/s
+  Benchmark (Release): FlatTreeSplay:: (iters=100000): 7908 μs :: 79 ns/iter :: 12644042 iter/s
   ```
 
 - **gdb_utils** - GDB helpers for inspecting the internal state of the data structures in this repository.
@@ -131,44 +131,44 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
   ```{r, engine='bash'}
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
-  Benchmark (Release)          RingBuffer: (iters=131072): 334 μs :: 2 ns/iter :: 392091872 iter/s
-  Benchmark (Release)          RingBuffer: (iters=131072): 304 μs :: 2 ns/iter :: 430194203 iter/s
-  Benchmark (Release)          RingBuffer: (iters=131072): 201 μs :: 1 ns/iter :: 651895177 iter/s
-  Benchmark (Release)          RingBuffer: (iters=131072): 200 μs :: 1 ns/iter :: 653905061 iter/s
-  Benchmark (Release)          RingBuffer: (iters=131072): 198 μs :: 1 ns/iter :: 659554768 iter/s
+  Benchmark (Release): RingBuffer: (iters=131072): 314 μs :: 2 ns/iter :: 416557817 iter/s
+  Benchmark (Release): RingBuffer: (iters=131072): 288 μs :: 2 ns/iter :: 454133462 iter/s
+  Benchmark (Release): RingBuffer: (iters=131072): 239 μs :: 1 ns/iter :: 546684573 iter/s
+  Benchmark (Release): RingBuffer: (iters=131072): 193 μs :: 1 ns/iter :: 675904105 iter/s
+  Benchmark (Release): RingBuffer: (iters=131072): 190 μs :: 1 ns/iter :: 686273175 iter/s
   ```
 
 - **ring_buffer_mutex** - Multi‑producer/multi‑consumer ring buffer using mutexes. It is designed for scenarios where multiple threads are producing and consuming data, so it uses mutexes to synchronize access to the buffer. This allows it to be used in multi‑threaded environments, but it may have higher latency compared to the single‑threaded version due to the overhead of locking and unlocking the mutexes.
   
   ```{r, engine='bash'}
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
-  Benchmark (Release)     RingBufferMutex: (iters=131072): 2145 μs :: 16 ns/iter :: 61090846 iter/s
-  Benchmark (Release)     RingBufferMutex: (iters=131072): 1843 μs :: 14 ns/iter :: 71106713 iter/s
-  Benchmark (Release)     RingBufferMutex: (iters=131072): 1726 μs :: 13 ns/iter :: 75898190 iter/s
-  Benchmark (Release)     RingBufferMutex: (iters=131072): 1725 μs :: 13 ns/iter :: 75981125 iter/s
-  Benchmark (Release)     RingBufferMutex: (iters=131072): 1813 μs :: 13 ns/iter :: 72271206 iter/s
+  Benchmark (Release): RingBufferMutex: (iters=131072): 1978 μs :: 15 ns/iter :: 66234442 iter/s
+  Benchmark (Release): RingBufferMutex: (iters=131072): 1943 μs :: 14 ns/iter :: 67445552 iter/s
+  Benchmark (Release): RingBufferMutex: (iters=131072): 1693 μs :: 12 ns/iter :: 77407162 iter/s
+  Benchmark (Release): RingBufferMutex: (iters=131072): 1744 μs :: 13 ns/iter :: 75134853 iter/s
+  Benchmark (Release): RingBufferMutex: (iters=131072): 1752 μs :: 13 ns/iter :: 74781285 iter/s
   ```
 
 - **ring_buffer_spsc** - Single‑producer/single‑consumer ring buffer using atomics. It is designed for scenarios where one thread is producing data and another thread is consuming data, so it uses atomic operations to synchronize access to the buffer. This allows it to be used in multi‑threaded environments while still maintaining low latency, as it avoids the overhead of mutexes.
   
   ```{r, engine='bash'}
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
-  Benchmark (Release)      RingBufferSPSC: (iters=131072): 545 μs :: 4 ns/iter :: 240424087 iter/s
-  Benchmark (Release)      RingBufferSPSC: (iters=131072): 497 μs :: 3 ns/iter :: 263594825 iter/s
-  Benchmark (Release)      RingBufferSPSC: (iters=131072): 388 μs :: 2 ns/iter :: 337537791 iter/s
-  Benchmark (Release)      RingBufferSPSC: (iters=131072): 388 μs :: 2 ns/iter :: 337647349 iter/s
-  Benchmark (Release)      RingBufferSPSC: (iters=131072): 384 μs :: 2 ns/iter :: 340754760 iter/s
+  Benchmark (Release): RingBufferSPSC: (iters=131072): 528 μs :: 4 ns/iter :: 247889369 iter/s
+  Benchmark (Release): RingBufferSPSC: (iters=131072): 499 μs :: 3 ns/iter :: 262249948 iter/s
+  Benchmark (Release): RingBufferSPSC: (iters=131072): 408 μs :: 3 ns/iter :: 320999204 iter/s
+  Benchmark (Release): RingBufferSPSC: (iters=131072): 415 μs :: 3 ns/iter :: 315483411 iter/s
+  Benchmark (Release): RingBufferSPSC: (iters=131072): 415 μs :: 3 ns/iter :: 315760057 iter/s
   ```
 
 - **ring_buffer_spmc** - Single‑producer/multiple‑consumer ring buffer using atomics. It is designed for scenarios where one thread is producing data and multiple threads are consuming data, so it uses atomic operations to synchronize access to the buffer. This allows it to be used in multi‑threaded environments while still maintaining low latency, as it avoids the overhead of mutexes.
 
   ```{r, engine='bash'}
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
-  Benchmark (Release)      RingBufferSPMC: (iters=131072): 1555 μs :: 11 ns/iter :: 84279022 iter/s
-  Benchmark (Release)      RingBufferSPMC: (iters=131072): 1540 μs :: 11 ns/iter :: 85104283 iter/s
-  Benchmark (Release)      RingBufferSPMC: (iters=131072): 1464 μs :: 11 ns/iter :: 89524123 iter/s
-  Benchmark (Release)      RingBufferSPMC: (iters=131072): 1470 μs :: 11 ns/iter :: 89161957 iter/s
-  Benchmark (Release)      RingBufferSPMC: (iters=131072): 1854 μs :: 14 ns/iter :: 70686310 iter/s
+  Benchmark (Release): RingBufferSPMC: (iters=131072): 1559 μs :: 11 ns/iter :: 84065239 iter/s
+  Benchmark (Release): RingBufferSPMC: (iters=131072): 1498 μs :: 11 ns/iter :: 87465533 iter/s
+  Benchmark (Release): RingBufferSPMC: (iters=131072): 1441 μs :: 10 ns/iter :: 90950219 iter/s
+  Benchmark (Release): RingBufferSPMC: (iters=131072): 1419 μs :: 10 ns/iter :: 92335892 iter/s
+  Benchmark (Release): RingBufferSPMC: (iters=131072): 1427 μs :: 10 ns/iter :: 91790328 iter/s
   ```
 
 - **task_executor** - Executes a function in a separate thread (optional thread affinity). Result retrieved via `Channel::get` (optional thread affinity).
