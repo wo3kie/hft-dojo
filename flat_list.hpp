@@ -15,7 +15,7 @@
 #include "object_pool.hpp"
 #include "storage.hpp"
 
-template<typename Value, int32_t Capacity>
+template<typename Value, std::size_t Capacity>
 class FlatList {
 public:
   using index_type = index_type_t<Capacity>;
