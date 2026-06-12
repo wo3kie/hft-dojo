@@ -8,7 +8,6 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include <array>
 #include <atomic>
 #include <cstddef>
 #include <stdexcept>
@@ -81,7 +80,7 @@ public:
     return head == _index(tail + 1);
   }
 
-  /* extension */ TValue pop() {
+  /* extension */ TValue _ext_pop() {
     TValue out;
 
     if(pop(out) == false) {
