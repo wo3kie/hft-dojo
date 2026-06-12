@@ -20,7 +20,7 @@
  * FlatQueue Open-Addressing
  */
 
-template<typename Value, std::size_t Capacity>
+template<typename Value, int32_t Capacity>
 class FlatQueue {
   using index_type = index_type_t<Capacity>;
 
@@ -28,7 +28,7 @@ class FlatQueue {
   
 public:
   FlatQueue() {
-    for(std::size_t i = 0; i < Capacity + 1; i += 1) {
+    for(int32_t i = 0; i < Capacity + 1; i += 1) {
       _buffer[i]._next = Sentinel;
       _buffer[i]._prev = Sentinel;
     }
@@ -36,7 +36,7 @@ public:
     _buffer[Sentinel]._size = 0;
   }
 
-  static constexpr std::size_t capacity() noexcept {
+  static constexpr int32_t capacity() noexcept {
     return Capacity;
   }
 
@@ -52,15 +52,15 @@ public:
     return _buffer[_buffer[Sentinel]._next]._value;
   }
 
-  Value& operator[](std::size_t slot) noexcept {
+  Value& operator[](int32_t slot) noexcept {
     return _buffer[slot]._value;
   }
 
-  const Value& operator[](std::size_t slot) const noexcept {
+  const Value& operator[](int32_t slot) const noexcept {
     return _buffer[slot]._value;
   }
 
-  void push(std::size_t slot, const Value& value) noexcept {
+  void push(int32_t slot, const Value& value) noexcept {
     assert(slot >= 0 && slot < Sentinel);
 
     slot = _allocate(slot);
@@ -78,7 +78,7 @@ public:
     _buffer[Sentinel]._prev = slot;
   }
 
-  void remove(std::size_t slot) noexcept {
+  void remove(int32_t slot) noexcept {
     const index_type prev = _buffer[slot]._prev;
     const index_type next = _buffer[slot]._next;
 
@@ -109,7 +109,7 @@ private:
   };
 
 private:
-  std::size_t _allocate(std::size_t slot) noexcept {
+  int32_t _allocate(int32_t slot) noexcept {
     assert(! full());
     assert(slot >= 0 && slot < Sentinel);
     assert(_buffer[slot]._prev == Sentinel);
@@ -118,7 +118,7 @@ private:
     return slot;
   }
 
-  void _deallocate(std::size_t slot) noexcept {
+  void _deallocate(int32_t slot) noexcept {
     _buffer[slot]._next = Sentinel;
     _buffer[slot]._prev = Sentinel;
   }
