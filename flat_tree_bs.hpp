@@ -15,7 +15,7 @@
 #include "common.hpp"
 #include "object_pool.hpp"
 
-
+#include <iostream>
 
 template<typename TKey, int32_t Capacity, typename TCompare = std::less<TKey>>
 struct FlatTreeBS: noncopyable, nonmovable {
@@ -27,7 +27,7 @@ struct FlatTreeBS: noncopyable, nonmovable {
     index_type _leftId{-1};
     index_type _rightId{-1};
     index_type _parentId{-1};
-    
+
     /* for balanced tree */
     index_type _height{1};
   };
@@ -44,7 +44,7 @@ public:
   }
 
   int32_t find(const TKey& key) noexcept {
-    if(_rootId == -1) {
+    if(UNLIKELY(_rootId == -1)) {
       return -1;
     }
 
@@ -72,8 +72,27 @@ public:
   }
 
   public:
+
+  void dump(int32_t nodeId, int32_t depth) const noexcept {
+    if(nodeId == -1) {
+      return;
+    }
+
+    const Node& node = _pool[nodeId];
+
+    dump(node._leftId, depth + 1);
+    std::cout << std::string(depth * 2, ' ') << node._key << " (h=" << int(node._height) << ")" << std::endl;
+    dump(node._rightId, depth + 1);
+  }
+
+  void dump() const noexcept {
+    dump(_rootId, 0);
+    std::cout << std::endl << std::endl;
+  }
+
+
   int32_t _insert(const TKey& key) noexcept {
-    if(_rootId == -1) {
+    if(UNLIKELY(_rootId == -1)) {
       return (_rootId = _pool.allocate(key, -1, -1, -1));
     }
 
@@ -126,9 +145,7 @@ public:
     Node& node = _pool[nodeId];
 
     /* case 1 */ if(node._leftId == -1 && node._rightId == -1) {
-      if(nodeId == _rootId) {
-        _rootId = -1;
-      } else {
+      if(nodeId != _rootId) {
         Node& parent = _node(node._parentId);
 
         if(parent._leftId == nodeId) {
@@ -136,21 +153,21 @@ public:
         } else {
           parent._rightId = -1;
         }
+      } else {
+        _rootId = -1;
       }
 
-      const index_type parentId = node._parentId;
+      const index_type result = node._parentId;
       _pool.deallocate(nodeId);
-      return parentId;
+      return result;
     }
 
     /* case 2 */ if(node._leftId == -1 || node._rightId == -1) {
-      index_type childId = (node._leftId != -1) ? node._leftId : node._rightId;
+      index_type childId = (node._rightId == -1) ? node._leftId : node._rightId;
       Node& child = _node(childId);
       child._parentId = node._parentId;
 
-      if(nodeId == _rootId) {
-        _rootId = childId;
-      } else {
+      if(nodeId != _rootId) {
         Node& parent = _node(node._parentId);
 
         if(parent._leftId == nodeId) {
@@ -158,11 +175,13 @@ public:
         } else {
           parent._rightId = childId;
         }
+      } else {
+        _rootId = childId;
       }
 
-      const index_type parentId = node._parentId;
+      const index_type result = node._parentId;
       _pool.deallocate(nodeId);
-      return parentId;
+      return result;
     }
 
     Node& left = _node(node._leftId);
@@ -171,12 +190,9 @@ public:
     /* case 3 */ if (right._leftId == -1) {
       right._leftId = node._leftId;
       left._parentId = node._rightId;
-
       right._parentId = node._parentId;
 
-      if(nodeId == _rootId) {
-        _rootId = node._rightId;
-      } else {
+      if(nodeId != _rootId) {
         Node& parent = _node(node._parentId);
 
         if(parent._leftId == nodeId) {
@@ -184,11 +200,13 @@ public:
         } else {
           parent._rightId = node._rightId;
         }
+      } else {
+        _rootId = node._rightId;
       }
 
-      const index_type parentId = node._parentId;
+      const index_type result = node._rightId;
       _pool.deallocate(nodeId);
-      return parentId;
+      return result;
     } 
     
     /* case 4 */ /* if (right._leftId != -1) */ {
@@ -199,25 +217,21 @@ public:
       }
       
       Node& minNode = _node(minNodeId);
-      const index_type minNodeParentId = minNode._parentId;
-
       minNode._leftId = node._leftId;
       left._parentId = minNodeId;
-
       _node(minNode._parentId)._leftId = minNode._rightId;
-
+      
       if (minNode._rightId != -1) {
         _node(minNode._rightId)._parentId = minNode._parentId;
       }
-
+      
       minNode._rightId = node._rightId;
       right._parentId = minNodeId;
-
+      
+      const index_type minNodeParentId = minNode._parentId;
       minNode._parentId = node._parentId;
 
-      if(nodeId == _rootId) {
-        _rootId = minNodeId;
-      } else {
+      if(nodeId != _rootId) {
         Node& parent = _node(node._parentId);
 
         if(parent._leftId == nodeId) {
@@ -225,6 +239,8 @@ public:
         } else {
           parent._rightId = minNodeId;
         }
+      } else {
+        _rootId = minNodeId;
       }
 
       _pool.deallocate(nodeId);
