@@ -6,8 +6,6 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include <unordered_set>
-
 #include "flat_tree_splay.hpp"
 #include "test_utils.hpp"
 
@@ -24,10 +22,12 @@ int main() {
 
 #ifdef NDEBUG
   bench_flat_tree<FlatTreeSplay<int, 100'000>>(100'000, "FlatTreeSplay:");
-  bench_flat_tree<std::set<int>>(100'000, "std::set:");
+  bench_flat_tree<FlatTreeSplay<int, 100'000>>(100'000, "FlatTreeSplay:");
+  bench_flat_tree<FlatTreeSplay<int, 100'000>>(100'000, "FlatTreeSplay:");
+  bench_flat_tree<FlatTreeSplay<int, 100'000>>(100'000, "FlatTreeSplay:");
+  bench_flat_tree<FlatTreeSplay<int, 100'000>>(100'000, "FlatTreeSplay:");
 #else
   bench_flat_tree<FlatTreeSplay<int, 10'000>>(10'000, "FlatTreeSplay:");
-  bench_flat_tree<std::set<int>>(10'000, "std::set:");
 #endif
 
   return 0;
