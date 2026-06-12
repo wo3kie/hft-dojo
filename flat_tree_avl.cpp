@@ -10,6 +10,8 @@
 #include "test_utils.hpp"
 
 int main() {
+
+
   for(unsigned i = 0; i < 1024; ++i) {
     test_flat_tree<FlatTreeAVL<int, 1>>();
     test_flat_tree<FlatTreeAVL<int, 2>>();
@@ -21,11 +23,17 @@ int main() {
   }
 
 #ifdef NDEBUG
-  bench_flat_tree<FlatTreeAVL<int, 100'000>>(100'000, "FlatTreeAVL");
-  bench_flat_tree<FlatTreeAVL<int, 100'000>>(100'000, "FlatTreeAVL");
-  bench_flat_tree<FlatTreeAVL<int, 100'000>>(100'000, "FlatTreeAVL");
-  bench_flat_tree<FlatTreeAVL<int, 100'000>>(100'000, "FlatTreeAVL");
-  bench_flat_tree<FlatTreeAVL<int, 100'000>>(100'000, "FlatTreeAVL");
+  // bench_flat_tree<FlatTreeAVL<int, 100'000>>(100'000, "FlatTreeAVL");
+  // bench_flat_tree<FlatTreeAVL<int, 100'000>>(100'000, "FlatTreeAVL");
+  // bench_flat_tree<FlatTreeAVL<int, 100'000>>(100'000, "FlatTreeAVL");
+  // bench_flat_tree<FlatTreeAVL<int, 100'000>>(100'000, "FlatTreeAVL");
+  // bench_flat_tree<FlatTreeAVL<int, 100'000>>(100'000, "FlatTreeAVL");
+
+  bench_flat_tree<std::set<int>>(100'000, "std::set");
+  bench_flat_tree<std::set<int>>(100'000, "std::set");
+  bench_flat_tree<std::set<int>>(100'000, "std::set");
+  bench_flat_tree<std::set<int>>(100'000, "std::set");
+  bench_flat_tree<std::set<int>>(100'000, "std::set");
 #else
   bench_flat_tree<FlatTreeAVL<int, 10'000>>(10'000, "FlatTreeAVL");
 #endif
