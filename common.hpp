@@ -25,8 +25,13 @@
 
 template<std::size_t Capacity>
 struct index_type {
-  using type = std::conditional_t<Capacity<128, int8_t, std::conditional_t<Capacity<32768, int16_t, int32_t>>;
+    using type =
+        std::conditional_t<(Capacity < (1ULL << 7)),  int8_t,
+          std::conditional_t<(Capacity < (1ULL << 15)), int16_t,
+            std::conditional_t<(Capacity < (1ULL << 31)), int32_t,
+                                                            int64_t>>>;
 };
+
 
 template<std::size_t Capacity>
 using index_type_t = typename index_type<Capacity>::type;
