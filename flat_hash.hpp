@@ -17,7 +17,7 @@
 
 template<typename TKey, typename TValue, int32_t Capacity>
   requires(std::is_integral_v<TKey>)
-struct FlatHash : noncopyable, nonmovable {
+struct FlatHash: noncopyable, nonmovable {
   static_assert((Capacity & (Capacity - 1)) == 0);
 
   static constexpr int32_t Mask = Capacity - 1;
@@ -35,15 +35,15 @@ public:
   ~FlatHash() {
   }
 
-  static inline uint8_t getBit(const Storage<uint8_t, Bits>& bits, int32_t idx) noexcept {
+  static inline uint8_t _get_bit(const Storage<uint8_t, Bits>& bits, int32_t idx) noexcept {
     return (bits[idx >> 3] >> (idx & 7)) & 1;
   }
 
-  static inline void setBit(Storage<uint8_t, Bits>& bits, int32_t idx) noexcept {
+  static inline void _set_bit(Storage<uint8_t, Bits>& bits, int32_t idx) noexcept {
     bits[idx >> 3] |= uint8_t(1u << (idx & 7));
   }
 
-  static inline void clearBit(Storage<uint8_t, Bits>& bits, int32_t idx) noexcept {
+  static inline void _clear_bit(Storage<uint8_t, Bits>& bits, int32_t idx) noexcept {
     bits[idx >> 3] &= uint8_t(~(1u << (idx & 7)));
   }
 
@@ -56,8 +56,8 @@ public:
     int32_t firstTomb = -1;
 
     for(int32_t iter = 0; iter < Capacity; ++iter) {
-      const uint8_t f = getBit(_freeBits, idx);
-      const uint8_t t = getBit(_tombBits, idx);
+      const uint8_t f = _get_bit(_freeBits, idx);
+      const uint8_t t = _get_bit(_tombBits, idx);
 
       const uint8_t isFree = f;
       const uint8_t isTomb = t;
@@ -73,15 +73,13 @@ public:
       }
 
       if(isFree) {
-        const int32_t target = (firstTomb != -1) 
-                             ? firstTomb 
-                             : idx;
+        const int32_t target = (firstTomb != -1) ? firstTomb : idx;
 
         _keys[target] = key;
         _values[target] = value;
 
-        clearBit(_freeBits, target); 
-        clearBit(_tombBits, target);
+        _clear_bit(_freeBits, target);
+        _clear_bit(_tombBits, target);
 
         return target;
       }
@@ -96,8 +94,8 @@ public:
     int32_t idx = key & Mask;
 
     for(int32_t iter = 0; iter < Capacity; ++iter) {
-      const uint8_t f = getBit(_freeBits, idx);
-      const uint8_t t = getBit(_tombBits, idx);
+      const uint8_t f = _get_bit(_freeBits, idx);
+      const uint8_t t = _get_bit(_tombBits, idx);
 
       const uint8_t isFree = f;
       const uint8_t isUsed = (~f & ~t) & 1;
@@ -131,8 +129,8 @@ public:
       return false;
     }
 
-    clearBit(_freeBits, idx);
-    setBit(_tombBits, idx);
+    _set_bit(_freeBits, idx);
+    _set_bit(_tombBits, idx);
 
     return true;
   }
