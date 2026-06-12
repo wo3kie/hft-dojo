@@ -24,9 +24,15 @@ public:
   int32_t insert(const TKey& key) noexcept {
     const int32_t insertedId = FlatTreeBS<TKey, Capacity, TCompare>::insert(key);
 
-    if(insertedId != -1) {
-      _rebalance(insertedId);
+    if (UNLIKELY(insertedId == -1)) {
+      return insertedId;
     }
+
+    if (UNLIKELY(this->_pool[insertedId]._parentId == -1)) {
+      return insertedId;
+    }
+
+    _rebalance(this->_pool[insertedId]._parentId);
 
     return insertedId;
   }
@@ -52,18 +58,18 @@ public:
   }
 
 public:
-  int32_t _height(int32_t nodeId) noexcept {
+  int32_t _get_height(int32_t nodeId) noexcept {
     return (nodeId == -1) ? (0) : (this->_node(nodeId)._height);
   }
 
   void _update_height(int32_t nodeId) noexcept {
-    const int32_t hl = _height(this->_node(nodeId)._leftId);
-    const int32_t hr = _height(this->_node(nodeId)._rightId);
+    const int32_t hl = _get_height(this->_node(nodeId)._leftId);
+    const int32_t hr = _get_height(this->_node(nodeId)._rightId);
     this->_node(nodeId)._height = (hl > hr ? hl : hr) + 1;
   }
 
   int32_t _balance_factor(int32_t nodeId) noexcept {
-    return _height(this->_node(nodeId)._leftId) - _height(this->_node(nodeId)._rightId);
+    return _get_height(this->_node(nodeId)._leftId) - _get_height(this->_node(nodeId)._rightId);
   }
 
   void _rotate_left(int32_t nodeId) {
@@ -119,10 +125,16 @@ public:
   }
 
   void _rebalance(int32_t nodeId) noexcept {
-    while(nodeId != -1) {
-      const int32_t parentId = this->_node(nodeId)._parentId;
-
+    do {
+      const int32_t oldHeight = this->_node(nodeId)._height;
       _update_height(nodeId);
+      const int32_t newHeight = this->_node(nodeId)._height;
+
+      if (oldHeight == newHeight) {
+        break;
+      }
+
+      const int32_t parentId = this->_node(nodeId)._parentId;
       const int32_t balance_factor = _balance_factor(nodeId);
 
       if(balance_factor > 1) {
@@ -140,8 +152,8 @@ public:
 
         _rotate_left(nodeId);
       }
-
+      
       nodeId = parentId;
-    }
+    } while(nodeId != -1);
   }
 };
