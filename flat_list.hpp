@@ -1,3 +1,5 @@
+#pragma once
+
 /*
  * Project:
  *      HFTDojo (https://github.com/wo3kie/hft-dojo)
