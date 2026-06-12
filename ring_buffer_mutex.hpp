@@ -14,22 +14,22 @@
 #include "./ring_buffer.hpp"
 
 /*
- * RingBufferMT - Ring Buffer MuTex
+ * RingBufferMutex - Ring Buffer MuTex
  */
 
 template<typename TValue, std::size_t Capacity>
-class RingBufferMT {
+class RingBufferMutex {
 public:
   using value_type = TValue;
 
-  RingBufferMT() = default;
-  RingBufferMT(RingBufferMT&&) = delete;
-  RingBufferMT(const RingBufferMT&) = delete;
+  RingBufferMutex() = default;
+  RingBufferMutex(RingBufferMutex&&) = delete;
+  RingBufferMutex(const RingBufferMutex&) = delete;
 
-  ~RingBufferMT() = default;
+  ~RingBufferMutex() = default;
 
-  RingBufferMT& operator=(RingBufferMT&&) = delete;
-  RingBufferMT& operator=(const RingBufferMT&) = delete;
+  RingBufferMutex& operator=(RingBufferMutex&&) = delete;
+  RingBufferMutex& operator=(const RingBufferMutex&) = delete;
 
 public:
   template<typename TT>
@@ -53,7 +53,7 @@ public:
       return ! this->_buffer.empty();
     });
 
-    out = std::move(_buffer.pop());
+    _buffer.pop(out);
     _notFull.notify_one();
 
     return true;
@@ -73,11 +73,11 @@ public:
     return _buffer.full();
   }
 
-  /* extension */ TValue pop() {
+  /* extension */ TValue _ext_pop() {
     TValue out;
 
     if(! pop(out)) {
-      throw std::runtime_error("RingBufferMT is empty");
+      throw std::runtime_error("RingBufferMutex is empty");
     }
 
     return out;
