@@ -105,7 +105,7 @@ public:
     return _full(pushed, popped);
   }
 
-  /* extension */ TValue pop() {
+  /* extension */ TValue _ext_pop() {
     TValue out;
 
     if(pop(out) == false) {
