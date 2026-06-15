@@ -145,13 +145,7 @@ public:
 
   void _rebalance(int32_t nodeId) noexcept {
     do {
-      const int32_t oldHeight = this->_node(nodeId)._height;
       _update_height(nodeId);
-      const int32_t newHeight = this->_node(nodeId)._height;
-
-      if (oldHeight == newHeight) {
-        break;
-      }
 
       const int32_t parentId = this->_node(nodeId)._parentId;
       const int32_t balance_factor = _balance_factor(nodeId);
@@ -200,5 +194,9 @@ public:
 
     validate(validate, this->_rootId);
     return true;
+  }
+
+  void dump() const noexcept {
+    FlatTreeBS<TKey, Capacity, TCompare>::_ext_dump();
   }
 };
