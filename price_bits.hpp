@@ -31,7 +31,7 @@ public:
     data[idx] &= ~(uint64_t(1) << off);
   }
 
-  bool empty() const noexcept {
+  [[nodiscard]] bool empty() const noexcept {
     for(uint32_t i = 0; i < Chunks; ++i) {
       if(data[i] != 0) {
         return false;
