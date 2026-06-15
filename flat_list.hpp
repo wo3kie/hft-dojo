@@ -16,7 +16,9 @@
 
 template<typename Value, int32_t Capacity>
 struct FlatList {
-public:
+  static_assert((Capacity > 0) && (Capacity <= 1024 * 1024 * 1024));
+
+private:
   using index_type = index_type_t<Capacity>;
 
 public:
@@ -34,7 +36,7 @@ public:
     return _pool.size();
   }  
 
-  bool empty() const noexcept {
+  [[nodiscard]] bool empty() const noexcept {
     return _pool.empty();
   }
 
@@ -98,7 +100,7 @@ public:
     _pool.deallocate(pos);
   }
 
-  index_type push_front(const Value& value) noexcept {
+  int32_t push_front(const Value& value) noexcept {
     assert(! full());
 
     const index_type next = _head;
@@ -112,7 +114,7 @@ public:
       _tail = slot;
     }
 
-    return slot;
+    return (int32_t)slot;
   }
 
   int32_t push_back(const Value& value) noexcept {
@@ -128,7 +130,7 @@ public:
     }
 
     _tail = slot;
-    return slot;
+    return (int32_t)slot;
   }
 
   void pop_front() noexcept {
