@@ -23,6 +23,8 @@
 
 template<typename Value, int32_t Capacity>
 struct FlatQueue {
+  static_assert((Capacity > 0) && (Capacity <= 1024 * 1024 * 1024));
+
 public:
   using index_type = index_type_t<Capacity>;
 
@@ -50,7 +52,7 @@ public:
     return _buffer[Sentinel]._size;
   }
 
-  bool empty() const noexcept {
+  [[nodiscard]] bool empty() const noexcept {
     return size() == 0;
   }
 
