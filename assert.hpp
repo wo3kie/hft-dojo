@@ -11,6 +11,7 @@
 #include <cassert>
 #include <functional>
 #include <iostream>
+#include "output.hpp"
 
 namespace impl {
 
@@ -46,6 +47,11 @@ struct _ExpressionDecomposerBinary {
     on_error([](const char* file, int line, const char* op, const Actual& actual, const Expected& expected) -> void {
       constexpr bool is_stream_insertable = requires { std::cerr << actual; } && //
                                             requires { std::cerr << expected; };
+
+        std::cerr << file << ':' << line
+                  << " Assertion failed"
+                     "\n\toperator: "
+                  << op << "\n\tactual  : " << actual << "\n\texpected: " << expected << std::endl;
 
       if constexpr(is_stream_insertable) {
         std::cerr << file << ':' << line
