@@ -79,6 +79,4 @@ void test_hard_stop_skips_queued_tasks_after_current_task() {
 int main() {
   test_stop_drains_all_queued_tasks();
   test_hard_stop_skips_queued_tasks_after_current_task();
-
-  return 0;
 }
