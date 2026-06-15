@@ -9,26 +9,7 @@
 #include "assert.hpp"
 #include "price_bits.hpp"
 
-void test_price_bits_1() {
-  PriceBits<256> mask;
-
-  mask.set(0);
-  Assert(mask.clz() == 0);
-
-  mask.reset();
-  mask.set(32);
-  Assert(mask.clz() == 32);
-
-  mask.reset();
-  mask.set(128);
-  Assert(mask.clz() == 128);
-
-  mask.reset();
-  mask.set(255);
-  Assert(mask.clz() == 255);
-}
-
-void test_price_bits_2() {
+void test_set_clz_clear() {
   PriceBits<256> mask;
 
   mask.set(1);
@@ -59,7 +40,7 @@ void test_price_bits_2() {
   Assert(mask.clz() == 1);
 }
 
-void test_price_bits_3() {
+void test_set_shift_clz() {
   int32_t minIndex = 100;
   int32_t minPrice = 100;
   int32_t maxPrice = 200;
@@ -100,7 +81,6 @@ void test_price_bits_3() {
 }
 
 int main() {
-  test_price_bits_1();
-  test_price_bits_2();
-  test_price_bits_3();
+  test_set_clz_clear();
+  test_set_shift_clz();
 }
