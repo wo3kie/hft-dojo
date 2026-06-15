@@ -86,11 +86,14 @@ public:
     return out;
   }
 
+  /* extension */ bool _ext_equal(std::queue<TValue> expected) const {
+    std::lock_guard<std::mutex> lock(_mutex);
+    return _buffer._ext_equal(expected);
+  }
+
 private:
   mutable std::mutex _mutex;
-
   std::condition_variable _notFull;
   std::condition_variable _notEmpty;
-
   RingBuffer<TValue, Capacity> _buffer;
 };
