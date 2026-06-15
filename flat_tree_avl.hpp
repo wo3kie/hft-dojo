@@ -16,6 +16,8 @@
 
 template<typename TKey, int32_t Capacity, typename TCompare = std::less<TKey>>
 struct FlatTreeAVL: FlatTreeBS<TKey, Capacity, TCompare> {
+  static_assert((Capacity > 0) && (Capacity <= 1024 * 1024 * 1024));
+
 public:
   explicit FlatTreeAVL(TCompare cmp = TCompare()) noexcept
     : FlatTreeBS<TKey, Capacity, TCompare>(cmp) 
@@ -30,7 +32,7 @@ public:
     return this->_pool.size();
   }
 
-  bool empty() const noexcept {
+  [[nodiscard]] bool empty() const noexcept {
     return this->_pool.empty();
   }
 
