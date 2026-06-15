@@ -100,6 +100,21 @@ public:
     return out;
   }
 
+  /* extension */ bool _ext_equal(std::queue<TValue> expected) const {
+    const int32_t head = _head.load(std::memory_order_acquire);
+    const int32_t tail = _tail.load(std::memory_order_acquire);
+
+    for(int32_t i = head; i != tail; i = _index(i + 1)) {
+      if(_buffer[i] != expected.front()) {
+        return false;
+      }
+
+      expected.pop();
+    }
+
+    return expected.empty();
+  }
+
 private:
   static constexpr int32_t _index(int32_t i) {
     constexpr bool isPowerOf2 = ((Capacity + 1) & Capacity) == 0;
