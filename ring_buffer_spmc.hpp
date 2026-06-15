@@ -114,6 +114,23 @@ public:
     return out;
   }
 
+  /* extension */ bool _ext_equal(std::queue<TValue> expected) const {
+    const int32_t popped = _popped.load(std::memory_order_acquire);
+    const int32_t pushed = _pushed.load(std::memory_order_acquire);
+
+    for(int32_t i = popped; i < pushed; i += 1) {
+      const int32_t index = _index(i);
+      
+      if(_buffer[index] != expected.front()) {
+        return false;
+      }
+
+      expected.pop();
+    }
+
+    return expected.empty();
+  }
+
 private:
   /* approximate */ bool _empty(int32_t pushed, int32_t popped) const {
     return popped >= pushed;
