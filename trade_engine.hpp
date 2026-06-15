@@ -41,7 +41,7 @@ public:
     }
   }
 
-  bool empty() const noexcept {
+  [[nodiscard]] bool empty() const noexcept {
     return _buffer.empty();
   }
 
@@ -115,7 +115,7 @@ struct Level final: noncopyable, nonmovable {
   Level() {
   }
 
-  bool empty() const noexcept {
+  [[nodiscard]] bool empty() const noexcept {
     assert(_buffer.empty() == (get_total() == 0));
     return (get_total() == 0);
   }
