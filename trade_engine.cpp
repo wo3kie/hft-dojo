@@ -533,6 +533,4 @@ int main() {
 #else
   benchmark(10'000'000);
 #endif
-
-  return 0;
 }
