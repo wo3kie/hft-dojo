@@ -145,10 +145,7 @@ void test_map_reduce_run_accepts_bigdata_temporaries() {
     return a + i;
   };
 
-  Assert(
-      48
-      == MapReduce(map, reduce)
-             .run(
+  Assert(48 == MapReduce(map, reduce).run(
                  BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
                  BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
                  BigData({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
