@@ -103,6 +103,4 @@ int main() {
   test_price_bits_1();
   test_price_bits_2();
   test_price_bits_3();
-
-  return 0;
 }
