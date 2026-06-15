@@ -12,25 +12,22 @@
 #include <stdexcept>
 #include <utility>
 
+#include "common.hpp"
 #include "storage.hpp"
 
 /*
  * RingBuffer
  */
 
-template<typename TValue, std::size_t Capacity>
-class RingBuffer {
+template<typename TValue, int32_t Capacity>
+struct RingBuffer : noncopyable, nonmovable {
+  static_assert((Capacity > 0) && (Capacity <= 1024 * 1024 * 1024));
+
 public:
   using value_type = TValue;
 
   RingBuffer() = default;
-  RingBuffer(RingBuffer&&) = delete;
-  RingBuffer(const RingBuffer&) = delete;
-
   ~RingBuffer() = default;
-
-  RingBuffer& operator=(RingBuffer&&) = delete;
-  RingBuffer& operator=(const RingBuffer&) = delete;
 
 public:
   template<typename TT>
@@ -56,7 +53,7 @@ public:
     return true;
   }
 
-  static constexpr std::size_t capacity() {
+  static constexpr int32_t capacity() {
     return Capacity;
   }
 
@@ -79,7 +76,7 @@ public:
   }
 
 private:
-  static constexpr std::size_t _index(std::size_t i) {
+  static constexpr int32_t _index(int32_t i) {
     constexpr bool isPowerOf2 = ((Capacity + 1) & Capacity) == 0;
 
     if constexpr(isPowerOf2) {
