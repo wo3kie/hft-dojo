@@ -81,6 +81,4 @@ int main() {
   test_erase<256>();
   test_erase<512>();
   test_erase<1024>();
-
-  return 0;
 }
