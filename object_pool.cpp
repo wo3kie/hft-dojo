@@ -8,7 +8,9 @@
 
 #include "object_pool.hpp"
 
-void test_object_pool() {
+namespace {
+
+void test_allocate_deallocate() {
   ObjectPool<int, 4> pool;
 
   assert(pool.empty());
@@ -50,8 +52,8 @@ void test_object_pool() {
   assert(pool.full() == false);
 }
 
-int main() {
-  test_object_pool();
+}
 
-  return 0;
+int main() {
+  test_allocate_deallocate();
 }
