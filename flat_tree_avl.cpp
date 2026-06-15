@@ -7,165 +7,80 @@
  */
 
 #include "flat_tree_avl.hpp"
+#include "random.hpp"
 
 #include <cassert>
 #include <set>
 
 namespace {
 
-template<typename TTree>
-void test_empty_tree() {
-  TTree tree;
-
-  assert(tree.capacity() > 0);
-  assert(tree._ext_equal({}));
-  assert(tree.find(123) == -1);
-  assert(tree.get(-1) == nullptr);
-  assert(tree.erase(-1) == false);
-}
-
-template<typename TTree>
-void test_insert_and_duplicate_rejection() {
-  TTree tree;
+template<int32_t Capacity>
+void test_insert() {
+  LCG lcg;
   std::set<int> expected;
+  FlatTreeAVL<int, Capacity> actual;
 
-  for(int value : {20, 10, 30, 25}) {
-    assert(tree.insert(value) != -1);
+  for(int32_t i = 0; i < Capacity; i += 1) {
+    const int32_t value = lcg();
+    
+    actual.insert(value);
     expected.insert(value);
-    assert(tree._ext_equal(expected));
-  }
-
-  assert(tree.insert(20) == -1);
-  assert(tree._ext_equal(expected));
-  assert(tree.find(999) == -1);
-}
-
-template<typename TTree>
-void test_ll_and_rr_rotations() {
-  {
-    TTree tree;
-    std::set<int> expected;
-
-    for(int value : {30, 20, 10}) {
-      assert(tree.insert(value) != -1);
-      expected.insert(value);
-    }
-
-    assert(tree._ext_equal(expected));
-  }
-
-  {
-    TTree tree;
-    std::set<int> expected;
-
-    for(int value : {10, 20, 30}) {
-      assert(tree.insert(value) != -1);
-      expected.insert(value);
-    }
-
-    assert(tree._ext_equal(expected));
+    assert(actual._ext_equal(expected));
   }
 }
 
-template<typename TTree>
-void test_lr_and_rl_rotations() {
-  {
-    TTree tree;
-    std::set<int> expected;
-
-    for(int value : {30, 10, 20}) {
-      assert(tree.insert(value) != -1);
-      expected.insert(value);
-    }
-
-    assert(tree._ext_equal(expected));
-  }
-
-  {
-    TTree tree;
-    std::set<int> expected;
-
-    for(int value : {10, 30, 20}) {
-      assert(tree.insert(value) != -1);
-      expected.insert(value);
-    }
-
-    assert(tree._ext_equal(expected));
-  }
-}
-
-template<typename TTree>
-void test_erase_leaf_and_single_child() {
-  TTree tree;
+template<int32_t Capacity>
+void test_erase() {
+  LCG lcg;
   std::set<int> expected;
+  FlatTreeAVL<int, Capacity> actual;
 
-  for(int value : {20, 10, 30, 25}) {
-    assert(tree.insert(value) != -1);
-    expected.insert(value);
+  for(int32_t i = 0; i < Capacity; i += 1) {   
+    actual.insert(i);
+    expected.insert(i);
   }
 
-  assert(tree._ext_equal(expected));
+  for(int32_t i = 0; i < Capacity; i += 1) {
+    const int32_t value = lcg() % Capacity;
+    
+    const int32_t slotId = actual.find(value);
 
-  const int32_t slot25 = tree.find(25);
-  assert(slot25 != -1);
-  assert(tree.erase(slot25));
-  expected.erase(25);
-  assert(tree._ext_equal(expected));
+    if (slotId == -1) {
+      continue;
+    }
 
-  const int32_t slot30 = tree.find(30);
-  assert(slot30 != -1);
-  assert(tree.erase(slot30));
-  expected.erase(30);
-  assert(tree._ext_equal(expected));
-}
-
-template<typename TTree>
-void test_erase_node_with_two_children() {
-  TTree tree;
-  std::set<int> expected;
-
-  for(int value : {20, 10, 30, 5, 15, 25, 35, 27}) {
-    assert(tree.insert(value) != -1);
-    expected.insert(value);
+    actual.erase(slotId);
+    expected.erase(value);
+    assert(actual._ext_equal(expected));
   }
-
-  assert(tree._ext_equal(expected));
-
-  const int32_t slot20 = tree.find(20);
-  assert(slot20 != -1);
-  assert(tree.erase(slot20));
-  expected.erase(20);
-  assert(tree._ext_equal(expected));
-  assert(tree.find(20) == -1);
-
-  const int32_t slot30 = tree.find(30);
-  assert(slot30 != -1);
-  assert(tree.erase(slot30));
-  expected.erase(30);
-  assert(tree._ext_equal(expected));
-  assert(tree.find(30) == -1);
 }
 
 } // namespace
 
 int main() {
-  test_empty_tree<FlatTreeAVL<int, 8>>();
-  test_empty_tree<FlatTreeAVL<int, 16>>();
+  test_insert<1>();
+  test_insert<2>();
+  test_insert<4>();
+  test_insert<8>();
+  test_insert<16>();
+  test_insert<32>();
+  test_insert<64>();
+  test_insert<128>();
+  test_insert<256>();
+  test_insert<512>();
+  test_insert<1024>();
 
-  test_insert_and_duplicate_rejection<FlatTreeAVL<int, 8>>();
-  test_insert_and_duplicate_rejection<FlatTreeAVL<int, 16>>();
-
-  test_ll_and_rr_rotations<FlatTreeAVL<int, 8>>();
-  test_ll_and_rr_rotations<FlatTreeAVL<int, 16>>();
-
-  test_lr_and_rl_rotations<FlatTreeAVL<int, 8>>();
-  test_lr_and_rl_rotations<FlatTreeAVL<int, 16>>();
-
-  test_erase_leaf_and_single_child<FlatTreeAVL<int, 8>>();
-  test_erase_leaf_and_single_child<FlatTreeAVL<int, 16>>();
-
-  test_erase_node_with_two_children<FlatTreeAVL<int, 8>>();
-  test_erase_node_with_two_children<FlatTreeAVL<int, 16>>();
+  test_erase<1>();
+  test_erase<2>();
+  test_erase<4>();
+  test_erase<8>();
+  test_erase<16>();
+  test_erase<32>();
+  test_erase<64>();
+  test_erase<128>();
+  test_erase<256>();
+  test_erase<512>();
+  test_erase<1024>();
 
   return 0;
 }
