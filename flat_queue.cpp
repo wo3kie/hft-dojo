@@ -76,6 +76,4 @@ int main() {
   test_empty_queue();
   test_push_pop_fifo_order();
   test_erase_middle_and_reuse_slot();
-
-  return 0;
 }
