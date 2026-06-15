@@ -13,10 +13,9 @@
 #include <list>
 
 #include "object_pool.hpp"
-#include "storage.hpp"
 
-template<typename Value, std::size_t Capacity>
-class FlatList {
+template<typename Value, int32_t Capacity>
+struct FlatList {
 public:
   using index_type = index_type_t<Capacity>;
 
@@ -26,6 +25,14 @@ public:
     , _tail(-1) 
   {
   }
+
+  static constexpr int32_t capacity() noexcept {
+    return Capacity;
+  }
+
+  int32_t size() const noexcept {
+    return _pool.size();
+  }  
 
   bool empty() const noexcept {
     return _pool.empty();
@@ -43,59 +50,59 @@ public:
     return _pool[_tail]._value;
   }
 
-  Value& operator[](std::size_t slot) noexcept {
+  Value& operator[](int32_t slot) noexcept {
     return _pool[slot]._value;
   }
 
-  const Value& operator[](std::size_t slot) const noexcept {
+  const Value& operator[](int32_t slot) const noexcept {
     return _pool[slot]._value;
   }
 
-int32_t insert(int32_t prev, const Value& value) noexcept {
+  int32_t insert(int32_t next, const Value& value) noexcept {
     assert(! full());
 
-    if (UNLIKELY(prev == -1)) {
+    if (UNLIKELY(next == _head)) {
       return push_front(value);
     }
 
-    if (UNLIKELY(prev == _tail)) {
+    if (UNLIKELY(next == -1)) {
       return push_back(value);
     }
 
-    const index_type next = _pool[prev]._next;
+    const index_type prev = _pool[next]._prev;
     const index_type slot = _pool.allocate(value, prev, next);
 
-    _pool[prev]._next = slot;
     _pool[next]._prev = slot;
+    _pool[prev]._next = slot;
 
     return slot;
   }
 
-  void remove(int32_t slot) noexcept {
+  void erase(int32_t pos) noexcept {
     assert(! empty());
 
-    if (UNLIKELY(slot == -1)) {
+    if (UNLIKELY(pos == _head)) {
       return pop_front();
     }
 
-    if (UNLIKELY(slot == _tail)) {
+    if (UNLIKELY(pos == _tail)) {
       return pop_back();
     }
 
-    const index_type prev = _pool[slot]._prev;
-    const index_type next = _pool[slot]._next;
+    const index_type prev = _pool[pos]._prev;
+    const index_type next = _pool[pos]._next;
 
     _pool[prev]._next = next;
     _pool[next]._prev = prev;
 
-    _pool.deallocate(slot);
+    _pool.deallocate(pos);
   }
 
   index_type push_front(const Value& value) noexcept {
     assert(! full());
 
     const index_type next = _head;
-    const index_type slot = _pool.allocate(value, -1, next);
+    const index_type slot = (index_type)_pool.allocate(value, -1, next);
 
     _head = slot;
 
@@ -112,7 +119,7 @@ int32_t insert(int32_t prev, const Value& value) noexcept {
     assert(! full());
 
     const index_type prev = _tail;
-    const index_type slot = _pool.allocate(value, prev, -1);
+    const index_type slot = (index_type)_pool.allocate(value, prev, -1);
 
     if(prev != -1) {
       _pool[prev]._next = slot;
@@ -157,20 +164,37 @@ int32_t insert(int32_t prev, const Value& value) noexcept {
     _pool.deallocate(slot);
   }
 
-  constexpr int32_t capacity() const noexcept {
-    return _pool.capacity();
-  }
-
-  /* extension */ bool _debug_equal(std::list<Value>& expected) const noexcept {
+  int32_t find(const Value& value) const noexcept {
     index_type head = _head;
-    std::list<Value> actual;
 
     while(head != -1) {
-      actual.push_back(_pool[head]._value);
+      if(_pool[head]._value == value) {
+        return head;
+      }
+
       head = _pool[head]._next;
     }
 
-    return actual == expected;
+    return -1;
+  }
+
+  /* extension */ bool _ext_equal(std::list<Value> expected) const noexcept {
+    if (this->size() != expected.size()) {
+      return false;
+    }
+
+    for(index_type slot = _head; slot != -1; slot = _pool[slot]._next) {
+      assert(_pool[slot]._prev == -1 || _pool[_pool[slot]._prev]._next == slot);
+      assert(_pool[slot]._next == -1 || _pool[_pool[slot]._next]._prev == slot);
+
+      if(_pool[slot]._value != expected.front()) {
+        return false;
+      }
+
+      expected.pop_front();
+    }
+
+    return true;
   }
 
 private:
