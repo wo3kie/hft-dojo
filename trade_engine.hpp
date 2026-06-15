@@ -84,7 +84,7 @@ public:
     }
 
     order.id = 0;
-    _buffer.remove(slot);
+    _buffer.erase(slot);
 
     return true;
   }
