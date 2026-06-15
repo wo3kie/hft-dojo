@@ -58,7 +58,7 @@ public:
     return count;
   }
 
-  bool empty() const noexcept {
+  [[nodiscard]] bool empty() const noexcept {
     return size() == 0;
   }
 
