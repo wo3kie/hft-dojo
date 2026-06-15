@@ -11,7 +11,6 @@
 #include <cassert>
 #include <functional>
 #include <iostream>
-#include "output.hpp"
 
 namespace impl {
 
