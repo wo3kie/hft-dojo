@@ -169,7 +169,7 @@ struct QueueOut {
     return event;
   }
 
-  bool empty() const noexcept {
+  [[nodiscard]] bool empty() const noexcept {
     return _queue.empty_approx();
   }
 
