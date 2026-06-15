@@ -35,8 +35,8 @@ public:
 public:
   FlatQueue() {
     for(int32_t i = 0; i < Capacity + 1; i += 1) {
-      _buffer[i]._next = Free;
       _buffer[i]._prev = Free;
+      _buffer[i]._next = Free;
     }
 
     _buffer[Sentinel]._prev = Sentinel;
@@ -122,7 +122,7 @@ public:
 
   /* extension */ bool _ext_is_free(int32_t slot) const noexcept {
     assert(slot >= 0 && slot < Sentinel);
-    return (_buffer[slot]._next == Free) && (_buffer[slot]._prev == Free);
+    return (_buffer[slot]._prev == Free) && (_buffer[slot]._next == Free);
   }
 
   /* extension */ bool _ext_equal(std::list<Value> expected) const noexcept {
@@ -167,8 +167,8 @@ private:
   }
 
   void _deallocate(int32_t slot) noexcept {
-    _buffer[slot]._next = Free;
     _buffer[slot]._prev = Free;
+    _buffer[slot]._next = Free;
     _buffer[Sentinel]._size -= 1;
   }
 
