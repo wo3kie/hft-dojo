@@ -13,39 +13,54 @@
 #include <stdexcept>
 #include <utility>
 
+#include "common.hpp"
 #include "storage.hpp"
 
-template<typename TValue, std::size_t Capacity>
-class RingBufferSPMC {
+template<typename TValue, int32_t Capacity>
+struct RingBufferSPMC : noncopyable, nonmovable {
+  static_assert((Capacity > 0) && (Capacity <= 1024 * 1024 * 1024));
+
 public:
   using value_type = TValue;
 
 public:
-  RingBufferSPMC()
-    : _pushed(0)
-    , _popped(0)
-    , _claim(0) {
-  }
-
-  RingBufferSPMC(RingBufferSPMC&&) = delete;
-  RingBufferSPMC(const RingBufferSPMC&) = delete;
-
+  RingBufferSPMC() = default;
   ~RingBufferSPMC() = default;
 
-  RingBufferSPMC& operator=(RingBufferSPMC&&) = delete;
-  RingBufferSPMC& operator=(const RingBufferSPMC&) = delete;
-
 public:
+  static constexpr int32_t capacity() {
+    return Capacity;
+  }
+
+  /* approximate */ int32_t size_approx() const {
+    const int32_t pushed = _pushed.load(std::memory_order_acquire);
+    const int32_t popped = _popped.load(std::memory_order_acquire);
+
+    return pushed - popped;
+  }
+
+  /* approximate */ [[nodiscard]] bool empty_approx() const {
+    const int32_t pushed = _pushed.load(std::memory_order_acquire);
+    const int32_t popped = _popped.load(std::memory_order_acquire);
+    return _empty(pushed, popped);
+  }
+
+  /* approximate */ bool full_approx() const {
+    const int32_t pushed = _pushed.load(std::memory_order_acquire);
+    const int32_t popped = _popped.load(std::memory_order_acquire);
+    return _full(pushed, popped);
+  }
+
   template<typename TT>
   bool push(TT&& value) {
-    const std::size_t popped = _popped.load(std::memory_order_acquire);
-    const std::size_t pushed = _pushed.load(std::memory_order_relaxed);
+    const int32_t popped = _popped.load(std::memory_order_acquire);
+    const int32_t pushed = _pushed.load(std::memory_order_relaxed);
 
     if(_full(pushed, popped)) {
       return false;
     }
 
-    const std::size_t index = _index(pushed);
+    const int32_t index = _index(pushed);
     _buffer[index] = std::forward<TT>(value);
 
     _pushed.store(pushed + 1, std::memory_order_release);
@@ -53,13 +68,13 @@ public:
   }
 
   bool pop(TValue& out) {
-    std::size_t claim;
+    int32_t claim;
 
     {
       claim = _claim.load(std::memory_order_acquire);
 
       while(true) {
-        const std::size_t pushed = _pushed.load(std::memory_order_acquire);
+        const int32_t pushed = _pushed.load(std::memory_order_acquire);
 
         if(claim >= pushed) {
           return false;
@@ -72,13 +87,13 @@ public:
     }
 
     {
-      const std::size_t index = _index(claim);
+      const int32_t index = _index(claim);
       out = std::move(_buffer[index]);
     }
 
     {
       while(true) {
-        std::size_t claim2 = claim;
+        int32_t claim2 = claim;
 
         if(_popped.compare_exchange_weak(/* ref */ claim2, claim + 1, std::memory_order_release, std::memory_order_relaxed)) {
           break;
@@ -87,22 +102,6 @@ public:
     }
 
     return true;
-  }
-
-  static constexpr std::size_t capacity() {
-    return Capacity;
-  }
-
-  /* approximate */ bool empty_approx() const {
-    const std::size_t pushed = _pushed.load(std::memory_order_acquire);
-    const std::size_t popped = _popped.load(std::memory_order_acquire);
-    return _empty(pushed, popped);
-  }
-
-  /* approximate */ bool full_approx() const {
-    const std::size_t pushed = _pushed.load(std::memory_order_acquire);
-    const std::size_t popped = _popped.load(std::memory_order_acquire);
-    return _full(pushed, popped);
   }
 
   /* extension */ TValue _ext_pop() {
@@ -116,15 +115,15 @@ public:
   }
 
 private:
-  /* approximate */ bool _empty(std::size_t pushed, std::size_t popped) const {
+  /* approximate */ bool _empty(int32_t pushed, int32_t popped) const {
     return popped >= pushed;
   }
 
-  /* approximate */ bool _full(std::size_t pushed, std::size_t popped) const {
+  /* approximate */ bool _full(int32_t pushed, int32_t popped) const {
     return (pushed - popped) >= Capacity;
   }
 
-  static constexpr std::size_t _index(std::size_t i) {
+  static constexpr int32_t _index(int32_t i) {
     constexpr bool isPowerOf2 = ((Capacity) & (Capacity - 1)) == 0;
 
     if constexpr(isPowerOf2) {
@@ -135,8 +134,8 @@ private:
   }
 
 private:
-  alignas(64) std::atomic<std::size_t> _pushed;
-  alignas(64) std::atomic<std::size_t> _popped;
-  alignas(64) std::atomic<std::size_t> _claim;
+  alignas(64) std::atomic<int32_t> _pushed{0};
+  alignas(64) std::atomic<int32_t> _popped{0};
+  alignas(64) std::atomic<int32_t> _claim{0};
   alignas(64) Storage<TValue, Capacity> _buffer;
 };
