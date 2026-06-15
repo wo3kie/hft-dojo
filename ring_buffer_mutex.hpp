@@ -84,7 +84,7 @@ public:
   }
 
 private:
-  std::mutex _mutex;
+  mutable std::mutex _mutex;
 
   std::condition_variable _notFull;
   std::condition_variable _notEmpty;
