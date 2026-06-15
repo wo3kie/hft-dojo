@@ -252,7 +252,7 @@ public:
     return _pool[nodeId];
   }
 
-  /* extension */ bool _debug_equal(const std::set<TKey>& expected) const noexcept {
+  /* extension */ bool _ext_equal(const std::set<TKey>& expected) const noexcept {
     std::vector<TKey> actual;
 
     const auto insert_keys_inorder = [this](auto&& self, int32_t nodeId, std::vector<TKey>& actual) noexcept {
@@ -261,9 +261,16 @@ public:
       }
 
       const Node& node = _pool[nodeId];
+
+      assert((node._parentId == -1) || (_pool[node._parentId]._leftId == nodeId || _pool[node._parentId]._rightId == nodeId));
+      assert((node._leftId == -1) || (_pool[node._leftId]._parentId == nodeId));
+      assert((node._leftId == -1) || _cmp(_pool[node._leftId]._key, node._key));
+      assert((node._rightId == -1) || (_pool[node._rightId]._parentId == nodeId));
+      assert((node._rightId == -1) || _cmp(node._key, _pool[node._rightId]._key));
+
       self(self, node._leftId, actual);
       actual.push_back(node._key);
-      self(self,node._rightId, actual);
+      self(self, node._rightId, actual);
     };
 
     insert_keys_inorder(insert_keys_inorder, _rootId, actual);  
