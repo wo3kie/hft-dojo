@@ -82,7 +82,7 @@ public:
     return _state.load(std::memory_order_acquire) == WorkerState::Running;
   }
 
-  /* approximate */ bool empty_approx() const {
+  /* approximate */ [[nodiscard]] bool empty_approx() const {
     return _queue.empty_approx();
   }
 
