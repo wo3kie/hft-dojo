@@ -11,27 +11,44 @@
 #include <condition_variable>
 #include <mutex>
 
+#include "common.hpp"
 #include "./ring_buffer.hpp"
 
 /*
  * RingBufferMutex - Ring Buffer MuTex
  */
 
-template<typename TValue, std::size_t Capacity>
-class RingBufferMutex {
+template<typename TValue, int32_t Capacity>
+struct RingBufferMutex : noncopyable, nonmovable {
+  static_assert((Capacity > 0) && (Capacity <= 1024 * 1024 * 1024));
+
 public:
   using value_type = TValue;
 
+public:
   RingBufferMutex() = default;
-  RingBufferMutex(RingBufferMutex&&) = delete;
-  RingBufferMutex(const RingBufferMutex&) = delete;
-
   ~RingBufferMutex() = default;
 
-  RingBufferMutex& operator=(RingBufferMutex&&) = delete;
-  RingBufferMutex& operator=(const RingBufferMutex&) = delete;
-
 public:
+  static constexpr std::size_t capacity() {
+    return Capacity;
+  }
+
+  int32_t size() const {
+    std::lock_guard<std::mutex> lock(_mutex);
+    return _buffer.size();
+  }
+
+  [[nodiscard]] bool empty() const {
+    std::lock_guard<std::mutex> lock(_mutex);
+    return _buffer.empty();
+  }
+
+  bool full() const {
+    std::lock_guard<std::mutex> lock(_mutex);
+    return _buffer.full();
+  }
+
   template<typename TT>
   bool push(TT&& t) {
     std::unique_lock<std::mutex> lock(_mutex);
@@ -57,20 +74,6 @@ public:
     _notFull.notify_one();
 
     return true;
-  }
-
-  static constexpr std::size_t capacity() {
-    return Capacity;
-  }
-
-  [[nodiscard]] bool empty() const {
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _buffer.empty();
-  }
-
-  bool full() const {
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _buffer.full();
   }
 
   /* extension */ TValue _ext_pop() {
