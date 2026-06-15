@@ -9,15 +9,14 @@ class PrintFlatList(gdb.Command):
         N = 4
         elems = []
         val = gdb.parse_and_eval(arg)
-        size = int(val.type.template_argument(1))
-        buffer = val["_buffer"]["_buffer"]
-        head = int(buffer[size]["_next"])
+        buffer = val["_pool"]["_buffer"]["_buffer"]
+        slot = int(val["_head"])
 
-        while head != size:
-            node = buffer[head]
+        while slot != -1:
+            node = buffer[slot]
 
             elems.append(str(node["_value"]))
-            head = node["_next"]
+            slot = node["_next"]
 
         if (N == -1) or (len(elems) <= 2 * N):
             shown = elems
