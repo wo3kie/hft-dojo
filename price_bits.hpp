@@ -12,6 +12,7 @@
 
 template<uint32_t Bits>
 struct PriceBits final {
+  static_assert(Bits >= 64);
   static_assert(Bits % 64 == 0);
   static constexpr uint32_t Chunks = Bits / 64;
 
