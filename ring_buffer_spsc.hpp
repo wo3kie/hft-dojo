@@ -14,29 +14,57 @@
 #include <utility>
 #include "storage.hpp"
 
+#include "common.hpp"
+
 /*
  * Circular Buffer, Single Producer Single Consumer, Lock Free
  */
 
-template<typename TValue, std::size_t Capacity>
-class RingBufferSPSC {
+template<typename TValue, int32_t Capacity>
+struct RingBufferSPSC : noncopyable, nonmovable {
+  static_assert((Capacity > 0) && (Capacity <= 1024 * 1024 * 1024));
+
 public:
   using value_type = TValue;
 
 public:
   RingBufferSPSC() = default;
+  ~RingBufferSPSC() = default;
 
-  RingBufferSPSC(RingBufferSPSC&&) = delete;
-  RingBufferSPSC(const RingBufferSPSC&) = delete;
+public:  
+  static constexpr int32_t capacity() {
+    return Capacity;
+  }
 
-  RingBufferSPSC& operator=(RingBufferSPSC&&) = delete;
-  RingBufferSPSC& operator=(const RingBufferSPSC&) = delete;
+  /* approximate */ int32_t size_approx() const {
+    const int32_t head = _head.load(std::memory_order_acquire);
+    const int32_t tail = _tail.load(std::memory_order_acquire);
 
-public:
+    if(tail >= head) {
+      return tail - head;
+    } else {
+      return (Capacity + 1) - (head - tail);
+    }
+  }
+
+  /* approximate */ [[nodiscard]] bool empty_approx() const {
+    const int32_t head = _head.load(std::memory_order_acquire);
+    const int32_t tail = _tail.load(std::memory_order_acquire);
+
+    return head == tail;
+  }
+
+  /* approximate */ bool full_approx() const {
+    const int32_t head = _head.load(std::memory_order_acquire);
+    const int32_t tail = _tail.load(std::memory_order_acquire);
+
+    return head == _index(tail + 1);
+  }
+
   template<typename T>
   bool push(T&& value) {
-    const std::size_t head = _head.load(std::memory_order_acquire);
-    const std::size_t tail = _tail.load(std::memory_order_relaxed);
+    const int32_t head = _head.load(std::memory_order_acquire);
+    const int32_t tail = _tail.load(std::memory_order_relaxed);
 
     if(head == _index(tail + 1)) {
       return false;
@@ -49,8 +77,8 @@ public:
   }
 
   bool pop(TValue& out) {
-    const std::size_t head = _head.load(std::memory_order_relaxed);
-    const std::size_t tail = _tail.load(std::memory_order_acquire);
+    const int32_t head = _head.load(std::memory_order_relaxed);
+    const int32_t tail = _tail.load(std::memory_order_acquire);
 
     if(head == tail) {
       return false;
@@ -60,24 +88,6 @@ public:
     _head.store(_index(head + 1), std::memory_order_release);
 
     return true;
-  }
-
-  static constexpr std::size_t capacity() {
-    return Capacity;
-  }
-
-  /* approximate */ bool empty_approx() const {
-    const std::size_t head = _head.load(std::memory_order_acquire);
-    const std::size_t tail = _tail.load(std::memory_order_acquire);
-
-    return head == tail;
-  }
-
-  /* approximate */ bool full_approx() const {
-    const std::size_t head = _head.load(std::memory_order_acquire);
-    const std::size_t tail = _tail.load(std::memory_order_acquire);
-
-    return head == _index(tail + 1);
   }
 
   /* extension */ TValue _ext_pop() {
@@ -91,7 +101,7 @@ public:
   }
 
 private:
-  static constexpr std::size_t _index(std::size_t i) {
+  static constexpr int32_t _index(int32_t i) {
     constexpr bool isPowerOf2 = ((Capacity + 1) & Capacity) == 0;
 
     if constexpr(isPowerOf2) {
@@ -102,7 +112,7 @@ private:
   }
 
 private:
-  alignas(64) std::atomic<std::size_t> _head{0};
-  alignas(64) std::atomic<std::size_t> _tail{0};
-  alignas(64) Storage<TValue, /* N+1 trick */ Capacity + 1> _buffer;
+  alignas(64) std::atomic<int32_t> _head{0};
+  alignas(64) std::atomic<int32_t> _tail{0};
+  alignas(64) Storage<TValue, Capacity + /* N+1 trick */ 1> _buffer;
 };
