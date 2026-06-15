@@ -167,46 +167,6 @@ private:
 };
 
 template<typename TContainer>
-void test_flat_list() {
-  LCG lcg;
-
-  TContainer actual;
-  std::list<int> expected;
-
-  std::vector<int> values;
-
-  for(int i = 0; i < actual.capacity(); ++i) {
-    values.push_back(i);
-  }
-
-  std::shuffle(values.begin(), values.end(), lcg);
-  
-  for(int i = 0; i < actual.capacity(); ++i) {
-    actual.push_back(values[i]);
-    expected.push_back(values[i]);
-    Assert(actual._debug_equal(expected));
-  }
-  
-  for(int i = 0; i < actual.capacity(); ++i) {
-    actual.pop_front();
-    expected.pop_front();
-    Assert(actual._debug_equal(expected));
-  }
-  
-  for(int i = 0; i < actual.capacity(); ++i) {
-    actual.push_front(values[i]);
-    expected.push_front(values[i]);
-    Assert(actual._debug_equal(expected));
-  }
-
-  for(int i = 0; i < actual.capacity(); ++i) {
-    actual.pop_back();
-    expected.pop_back();
-    Assert(actual._debug_equal(expected));
-  }
-}
-
-template<typename TContainer>
 void test_flat_tree() {
   LCG lcg;
 
@@ -224,7 +184,7 @@ void test_flat_tree() {
   for(int i = 0; i < tree.capacity(); ++i) {
     Assert(tree.insert(values[i]) != -1);
     Assert(set.insert(values[i]).second);
-    Assert(tree._debug_equal(set));
+    Assert(tree._ext_equal(set));
   }
   
   std::shuffle(values.begin(), values.end(), lcg);
@@ -238,47 +198,11 @@ void test_flat_tree() {
   for(int i = 0; i < tree.capacity(); ++i) {
     Assert(tree.erase(tree.find(values[i])));
     Assert(set.erase(values[i]) == 1);
-    Assert(tree._debug_equal(set));
+    Assert(tree._ext_equal(set));
   }
 }
 
-template<typename TContainer>
-void test_flat_hash(int32_t iters) {
-  LCG lcg;
 
-  TContainer hash;
-  std::unordered_map<int, int> umap;
-
-  std::vector<int> values;
-
-  for(int i = 0; i < iters; i += 2) {
-    values.push_back(i);
-    values.push_back(i);
-  }
-
-  std::shuffle(values.begin(), values.end(), lcg);
-
-  for(int i = 0; i < iters; ++i) {
-    hash.insert({values[i], values[i]});
-    umap.insert({values[i], values[i]});
-    Assert(hash._debug_equal(umap));
-  }
-  
-  std::shuffle(values.begin(), values.end(), lcg);
-
-  for(int i = 0; i < iters; ++i) {
-    Assert(hash.contains(values[i]));
-    Assert(umap.contains(values[i]));
-  }
-  
-  std::shuffle(values.begin(), values.end(), lcg);
-
-  for(int i = 0; i <  iters; ++i) {
-    hash.erase(hash.find(values[i]));
-    umap.erase(umap.find(values[i]));
-    Assert(hash._debug_equal(umap));
-  }
-}
 
 template<typename TContainer>
 void bench_ring_buffer(int32_t iters, const std::string& label = ":") {
@@ -409,57 +333,6 @@ void bench_flat_queue(const std::string& label = ":") {
   } bench;
 
   Timer<1>(bench).log([iters = TContainer::capacity(), label](int ns, const std::string& msg) {
-    std::cout << "Benchmark (" << PROFILE << "): "
-              << label << ": "
-              << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
-              << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
-  });
-}
-
-template<typename TContainer>
-void bench_flat_list(int32_t iters, const std::string& label = ":") {
-   
-  struct Benchmark {
-    Benchmark(int32_t iters)
-      : _iters(iters)
-    {
-    }
-
-    LCG _lcg;
-    int32_t _iters;
-    TContainer _list;
-    std::vector<int> _values;
-    
-    void setup() {
-      for(int i = 0; i < _iters; ++i) {
-        _values.push_back(i);
-      }
-      
-      std::shuffle(_values.begin(), _values.end(), _lcg);
-    }
-    
-    void run() {
-      volatile int32_t no_opt = 0;
-
-      for(const auto& v : _values) {
-        _list.push_back(v);
-        no_opt += _list.front();
-        _list.pop_front();
-        no_opt += (_list.empty()) ? (0) : (_list.front());
-      }
-
-      do_not_optimize(no_opt);
-    }
-
-    void teardown() {
-      while(! _list.empty()) {
-        _list.pop_front();
-      }
-    }
-
-  } bench(iters);
-
-  Timer<1>(bench).log([iters, label](int ns, const std::string& msg) {
     std::cout << "Benchmark (" << PROFILE << "): "
               << label << ": "
               << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
