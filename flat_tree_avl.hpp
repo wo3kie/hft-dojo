@@ -9,6 +9,7 @@
  */
 
 #include <functional>
+#include <set>
 
 #include "common.hpp"
 #include "flat_tree_bs.hpp"
@@ -19,6 +20,22 @@ public:
   explicit FlatTreeAVL(TCompare cmp = TCompare()) noexcept
     : FlatTreeBS<TKey, Capacity, TCompare>(cmp) 
   {
+  }
+
+  static constexpr int32_t capacity() noexcept {
+    return Capacity;
+  }
+
+  int32_t size() const noexcept {
+    return this->_pool.size();
+  }
+
+  bool empty() const noexcept {
+    return this->_pool.empty();
+  }
+
+  bool full() const noexcept {
+    return this->_pool.full();
   }
 
   int32_t insert(const TKey& key) noexcept {
@@ -155,5 +172,31 @@ public:
       
       nodeId = parentId;
     } while(nodeId != -1);
+  }
+
+  /* extension */ bool _ext_equal(const std::set<TKey>& expected) const noexcept {
+    if(FlatTreeBS<TKey, Capacity, TCompare>::_ext_equal(expected) == false) {
+      return false;
+    }
+
+    const auto validate = [this](auto&& self, int32_t nodeId) noexcept -> int32_t {
+      if(nodeId == -1) {
+        return 0;
+      }
+
+      const auto& node = this->_pool[nodeId];
+      const int32_t leftHeight = self(self, node._leftId);
+      const int32_t rightHeight = self(self, node._rightId);
+      const int32_t expectedHeight = (leftHeight > rightHeight ? leftHeight : rightHeight) + 1;
+      const int32_t balanceFactor = leftHeight - rightHeight;
+
+      assert(node._height == expectedHeight);
+      assert(balanceFactor >= -1 && balanceFactor <= 1);
+
+      return expectedHeight;
+    };
+
+    validate(validate, this->_rootId);
+    return true;
   }
 };
