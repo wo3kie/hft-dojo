@@ -12,9 +12,10 @@
 #include <cstddef>
 #include <stdexcept>
 #include <utility>
-#include "storage.hpp"
+#include <queue>
 
 #include "common.hpp"
+#include "storage.hpp"
 
 /*
  * Circular Buffer, Single Producer Single Consumer, Lock Free
