@@ -278,6 +278,22 @@ public:
     return std::equal(actual.begin(), actual.end(), expected.begin(), expected.end());
   }
 
+  /* extension */ void _ext_dump() const noexcept {
+    const auto dump = [this](auto&& self, int32_t nodeId, int32_t depth) noexcept {
+      if(nodeId == -1) {
+        return;
+      }
+
+      const Node& node = _pool[nodeId];
+
+      self(self, node._rightId, depth + 1);
+      std::cout << std::string(depth * 2, ' ') << node._key << std::endl;
+      self(self, node._leftId, depth + 1);
+    };
+
+    dump(dump, _rootId, 0);
+  }
+
 public:
   TCompare _cmp{};
   int32_t _rootId{-1};
