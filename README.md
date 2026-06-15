@@ -50,16 +50,6 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   Benchmark (Release): FlatHash: (iters=131072): 440 μs :: 3 ns/iter :: 297600072 iter/s
   Benchmark (Release): FlatHash: (iters=131072): 441 μs :: 3 ns/iter :: 297108298 iter/s
   ```
-
-- **flat_list** - A fixed‑capacity, array‑based linked list. It is designed for scenarios where the maximum number of elements is known in advance.
-
-  ```{r, engine='bash'}
-  Benchmark (Release): FlatList: (iters=100000): 176 μs :: 1 ns/iter :: 567288982 iter/s
-  Benchmark (Release): FlatList: (iters=100000): 176 μs :: 1 ns/iter :: 566408573 iter/s
-  Benchmark (Release): FlatList: (iters=100000): 176 μs :: 1 ns/iter :: 566136008 iter/s
-  Benchmark (Release): FlatList: (iters=100000): 176 μs :: 1 ns/iter :: 567430617 iter/s
-  Benchmark (Release): FlatList: (iters=100000): 176 μs :: 1 ns/iter :: 566662133 iter/s
-  ```
     
 - **flat_queue** - It uses an open‑addressing approach to manage free slots, which can be more efficient in certain scenarios, especially when slot `id`s can't be cached.
 
