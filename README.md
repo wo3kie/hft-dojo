@@ -44,11 +44,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
   ```{r, engine='bash'}
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
-  Benchmark (Release): FlatHash: (iters=131072): 676 μs :: 5 ns/iter :: 193781693 iter/s
-  Benchmark (Release): FlatHash: (iters=131072): 614 μs :: 4 ns/iter :: 213170957 iter/s
-  Benchmark (Release): FlatHash: (iters=131072): 457 μs :: 3 ns/iter :: 286590765 iter/s
-  Benchmark (Release): FlatHash: (iters=131072): 440 μs :: 3 ns/iter :: 297600072 iter/s
-  Benchmark (Release): FlatHash: (iters=131072): 441 μs :: 3 ns/iter :: 297108298 iter/s
+  Micro Benchmark: insert: (Release): FlatHash<int,int,8>: (iters=10000): 15 μs :: 1 ns/iter :: 638977635 iter/s
   ```
     
 - **flat_queue** - It uses an open‑addressing approach to manage free slots, which can be more efficient in certain scenarios, especially when slot `id`s can't be cached.

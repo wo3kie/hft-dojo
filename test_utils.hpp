@@ -247,53 +247,6 @@ void bench_ring_buffer(int32_t iters, const std::string& label = ":") {
   });
 }
 
-
-template<typename TContainer>
-void bench_flat_hash(int32_t iters, const std::string& label = ":") {
-   
-  struct Benchmark {
-    Benchmark(int32_t iters)
-      : _iters(iters)
-    {
-    }
-
-    LCG _lcg;
-    int32_t _iters;
-    TContainer _hash;
-    std::vector<int> _values;
-    
-    void setup() {
-      for(int i = 0; i < _iters; ++i) {
-        _values.push_back(_lcg());
-      }      
-    }
-    
-    void run() {
-      volatile int32_t no_opt = 0;
-
-      for(const auto v : _values) {
-        _hash.insert({v, v});
-        no_opt += _hash.contains(v);
-      }
-
-      do_not_optimize(no_opt);
-    }
-
-    void teardown() {
-      for(const auto v : _values) {
-        _hash.erase(v);
-      }
-    }
-  } bench(iters);
-
-  Timer<1>(bench).log([iters, label](int ns, const std::string& msg) {
-    std::cout << "Benchmark (" << PROFILE << "): "
-              << label << ": "
-              << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
-              << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
-  });
-}
-
 template<typename TContainer>
 void bench_flat_queue(const std::string& label = ":") {
    

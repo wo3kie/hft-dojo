@@ -1,5 +1,13 @@
+/*
+* Project:
+*      HFTDojo (https://github.com/wo3kie/hft-dojo)
+*
+* Author:
+*      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
+*/
 
 #include "flat_hash.hpp"
+#include "test_utils.hpp"
 
 #include <cassert>
 #include <unordered_map>
@@ -96,6 +104,42 @@ void test_fill_to_capacity() {
   assert(hash.insert(1000, 10000) == -1);
 }
 
+template<typename TContainer>
+void bench_flat_hash(int32_t iters, const std::string& label = ":") {
+   
+  struct Benchmark {
+    Benchmark(int32_t iters)
+      : _iters(iters)
+    {
+    }
+
+    int32_t _iters;
+    TContainer _hash;
+    
+    void setup() {
+    }
+    
+    void run() {
+      for(int32_t i = 0; i < _iters; ++i) {
+        do_not_optimize(_hash.insert({typename TContainer::key_type{}, 
+                                      typename TContainer::mapped_type{}}));
+      }
+    }
+
+    void teardown() {
+      _hash.clear();
+    }
+
+  } bench(iters);
+
+  Timer<1>(bench).log([iters, label](int ns, const std::string& msg) {
+    std::cout << "Micro Benchmark: insert: (" << PROFILE << "): "
+              << label << ": "
+              << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
+              << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
+  });
+}
+
 } // namespace
 
 int main(){
@@ -103,4 +147,8 @@ int main(){
   test_insert_find_and_update<FlatHash<int, int, 8>>();
   test_collisions_erase_and_tomb_reuse<FlatHash<int, int, 8>>();
   test_fill_to_capacity<FlatHash<int, int, 8>>();
+
+#ifdef NDEBUG
+  bench_flat_hash<FlatHash<int, int, 8>>(10'000, "FlatHash<int,int,8>");
+#endif
 }

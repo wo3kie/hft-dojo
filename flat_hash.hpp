@@ -27,6 +27,10 @@ struct FlatHash: noncopyable, nonmovable {
   static constexpr int32_t Bits = Capacity / 8;
 
 public:
+  using key_type = TKey;
+  using mapped_type = TValue;
+
+public:
   FlatHash() {
     for(int32_t i = 0; i < Bits; ++i) {
       _freeBits[i] = 0xFF;
@@ -153,6 +157,13 @@ public:
     _set_bit(_tombBits, idx);
 
     return true;
+  }
+
+  void clear() noexcept {
+    for(int32_t i = 0; i < Bits; ++i) {
+      _freeBits[i] = 0xFF;
+      _tombBits[i] = 0x00;
+    }
   }
 
   /* extension */ bool _ext_equal(const std::unordered_map<TKey, TValue>& expected) const noexcept {
