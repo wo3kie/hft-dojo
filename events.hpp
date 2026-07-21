@@ -1,11 +1,7 @@
 #pragma once
 
 /*
- * Project:
- *      HFTDojo (https://github.com/wo3kie/hft-dojo)
- *
- * Author:
- *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
+ * Author: Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
 #include <cstdint>
@@ -170,13 +166,13 @@ struct QueueOut {
   }
 
   [[nodiscard]] bool empty() const noexcept {
-    return _queue.empty_approx();
+    return _queue._approx_empty();
   }
 
   std::size_t clear() noexcept {
     std::size_t count = 0;
 
-    while(_queue.empty_approx() == false) {
+    while(_queue._approx_empty() == false) {
       count += 1;
 
       Event event;
@@ -189,7 +185,7 @@ struct QueueOut {
   std::size_t log(const std::string& prefix = "") {
     std::size_t count = 0;
 
-    while(_queue.empty_approx() == false) {
+    while(_queue._approx_empty() == false) {
       count += 1;
 
       Event event;
