@@ -1,15 +1,12 @@
 #pragma once
 
 /*
- * Project:
- *      HFTDojo (https://github.com/wo3kie/hft-dojo)
- *
- * Author:
- *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
+ * Author: Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
 #include <cstddef>
 #include <stdexcept>
+#include <queue>
 #include <utility>
 
 #include "common.hpp"
@@ -19,19 +16,16 @@
  * RingBuffer
  */
 
-template<typename TValue, int32_t Capacity>
+template<typename TValue, std::size_t Capacity>
 struct RingBuffer : noncopyable, nonmovable {
   static_assert((Capacity > 0) && (Capacity <= 1024 * 1024 * 1024));
 
 public:
   using value_type = TValue;
 
-  RingBuffer() = default;
-  ~RingBuffer() = default;
-
 public:
   template<typename TT>
-  bool push(TT&& t) {
+  bool push(TT&& t) noexcept {
     if(full()) {
       return false;
     }
@@ -42,7 +36,7 @@ public:
     return true;
   }
 
-  bool pop(TValue& out) {
+  bool pop(TValue& out) noexcept{
     if(empty()) {
       return false;
     }
@@ -53,15 +47,23 @@ public:
     return true;
   }
 
-  static constexpr int32_t capacity() {
+  static constexpr std::size_t capacity() noexcept{
     return Capacity;
   }
 
-  [[nodiscard]] bool empty() const {
+  [[nodiscard]] bool empty() const noexcept {
     return _head == _tail;
   }
 
-  bool full() const {
+  std::size_t size() const noexcept {
+    if(_tail >= _head) {
+      return _tail - _head;
+    } else {
+      return (Capacity + 1) - (_head - _tail);
+    }
+  }
+
+  bool full() const noexcept {
     return _index(_tail + 1) == _head;
   }
 
@@ -76,7 +78,11 @@ public:
   }
 
   /* extension */ bool _ext_equal(std::queue<TValue> expected) const noexcept {
-    for(int32_t i = _head; i != _tail; i = _index(i + 1)) {
+    if (size() != expected.size()) {
+      return false;
+    }
+
+    for(std::size_t i = _head; i != _tail; i = _index(i + 1)) {
       if(_buffer[i] != expected.front()) {
         return false;
       }
@@ -88,7 +94,7 @@ public:
   }
   
 private:
-  static constexpr int32_t _index(int32_t i) {
+  static constexpr std::size_t _index(std::size_t i) noexcept {
     constexpr bool isPowerOf2 = ((Capacity + 1) & Capacity) == 0;
 
     if constexpr(isPowerOf2) {
