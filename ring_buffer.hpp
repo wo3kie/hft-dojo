@@ -100,13 +100,12 @@ private:
     if constexpr(isPowerOf2) {
       return i & Capacity;
     } else {
-      // return i % (Capacity + 1);
-      return (i >= (Capacity + 1) ? 0 : i);
+      return (i == (Capacity + 1) ? 0 : i); // return i % (Capacity + 1);
     }
   }
 
 private:
   std::size_t _head{0};
   std::size_t _tail{0};
-  Storage<TValue, /* N+1 trick */ Capacity + 1> _buffer;
+  Storage<TValue, Capacity + /* N+1 trick */ 1> _buffer;
 };
