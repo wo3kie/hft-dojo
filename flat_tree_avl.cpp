@@ -1,9 +1,5 @@
 /*
- * Project:
- *      HFTDojo (https://github.com/wo3kie/hft-dojo)
- *
- * Author:
- *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
+ * Author: Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
 #include "flat_tree_avl.hpp"
