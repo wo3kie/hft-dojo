@@ -1,11 +1,7 @@
 #pragma once
 
 /*
- * Project:
- *      CxxDojo (https://github.com/wo3kie/cpp-dojo)
- *
- * Author:
- *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
+ * Author: Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
 #include <algorithm>
