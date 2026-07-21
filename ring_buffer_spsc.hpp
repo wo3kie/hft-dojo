@@ -1,11 +1,7 @@
 #pragma once
 
 /*
- * Website:
- *      HFTDojo https://github.com/wo3kie/hft-dojo
- *
- * Author:
- *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
+ * Author: Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
 #include <atomic>
@@ -21,68 +17,46 @@
  * Circular Buffer, Single Producer Single Consumer, Lock Free
  */
 
-template<typename TValue, int32_t Capacity>
+template<typename TValue, std::size_t Capacity>
 struct RingBufferSPSC : noncopyable, nonmovable {
   static_assert((Capacity > 0) && (Capacity <= 1024 * 1024 * 1024));
 
 public:
   using value_type = TValue;
 
-public:
-  RingBufferSPSC() = default;
-  ~RingBufferSPSC() = default;
-
 public:  
-  static constexpr int32_t capacity() {
+  static constexpr std::size_t capacity() {
     return Capacity;
-  }
-
-  /* approximate */ int32_t size_approx() const {
-    const int32_t head = _head.load(std::memory_order_acquire);
-    const int32_t tail = _tail.load(std::memory_order_acquire);
-
-    if(tail >= head) {
-      return tail - head;
-    } else {
-      return (Capacity + 1) - (head - tail);
-    }
-  }
-
-  /* approximate */ [[nodiscard]] bool empty_approx() const {
-    const int32_t head = _head.load(std::memory_order_acquire);
-    const int32_t tail = _tail.load(std::memory_order_acquire);
-
-    return head == tail;
-  }
-
-  /* approximate */ bool full_approx() const {
-    const int32_t head = _head.load(std::memory_order_acquire);
-    const int32_t tail = _tail.load(std::memory_order_acquire);
-
-    return head == _index(tail + 1);
   }
 
   template<typename T>
   bool push(T&& value) {
-    const int32_t head = _head.load(std::memory_order_acquire);
-    const int32_t tail = _tail.load(std::memory_order_relaxed);
+    const std::size_t tail = _tail.load(std::memory_order_relaxed);
+    const std::size_t next = _index(tail + 1);
 
-    if(head == _index(tail + 1)) {
-      return false;
+    if (UNLIKELY(next == _headCached)) {
+      _headCached = _head.load(std::memory_order_acquire);
+
+      if (UNLIKELY(next == _headCached)) {
+        return false;
+      }
     }
 
     _buffer[tail] = std::forward<T>(value);
-    _tail.store(_index(tail + 1), std::memory_order_release);
+    _tail.store(next, std::memory_order_release);
 
     return true;
   }
 
   bool pop(TValue& out) {
-    const int32_t head = _head.load(std::memory_order_relaxed);
-    const int32_t tail = _tail.load(std::memory_order_acquire);
+    const std::size_t head = _head.load(std::memory_order_relaxed);
 
-    if(head == tail) {
-      return false;
+    if (UNLIKELY(head == _tailCached)) {
+      _tailCached = _tail.load(std::memory_order_acquire);
+
+      if (UNLIKELY(head == _tailCached)) {
+        return false;
+      }
     }
 
     out = std::move(_buffer[head]);
@@ -101,11 +75,36 @@ public:
     return out;
   }
 
-  /* extension */ bool _ext_equal(std::queue<TValue> expected) const {
-    const int32_t head = _head.load(std::memory_order_acquire);
-    const int32_t tail = _tail.load(std::memory_order_acquire);
+  /* approximate */ std::size_t _approx_size() const {
+    const std::size_t head = _head.load(std::memory_order_acquire);
+    const std::size_t tail = _tail.load(std::memory_order_acquire);
 
-    for(int32_t i = head; i != tail; i = _index(i + 1)) {
+    if(tail >= head) {
+      return tail - head;
+    } else {
+      return (Capacity + 1) - (head - tail);
+    }
+  }
+
+  /* approximate */ [[nodiscard]] bool _approx_empty() const {
+    const std::size_t head = _head.load(std::memory_order_acquire);
+    const std::size_t tail = _tail.load(std::memory_order_acquire);
+
+    return head == tail;
+  }
+
+  /* approximate */ bool _approx_full() const {
+    const std::size_t head = _head.load(std::memory_order_acquire);
+    const std::size_t tail = _tail.load(std::memory_order_acquire);
+
+    return head == _index(tail + 1);
+  }
+
+  /* extension */ bool _ext_equal(std::queue<TValue> expected) const {
+    const std::size_t head = _head.load(std::memory_order_acquire);
+    const std::size_t tail = _tail.load(std::memory_order_acquire);
+
+    for(std::size_t i = head; i != tail; i = _index(i + 1)) {
       if(_buffer[i] != expected.front()) {
         return false;
       }
@@ -117,18 +116,25 @@ public:
   }
 
 private:
-  static constexpr int32_t _index(int32_t i) {
-    constexpr bool isPowerOf2 = ((Capacity + 1) & Capacity) == 0;
+  static constexpr std::size_t _index(std::size_t i) noexcept {
+    constexpr bool isPowerOf2 = ((Capacity + 1) & Capacity) == 0; 
 
     if constexpr(isPowerOf2) {
       return i & Capacity;
     } else {
-      return i % (Capacity + 1);
+      // return i % (Capacity + 1);
+      return (i >= (Capacity + 1) ? 0 : i);
     }
   }
 
 private:
-  alignas(64) std::atomic<int32_t> _head{0};
-  alignas(64) std::atomic<int32_t> _tail{0};
-  alignas(64) Storage<TValue, Capacity + /* N+1 trick */ 1> _buffer;
+  // producer line, writes _tail, uses _headCached
+  alignas(CacheLineSize) std::atomic<std::size_t> _tail{0};
+                         std::size_t _headCached{0};
+  
+  // consumer line, writes _head, uses _tailCached
+  alignas(CacheLineSize) std::atomic<std::size_t> _head{0};
+                         std::size_t _tailCached{0};
+
+  alignas(CacheLineSize) Storage<TValue, Capacity + /* N+1 trick */ 1> _buffer;
 };
