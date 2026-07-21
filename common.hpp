@@ -1,11 +1,7 @@
 #pragma once
 
 /*
- * Website:
- *      HFTDojo https://github.com/wo3kie/hft-dojo
- *
- * Author:
- *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
+ * Author: Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
 #include <cmath>
@@ -13,11 +9,7 @@
 #include <cstdlib>
 #include <cxxabi.h>
 #include <limits>
-#include <random>
-#include <sstream>
 #include <string>
-#include <unordered_map>
-#include <vector>
 
 /*
  * index_type_t
@@ -121,3 +113,6 @@ struct nonmovable {
   nonmovable(nonmovable&&) = delete;
   nonmovable& operator=(nonmovable&&) = delete;
 };
+
+// std::hardware_destructive_interference_size
+inline constexpr std::size_t CacheLineSize = 64;
