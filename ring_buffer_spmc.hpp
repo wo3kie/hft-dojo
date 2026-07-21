@@ -142,8 +142,7 @@ private:
     if constexpr(isPowerOf2) {
       return i & (Capacity - 1);
     } else {
-      // return i % (Capacity + 1);
-      return (i >= Capacity ? 0 : i);
+      return (i >= Capacity ? 0 : i); // return i % Capacity;
     }
   }
 
