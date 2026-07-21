@@ -1,11 +1,7 @@
 #pragma once
 
 /*
- * Project:
- *      HFTDojo (www.github.com/wo3kie/hft-dojo)
- *
- * Author:
- *      Lukasz Czerwinski (www.lukaszczerwinski.pl)
+ * Author: Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
 #include <atomic>
@@ -32,20 +28,20 @@ public:
     return Capacity;
   }
 
-  /* approximate */ int32_t size_approx() const {
+  /* approximate */ int32_t _approx_size() const {
     const int32_t pushed = _pushed.load(std::memory_order_acquire);
     const int32_t popped = _popped.load(std::memory_order_acquire);
 
     return pushed - popped;
   }
 
-  /* approximate */ [[nodiscard]] bool empty_approx() const {
+  /* approximate */ [[nodiscard]] bool _approx_empty() const {
     const int32_t pushed = _pushed.load(std::memory_order_acquire);
     const int32_t popped = _popped.load(std::memory_order_acquire);
     return _empty(pushed, popped);
   }
 
-  /* approximate */ bool full_approx() const {
+  /* approximate */ bool _approx_full() const {
     const int32_t pushed = _pushed.load(std::memory_order_acquire);
     const int32_t popped = _popped.load(std::memory_order_acquire);
     return _full(pushed, popped);
@@ -68,13 +64,13 @@ public:
   }
 
   bool pop(TValue& out) {
-    int32_t claim;
+    std::size_t claim;
 
     {
       claim = _claim.load(std::memory_order_acquire);
 
       while(true) {
-        const int32_t pushed = _pushed.load(std::memory_order_acquire);
+        const std::size_t pushed = _pushed.load(std::memory_order_acquire);
 
         if(claim >= pushed) {
           return false;
@@ -87,13 +83,13 @@ public:
     }
 
     {
-      const int32_t index = _index(claim);
+      const std::size_t index = _index(claim);
       out = std::move(_buffer[index]);
     }
 
     {
       while(true) {
-        int32_t claim2 = claim;
+        std::size_t claim2 = claim;
 
         if(_popped.compare_exchange_weak(/* ref */ claim2, claim + 1, std::memory_order_release, std::memory_order_relaxed)) {
           break;
@@ -102,6 +98,14 @@ public:
     }
 
     return true;
+  }
+
+  /* approximate */ bool _approx_empty(std::size_t pushed, std::size_t popped) const {
+    return popped >= pushed;
+  }
+  
+  /* approximate */ bool _approx_full(std::size_t pushed, std::size_t popped) const {
+    return (pushed - popped) >= Capacity;
   }
 
   /* extension */ TValue _ext_pop() {
@@ -115,11 +119,11 @@ public:
   }
 
   /* extension */ bool _ext_equal(std::queue<TValue> expected) const {
-    const int32_t popped = _popped.load(std::memory_order_acquire);
-    const int32_t pushed = _pushed.load(std::memory_order_acquire);
+    const std::size_t popped = _popped.load(std::memory_order_acquire);
+    const std::size_t pushed = _pushed.load(std::memory_order_acquire);
 
-    for(int32_t i = popped; i < pushed; i += 1) {
-      const int32_t index = _index(i);
+    for(std::size_t i = popped; i < pushed; i += 1) {
+      const std::size_t index = _index(i);
       
       if(_buffer[index] != expected.front()) {
         return false;
@@ -132,27 +136,20 @@ public:
   }
 
 private:
-  /* approximate */ bool _empty(int32_t pushed, int32_t popped) const {
-    return popped >= pushed;
-  }
-
-  /* approximate */ bool _full(int32_t pushed, int32_t popped) const {
-    return (pushed - popped) >= Capacity;
-  }
-
-  static constexpr int32_t _index(int32_t i) {
+  static constexpr std::size_t _index(std::size_t i) noexcept {
     constexpr bool isPowerOf2 = ((Capacity) & (Capacity - 1)) == 0;
 
     if constexpr(isPowerOf2) {
       return i & (Capacity - 1);
     } else {
-      return i % Capacity;
+      // return i % (Capacity + 1);
+      return (i >= Capacity ? 0 : i);
     }
   }
 
 private:
-  alignas(64) std::atomic<int32_t> _pushed{0};
-  alignas(64) std::atomic<int32_t> _popped{0};
-  alignas(64) std::atomic<int32_t> _claim{0};
-  alignas(64) Storage<TValue, Capacity> _buffer;
+  alignas(CacheLineSize) std::atomic<std::size_t> _pushed{0};
+  alignas(CacheLineSize) std::atomic<std::size_t> _popped{0};
+  alignas(CacheLineSize) std::atomic<std::size_t> _claim{0};
+  alignas(CacheLineSize) Storage<TValue, Capacity> _buffer;
 };
