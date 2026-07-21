@@ -30,14 +30,16 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
     
 - **flat_hash** - A fixed‑capacity, array‑based open‑addressing hash map. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions, deletions, and lookups without dynamic memory allocation. The map maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
 
-  ```{r, engine='bash'}
+  ```bash
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
   Micro Benchmark: insert: (Release): FlatHash<int,int,8>: (iters=10000): 15 μs :: 1 ns/iter :: 638977635 iter/s
   ```
     
+- **flat_list** - A fixed‑capacity, array‑based linked list. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions and deletions without dynamic memory allocation. The list maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
+
 - **flat_queue** - It uses an open‑addressing approach to manage free slots, which can be more efficient in certain scenarios, especially when slot `id`s can't be cached.
 
-  ```{r, engine='bash'}
+  ```bash
   Benchmark (Release): FlatQueue: (iters=100000): 581 μs :: 5 ns/iter :: 171927357 iter/s
   Benchmark (Release): FlatQueue: (iters=100000): 579 μs :: 5 ns/iter :: 172554216 iter/s
   Benchmark (Release): FlatQueue: (iters=100000): 579 μs :: 5 ns/iter :: 172557789 iter/s
@@ -47,7 +49,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **flat_tree_bs** - The simplest binary-search variant of the flat tree without nodes balancing. It is designed as a base for balanced versions, but it can be useful on its own in scenarios where the input data is mostly random.
 
-  ```{r, engine='cpp'}
+  ```bash
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
   Benchmark (Release): FlatTreeBS: (iters=100000): 69806 μs :: 698 ns/iter :: 1432525 iter/s
   Benchmark (Release): FlatTreeBS: (iters=100000): 69219 μs :: 692 ns/iter :: 1444681 iter/s
@@ -58,7 +60,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **flat_tree_avl** - An AVL‑balanced variant of the flat tree. It maintains the AVL balance property, which ensures that the tree remains balanced after insertions and deletions, providing O(log n) time complexity for insertions, lookups and deletions. It is implemented as a subclass of the binary‑search variant, reusing its core logic and adding the necessary rotations and balance factor updates to maintain the AVL property.
 
-  ```{r, engine='cpp'}
+  ```bash
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
   Benchmark (Release): FlatTreeAVL: (iters=100000): 3455 μs :: 34 ns/iter :: 28943224 iter/s
   Benchmark (Release): FlatTreeAVL: (iters=100000): 3433 μs :: 34 ns/iter :: 29121602 iter/s
@@ -69,7 +71,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **flat_tree_splay** - A splay‑tree variant of the flat tree. It is a self‑adjusting binary search tree that performs splaying operations to keep recently accessed elements near the root, which can improve access times for certain access patterns. It is designed for scenarios where there is a high degree of locality in the access patterns, as it can provide faster access to recently accessed elements compared to other balanced tree structures.
 
-  ```{r, engine='cpp'}
+  ```bash
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
   Benchmark (Release): FlatTreeSplay:: (iters=100000): 7348 μs :: 73 ns/iter :: 13608936 iter/s
   Benchmark (Release): FlatTreeSplay:: (iters=100000): 7703 μs :: 77 ns/iter :: 12980603 iter/s
@@ -80,7 +82,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **gdb_utils** - GDB helpers for inspecting the internal state of the data structures in this repository.
 
-  ```{r, engine='bash'}
+  ```bash
   (gdb) source ../gdb_utils.py
 
   (gdb) print_ring_buffer rBuffer
@@ -103,7 +105,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **ring_buffer** - Single‑threaded ring buffer. It is designed for scenarios where only one thread is producing and consuming data, so it does not include any synchronization mechanisms.
 
-  ```{r, engine='bash'}
+  ```bash
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
   Benchmark (Release): RingBuffer: (iters=131072): 314 μs :: 2 ns/iter :: 416557817 iter/s
   Benchmark (Release): RingBuffer: (iters=131072): 288 μs :: 2 ns/iter :: 454133462 iter/s
@@ -114,7 +116,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **ring_buffer_mutex** - Multi‑producer/multi‑consumer ring buffer using mutexes. It is designed for scenarios where multiple threads are producing and consuming data, so it uses mutexes to synchronize access to the buffer. This allows it to be used in multi‑threaded environments, but it may have higher latency compared to the single‑threaded version due to the overhead of locking and unlocking the mutexes.
   
-  ```{r, engine='bash'}
+  ```bash
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
   Benchmark (Release): RingBufferMutex: (iters=131072): 1978 μs :: 15 ns/iter :: 66234442 iter/s
   Benchmark (Release): RingBufferMutex: (iters=131072): 1943 μs :: 14 ns/iter :: 67445552 iter/s
@@ -125,7 +127,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **ring_buffer_spsc** - Single‑producer/single‑consumer ring buffer using atomics. It is designed for scenarios where one thread is producing data and another thread is consuming data, so it uses atomic operations to synchronize access to the buffer. This allows it to be used in multi‑threaded environments while still maintaining low latency, as it avoids the overhead of mutexes.
   
-  ```{r, engine='bash'}
+  ```bash
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
   Benchmark (Release): RingBufferSPSC: (iters=131072): 528 μs :: 4 ns/iter :: 247889369 iter/s
   Benchmark (Release): RingBufferSPSC: (iters=131072): 499 μs :: 3 ns/iter :: 262249948 iter/s
@@ -136,7 +138,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 - **ring_buffer_spmc** - Single‑producer/multiple‑consumer ring buffer using atomics. It is designed for scenarios where one thread is producing data and multiple threads are consuming data, so it uses atomic operations to synchronize access to the buffer. This allows it to be used in multi‑threaded environments while still maintaining low latency, as it avoids the overhead of mutexes.
 
-  ```{r, engine='bash'}
+  ```bash
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
   Benchmark (Release): RingBufferSPMC: (iters=131072): 1559 μs :: 11 ns/iter :: 84065239 iter/s
   Benchmark (Release): RingBufferSPMC: (iters=131072): 1498 μs :: 11 ns/iter :: 87465533 iter/s
@@ -168,7 +170,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
     
   - **TradeEngine** — the high‑level orchestrator of the matching system. All internal parameters, such as the number of price levels and the capacity of each level, are chosen so the complete data structure resides entirely in a 32 KB L1 cache for maximum performance. Requests are submitted via API calls, and resulting events are delivered through a FIFO SPSC ring buffer. The engine handles limit orders, market orders, and advanced execution types like FOK and IOC.
 
-  ```{r, engine='bash'}
+  ```bash
   # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
   Benchmark (Release)(events=12561862): 249 ms :: 19 ns/event :: 50279376 events/s
   Benchmark (Release)(events=12561862): 239 ms :: 19 ns/event :: 52518164 events/s
