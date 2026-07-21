@@ -1,11 +1,7 @@
 #pragma once
 
 /*
- * Website:
- *      https://github.com/wo3kie/hft-dojo
- *
- * Author:
- *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
+ * Author: Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
 #include <atomic>
@@ -82,12 +78,12 @@ public:
     return _state.load(std::memory_order_acquire) == WorkerState::Running;
   }
 
-  /* approximate */ [[nodiscard]] bool empty_approx() const {
-    return _queue.empty_approx();
+  /* approximate */ [[nodiscard]] bool _approx_empty() const {
+    return _queue._approx_empty();
   }
 
-  /* approximate */ bool full_approx() const {
-    return _queue.full_approx();
+  /* approximate */ bool _approx_full() const {
+    return _queue._approx_full();
   }
 
 private:
