@@ -15,11 +15,9 @@
 #include <exception>
 #include <future>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 
-#include "./assert.hpp"
 #include "./task_worker.hpp"
 
 /*

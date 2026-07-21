@@ -10,7 +10,6 @@
 #include <iostream>
 #include <thread>
 
-#include "assert.hpp"
 #include "task_worker.hpp"
 
 void test_stop_drains_all_queued_tasks() {
@@ -30,7 +29,7 @@ void test_stop_drains_all_queued_tasks() {
     worker.stop();
   }
 
-  Assert(counter == 1024);
+  assert(counter == 1024);
 }
 
 void test_hard_stop_skips_queued_tasks_after_current_task() {
@@ -73,7 +72,7 @@ void test_hard_stop_skips_queued_tasks_after_current_task() {
     release_current_task.store(true, std::memory_order_release);
   }
 
-  Assert(counter.load(std::memory_order_relaxed) == 1);
+  assert(counter.load(std::memory_order_relaxed) == 1);
 }
 
 int main() {

@@ -11,7 +11,6 @@
 #include <utility>
 #include <queue>
 
-#include "assert.hpp"
 #include "common.hpp"
 
 #include "ring_buffer_mutex.hpp"

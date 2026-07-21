@@ -7,7 +7,6 @@
  */
 
 #include "trade_engine.hpp"
-#include "assert.hpp"
 #include "test_utils.hpp"
 #include "timer.hpp"
 
@@ -19,10 +18,10 @@ void test_insert(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(1, ANY, 100));
+  assert(engine.out().pop() == CreateAccepted(1, ANY, 100));
 
   engine.insert_order<side>(2, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(2, ANY, 100));
+  assert(engine.out().pop() == CreateAccepted(2, ANY, 100));
 }
 
 template<Side side>
@@ -31,7 +30,7 @@ void test_insert_invalid_id(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(InvalidOrderId, 100, 100);
-  Assert(engine.out().pop() == CreateRejected(InvalidOrderId, 100));
+  assert(engine.out().pop() == CreateRejected(InvalidOrderId, 100));
 }
 
 template<Side side>
@@ -40,10 +39,10 @@ void test_insert_invalid_price(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, engine.max_price() + 1, 100);
-  Assert(engine.out().pop() == CreateRejected(1, 100));
+  assert(engine.out().pop() == CreateRejected(1, 100));
 
   engine.insert_order<side>(2, engine.min_price() - 1, 100);
-  Assert(engine.out().pop() == CreateRejected(2, 100));
+  assert(engine.out().pop() == CreateRejected(2, 100));
 }
 
 template<Side side>
@@ -52,10 +51,10 @@ void test_insert_invalid_qty(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, 10, MaxQty + 1);
-  Assert(engine.out().pop() == CreateRejected(1, MaxQty + 1));
+  assert(engine.out().pop() == CreateRejected(1, MaxQty + 1));
 
   engine.insert_order<side>(2, 10, MinQty - 1);
-  Assert(engine.out().pop() == CreateRejected(2, MinQty - 1));
+  assert(engine.out().pop() == CreateRejected(2, MinQty - 1));
 }
 
 template<Side side>
@@ -66,7 +65,7 @@ void test_insert_all(int32_t centerPrice) {
   for(int32_t price = engine.min_price(); price <= engine.max_price(); price++) {
     for(int32_t i = 0; i < TradeEngine::OrdersPerLevel; i++) {
       engine.insert_order<side>(price * 100 + i, price, 10);
-      Assert(engine.out().pop() == CreateAccepted(price * 100 + i, ANY, 10));
+      assert(engine.out().pop() == CreateAccepted(price * 100 + i, ANY, 10));
     }
   }
 }
@@ -78,13 +77,13 @@ void test_update(int32_t centerPrice) {
 
   engine.insert_order<side>(1, centerPrice, 100);
   const Event event = engine.out().pop();
-  Assert(event == CreateAccepted(1, ANY, 100));
+  assert(event == CreateAccepted(1, ANY, 100));
 
   engine.update_order<side>(1, centerPrice, 100 + 1, event.m3);
-  Assert(engine.out().pop() == UpdateAccepted(1));
+  assert(engine.out().pop() == UpdateAccepted(1));
 
   engine.update_order<side>(1, centerPrice, 100 - 1, event.m3);
-  Assert(engine.out().pop() == UpdateAccepted(1));
+  assert(engine.out().pop() == UpdateAccepted(1));
 }
 
 template<Side side>
@@ -93,7 +92,7 @@ void test_update_invalid_id(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.update_order<side>(InvalidOrderId, centerPrice, 0, 100 + 1);
-  Assert(engine.out().pop() == UpdateRejected(InvalidOrderId, 100 + 1));
+  assert(engine.out().pop() == UpdateRejected(InvalidOrderId, 100 + 1));
 }
 
 template<Side side>
@@ -103,10 +102,10 @@ void test_update_invalid_qty(int32_t centerPrice) {
 
   engine.insert_order<side>(1, centerPrice, 100);
   const Event event = engine.out().pop();
-  Assert(event == CreateAccepted(1, 0, 100));
+  assert(event == CreateAccepted(1, 0, 100));
 
   engine.update_order<side>(1, centerPrice, MaxQty + 1, event.m3);
-  Assert(engine.out().pop() == UpdateRejected(1, MaxQty + 1));
+  assert(engine.out().pop() == UpdateRejected(1, MaxQty + 1));
 }
 
 template<Side side>
@@ -116,10 +115,10 @@ void test_update_invalid_price(int32_t centerPrice) {
 
   engine.insert_order<side>(1, centerPrice, 100);
   const Event event = engine.out().pop();
-  Assert(event == CreateAccepted(1, ANY, 100));
+  assert(event == CreateAccepted(1, ANY, 100));
 
   engine.update_order<side>(1, centerPrice + 1, 100 + 1, event.m3);
-  Assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
+  assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
 }
 
 template<Side side>
@@ -129,13 +128,13 @@ void test_update_invalid_slot(int32_t centerPrice) {
 
   engine.insert_order<side>(1, centerPrice, 100);
   const Event event = engine.out().pop();
-  Assert(event == CreateAccepted(1, ANY, 100));
+  assert(event == CreateAccepted(1, ANY, 100));
 
   engine.update_order<side>(1, centerPrice, 100 + 1, event.m3 + 1000000);
-  Assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
+  assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
 
   engine.update_order<side>(1, centerPrice, 100 + 1, event.m3 + 1);
-  Assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
+  assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
 }
 
 template<Side side>
@@ -145,13 +144,13 @@ void test_update_deleted(int32_t centerPrice) {
 
   engine.insert_order<side>(1, centerPrice, 100);
   const Event event = engine.out().pop();
-  Assert(event == CreateAccepted(1, ANY, 100));
+  assert(event == CreateAccepted(1, ANY, 100));
 
   engine.cancel_order<side>(1, centerPrice, event.m3);
-  Assert(engine.out().pop() == CancelAccepted(1));
+  assert(engine.out().pop() == CancelAccepted(1));
 
   engine.update_order<side>(1, centerPrice, 100 + 1, event.m3);
-  Assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
+  assert(engine.out().pop() == UpdateRejected(1, 100 + 1));
 }
 
 template<Side side>
@@ -161,10 +160,10 @@ void test_delete(int32_t centerPrice) {
 
   engine.insert_order<side>(1, centerPrice, 100);
   const Event event = engine.out().pop();
-  Assert(event == CreateAccepted(1, ANY, 100));
+  assert(event == CreateAccepted(1, ANY, 100));
 
   engine.cancel_order<side>(1, centerPrice, event.m3);
-  Assert(engine.out().pop() == CancelAccepted(1));
+  assert(engine.out().pop() == CancelAccepted(1));
 }
 
 template<Side side>
@@ -173,10 +172,10 @@ void test_delete_invalid_id(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, centerPrice, 100);
-  Assert(engine.out().pop() == CreateAccepted(1, ANY, 100));
+  assert(engine.out().pop() == CreateAccepted(1, ANY, 100));
 
   engine.cancel_order<side>(InvalidOrderId, centerPrice, 0);
-  Assert(engine.out().pop() == CancelRejected(InvalidOrderId));
+  assert(engine.out().pop() == CancelRejected(InvalidOrderId));
 }
 
 template<Side side>
@@ -186,10 +185,10 @@ void test_delete_invalid_price(int32_t centerPrice) {
 
   engine.insert_order<side>(1, centerPrice, 100);
   const Event event = engine.out().pop();
-  Assert(event == CreateAccepted(1, ANY, 100));
+  assert(event == CreateAccepted(1, ANY, 100));
 
   engine.cancel_order<side>(1, centerPrice + 1, event.m3);
-  Assert(engine.out().pop() == CancelRejected(1));
+  assert(engine.out().pop() == CancelRejected(1));
 }
 
 template<Side side>
@@ -199,13 +198,13 @@ void test_delete_invalid_slot(int32_t centerPrice) {
 
   engine.insert_order<side>(1, centerPrice, 100);
   const Event event = engine.out().pop();
-  Assert(event == CreateAccepted(1, ANY, 100));
+  assert(event == CreateAccepted(1, ANY, 100));
 
   engine.cancel_order<side>(1, centerPrice, event.m3 + 1000000);
-  Assert(engine.out().pop() == CancelRejected(1));
+  assert(engine.out().pop() == CancelRejected(1));
 
   engine.cancel_order<side>(1, centerPrice, event.m3 + 1);
-  Assert(engine.out().pop() == CancelRejected(1));
+  assert(engine.out().pop() == CancelRejected(1));
 }
 
 template<Side side>
@@ -215,13 +214,13 @@ void test_double_delete(int32_t centerPrice) {
 
   engine.insert_order<side>(1, centerPrice, 100);
   const Event event = engine.out().pop();
-  Assert(event == CreateAccepted(1, ANY, 100));
+  assert(event == CreateAccepted(1, ANY, 100));
 
   engine.cancel_order<side>(1, centerPrice, event.m3);
-  Assert(engine.out().pop() == CancelAccepted(1));
+  assert(engine.out().pop() == CancelAccepted(1));
 
   engine.cancel_order<side>(1, centerPrice, event.m3);
-  Assert(engine.out().pop() == CancelRejected(1));
+  assert(engine.out().pop() == CancelRejected(1));
 }
 
 template<Side side>
@@ -234,13 +233,13 @@ void test_trade_level(int32_t centerPrice, int32_t tradePrice) {
 
   for(int32_t order = 1; order <= orders; order++) {
     engine.insert_order<side>(order, tradePrice, qty);
-    Assert(engine.out().pop() == CreateAccepted(order, ANY, qty));
+    assert(engine.out().pop() == CreateAccepted(order, ANY, qty));
   }
 
   engine.insert_order<-side>(orders + 1, tradePrice, orders * qty);
 
   for(int32_t i = 0; i < TradeEngine::OrdersPerLevel; i++) {
-    Assert(engine.out().pop() == Trade(tradePrice, qty, orders + 1, i + 1));
+    assert(engine.out().pop() == Trade(tradePrice, qty, orders + 1, i + 1));
   }
 }
 
@@ -286,25 +285,25 @@ void test_fok_trade(int32_t centerPrice) {
   TradeEngine engine(out, centerPrice);
 
   engine.insert_order<side>(1, centerPrice + side * 1, 100);
-  Assert(engine.out().pop() == CreateAccepted(1, ANY, 100));
+  assert(engine.out().pop() == CreateAccepted(1, ANY, 100));
 
   engine.insert_order<side>(2, centerPrice + side * 2, 100);
-  Assert(engine.out().pop() == CreateAccepted(2, ANY, 100));
+  assert(engine.out().pop() == CreateAccepted(2, ANY, 100));
 
   engine.insert_order<side>(3, centerPrice + side * 3, 100);
-  Assert(engine.out().pop() == CreateAccepted(3, ANY, 100));
+  assert(engine.out().pop() == CreateAccepted(3, ANY, 100));
 
   engine.insert_order_fok<-side>(4, centerPrice, 400);
-  Assert(engine.out().pop() == CreateRejected(4, 400, Reason::FOK));
+  assert(engine.out().pop() == CreateRejected(4, 400, Reason::FOK));
 
   engine.insert_order<side>(5, centerPrice + side * 5, 100);
-  Assert(engine.out().pop() == CreateAccepted(5, ANY, 100));
+  assert(engine.out().pop() == CreateAccepted(5, ANY, 100));
 
   engine.insert_order_fok<-side>(6, centerPrice, 400);
-  Assert(engine.out().pop() == Trade(ANY, 100, 6, ANY));
-  Assert(engine.out().pop() == Trade(ANY, 100, 6, ANY));
-  Assert(engine.out().pop() == Trade(ANY, 100, 6, ANY));
-  Assert(engine.out().pop() == Trade(ANY, 100, 6, ANY));
+  assert(engine.out().pop() == Trade(ANY, 100, 6, ANY));
+  assert(engine.out().pop() == Trade(ANY, 100, 6, ANY));
+  assert(engine.out().pop() == Trade(ANY, 100, 6, ANY));
+  assert(engine.out().pop() == Trade(ANY, 100, 6, ANY));
 }
 
 void test(int32_t price) {

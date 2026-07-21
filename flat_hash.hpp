@@ -12,7 +12,6 @@
 #include <type_traits>
 #include <unordered_map>
 
-#include "assert.hpp"
 #include "common.hpp"
 #include "storage.hpp"
 

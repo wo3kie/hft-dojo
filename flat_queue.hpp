@@ -13,7 +13,6 @@
 #include <list>
 #include <type_traits>
 
-#include "assert.hpp"
 #include "common.hpp"
 #include "storage.hpp"
 

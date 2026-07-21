@@ -26,18 +26,6 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 
 ## Content
   
-- **assert** - Improved assert that accepts simple comparison expressions (`==`, `!=`, `<`, `<=`, `>`, `>=`) and prints both actual and expected values on failure.
-  
-  ```{r, engine='bash'}
-  $ cat assert.cpp
-  #include "./assert.hpp"
-  int main() {
-    int a = 1;
-    int b = 2;
-    Assert(a == b);
-  }
-  ```
-
 - **branchless** - A collection of branchless functions like `min`, `max`... These functions are implemented using bitwise operations and arithmetic to avoid branching, which can improve performance in certain scenarios by reducing pipeline stalls.  
     
 - **flat_hash** - A fixed‑capacity, array‑based open‑addressing hash map. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions, deletions, and lookups without dynamic memory allocation. The map maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.

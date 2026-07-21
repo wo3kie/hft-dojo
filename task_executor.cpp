@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <vector>
 
-#include "assert.hpp"
 #include "task_executor.hpp"
 
 #include <cassert>
@@ -28,22 +27,22 @@ void test_submit_delivers_results_to_channels() {
   Channel<int> channel7;
   Channel<int> channel8;
 
-  Assert(exec.try_submit(
+  assert(exec.try_submit(
       [](Channel<int>& channel) noexcept {
         channel.set(1);
       },
       channel1));
-  Assert(exec.try_submit(
+  assert(exec.try_submit(
       [](Channel<int>& channel) noexcept {
         channel.set(2);
       },
       channel2));
-  Assert(exec.try_submit(
+  assert(exec.try_submit(
       [](Channel<int>& channel) noexcept {
         channel.set(3);
       },
       channel3));
-  Assert(exec.try_submit(
+  assert(exec.try_submit(
       [](Channel<int>& channel) noexcept {
         channel.set(4);
       },
@@ -69,14 +68,14 @@ void test_submit_delivers_results_to_channels() {
       },
       channel8);
 
-  Assert(channel1.get() == 1);
-  Assert(channel2.get() == 2);
-  Assert(channel3.get() == 3);
-  Assert(channel4.get() == 4);
-  Assert(channel5.get() == 5);
-  Assert(channel6.get() == 6);
-  Assert(channel7.get() == 7);
-  Assert(channel8.get() == 8);
+  assert(channel1.get() == 1);
+  assert(channel2.get() == 2);
+  assert(channel3.get() == 3);
+  assert(channel4.get() == 4);
+  assert(channel5.get() == 5);
+  assert(channel6.get() == 6);
+  assert(channel7.get() == 7);
+  assert(channel8.get() == 8);
 }
 
 void test_submit_preserves_task_execution_order() {
@@ -120,15 +119,15 @@ void test_submit_preserves_task_execution_order() {
 
   exec.stop();
 
-  Assert(channel1.get() == 1);
-  Assert(channel2.get() == 2);
-  Assert(channel3.get() == 3);
-  Assert(channel4.get() == 4);
+  assert(channel1.get() == 1);
+  assert(channel2.get() == 2);
+  assert(channel3.get() == 3);
+  assert(channel4.get() == 4);
 
-  Assert(execution_order[0] == 1);
-  Assert(execution_order[1] == 2);
-  Assert(execution_order[2] == 3);
-  Assert(execution_order[3] == 4);
+  assert(execution_order[0] == 1);
+  assert(execution_order[1] == 2);
+  assert(execution_order[2] == 3);
+  assert(execution_order[3] == 4);
 }
 
 int main() {

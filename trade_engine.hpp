@@ -11,7 +11,6 @@
 #include <cassert>
 #include <cstdint>
 
-#include "assert.hpp"
 #include "branchless.hpp"
 #include "common.hpp"
 #include "events.hpp"

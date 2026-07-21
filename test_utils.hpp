@@ -23,7 +23,6 @@
 #include <utility>
 #include <vector>
 
-#include "assert.hpp"
 #include "common.hpp"
 #include "object_pool.hpp"
 #include "random.hpp"
@@ -182,23 +181,23 @@ void test_flat_tree() {
   std::shuffle(values.begin(), values.end(), lcg);
   
   for(int i = 0; i < tree.capacity(); ++i) {
-    Assert(tree.insert(values[i]) != -1);
-    Assert(set.insert(values[i]).second);
-    Assert(tree._ext_equal(set));
+    assert(tree.insert(values[i]) != -1);
+    assert(set.insert(values[i]).second);
+    assert(tree._ext_equal(set));
   }
   
   std::shuffle(values.begin(), values.end(), lcg);
 
   for(int i = 0; i < tree.capacity(); ++i) {
-    Assert(tree.find(values[i]) != -1);
+    assert(tree.find(values[i]) != -1);
   }
   
   std::shuffle(values.begin(), values.end(), lcg);
 
   for(int i = 0; i < tree.capacity(); ++i) {
-    Assert(tree.erase(tree.find(values[i])));
-    Assert(set.erase(values[i]) == 1);
-    Assert(tree._ext_equal(set));
+    assert(tree.erase(tree.find(values[i])));
+    assert(set.erase(values[i]) == 1);
+    assert(tree._ext_equal(set));
   }
 }
 

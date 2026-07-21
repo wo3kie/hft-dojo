@@ -8,6 +8,7 @@
  *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
+#include <cassert>
 #include <cstdint>
 
 template<uint32_t Bits>
