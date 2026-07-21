@@ -122,8 +122,7 @@ private:
     if constexpr(isPowerOf2) {
       return i & Capacity;
     } else {
-      // return i % (Capacity + 1);
-      return (i >= (Capacity + 1) ? 0 : i);
+      return (i == (Capacity + 1) ? 0 : i); // return i % (Capacity + 1);
     }
   }
 
