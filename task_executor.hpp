@@ -1,11 +1,7 @@
 #pragma once
 
 /*
- * Website:
- *      HFTDojo https://github.com/wo3kie/hft-dojo
- *
- * Author:
- *      Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
+ * Author: Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
 #include <atomic>
@@ -78,7 +74,7 @@ public:
   bool try_submit(F&& f, Channel<T>& channel) {
     assert(_worker.running_approx());
 
-    if(_worker.full_approx()) {
+    if(_worker._approx_full()) {
       return false;
     }
 
