@@ -81,34 +81,6 @@ class PrintRingBufferSPSC(gdb.Command):
 
 PrintRingBufferSPSC()
 
-
-class PrintRingBufferSPMC(gdb.Command):
-    def __init__(self):
-        super(PrintRingBufferSPMC, self).__init__("print_ring_buffer_spmc", gdb.COMMAND_USER)
-
-    def invoke(self, arg, from_tty):
-        N = 4
-        elems = []
-        val = gdb.parse_and_eval(arg)
-        size = val.type.template_argument(1)
-        buffer = val["_buffer"]["_buffer"]
-        popped = int(val["_popped"]["_M_i"])
-        pushed = int(val["_pushed"]["_M_i"])
-
-        while popped != pushed:
-            elems.append(str(buffer[popped % size]))
-            popped += 1
-
-        if (N == -1) or (len(elems) <= 2 * N):
-            shown = elems
-        else:
-            shown = elems[:N] + ["..."] + elems[-N:]
-
-        print(f"{val.type.strip_typedefs()} [ {", ".join(shown)} ]")
-
-PrintRingBufferSPMC()
-
-
 class PrintPriceBits(gdb.Command):
     def __init__(self):
         super(PrintPriceBits, self).__init__("print_price_bits", gdb.COMMAND_USER)
@@ -159,8 +131,6 @@ class PrintQueue(gdb.Command):
             PrintRingBuffer().invoke(arg, from_tty)
         elif type.startswith("RingBufferSPSC<"):
             PrintRingBufferSPSC().invoke(arg, from_tty)
-        elif type.startswith("RingBufferSPMC<"):
-            PrintRingBufferSPMC().invoke(arg, from_tty)
         elif type.startswith("PriceBits"):
             PrintPriceBits().invoke(arg, from_tty)
         else:

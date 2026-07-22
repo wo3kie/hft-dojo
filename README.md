@@ -90,9 +90,6 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   
   (gdb) print_ring_buffer_spsc rBuffer
   RingBufferSPSC<int, 128> [ 0, 1, 2, 3, ..., 124, 125, 126, 127 ]
-  
-  (gdb) print_ring_buffer_spmc rBuffer
-  RingBufferSPMC<int, 128> [ 0, 1, 2, 3, ..., 124, 125, 126, 127 ]
   ```
     
 - **map_reduce** - An implementation of the parallel map and serial reduce paradigm in C++.
@@ -134,17 +131,6 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
   Benchmark (Release): RingBufferSPSC: (iters=131072): 408 μs :: 3 ns/iter :: 320999204 iter/s
   Benchmark (Release): RingBufferSPSC: (iters=131072): 415 μs :: 3 ns/iter :: 315483411 iter/s
   Benchmark (Release): RingBufferSPSC: (iters=131072): 415 μs :: 3 ns/iter :: 315760057 iter/s
-  ```
-
-- **ring_buffer_spmc** - Single‑producer/multiple‑consumer ring buffer using atomics. It is designed for scenarios where one thread is producing data and multiple threads are consuming data, so it uses atomic operations to synchronize access to the buffer. This allows it to be used in multi‑threaded environments while still maintaining low latency, as it avoids the overhead of mutexes.
-
-  ```bash
-  # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
-  Benchmark (Release): RingBufferSPMC: (iters=131072): 1559 μs :: 11 ns/iter :: 84065239 iter/s
-  Benchmark (Release): RingBufferSPMC: (iters=131072): 1498 μs :: 11 ns/iter :: 87465533 iter/s
-  Benchmark (Release): RingBufferSPMC: (iters=131072): 1441 μs :: 10 ns/iter :: 90950219 iter/s
-  Benchmark (Release): RingBufferSPMC: (iters=131072): 1419 μs :: 10 ns/iter :: 92335892 iter/s
-  Benchmark (Release): RingBufferSPMC: (iters=131072): 1427 μs :: 10 ns/iter :: 91790328 iter/s
   ```
 
 - **task_executor** - Executes a function in a separate thread (optional thread affinity). Result retrieved via `Channel::get` (optional thread affinity).
