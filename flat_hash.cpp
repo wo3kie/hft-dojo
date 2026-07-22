@@ -16,11 +16,11 @@ void test_empty_hash() {
 
   assert(hash.capacity() >= 8);
   assert(hash._ext_equal({}));
-  assert(hash.find(123) == -1);
+  assert(hash.find(123) == THash::npos);
   assert(hash.contains(123) == false);
-  assert(hash.get(-1) == nullptr);
-  assert(hash.get(THash::capacity()) == nullptr);
-  assert(hash.erase(-1) == false);
+  assert(hash.get(THash::npos) == nullptr);
+  assert(hash.get(hash.capacity()) == nullptr);
+  assert(hash.erase(THash::npos) == false);
 }
 
 template<typename THash>
@@ -29,17 +29,17 @@ void test_insert_find_and_update() {
   std::unordered_map<int, int> expected;
 
   const int32_t idx10 = hash.insert(10, 100);
-  assert(idx10 != -1);
+  assert(idx10 != THash::npos);
   expected[10] = 100;
   assert(hash._ext_equal(expected));
 
   const int32_t idx18 = hash.insert(18, 180);
-  assert(idx18 != -1);
+  assert(idx18 != THash::npos);
   expected[18] = 180;
   assert(hash._ext_equal(expected));
 
   const int32_t idx26 = hash.insert({26, 260});
-  assert(idx26 != -1);
+  assert(idx26 != THash::npos);
   expected[26] = 260;
   assert(hash._ext_equal(expected));
 
@@ -63,9 +63,9 @@ void test_collisions_erase_and_tomb_reuse() {
   const int32_t idx2 = hash.insert(key2, 99);
   const int32_t idx3 = hash.insert(key3, 171);
 
-  assert(idx1 != -1);
-  assert(idx2 != -1);
-  assert(idx3 != -1);
+  assert(idx1 != THash::npos);
+  assert(idx2 != THash::npos);
+  assert(idx3 != THash::npos);
 
   expected[key1] = 11;
   expected[key2] = 99;
@@ -75,7 +75,7 @@ void test_collisions_erase_and_tomb_reuse() {
   assert(hash.erase(idx2));
   expected.erase(key2);
   assert(hash._ext_equal(expected));
-  assert(hash.find(key2) == -1);
+  assert(hash.find(key2) == THash::npos);
   assert(hash.contains(key2) == false);
 
   const int32_t idx4 = hash.insert(key4, 2525);
@@ -91,49 +91,13 @@ void test_fill_to_capacity() {
 
   for(int32_t key = 0; key < THash::capacity(); ++key) {
     const int32_t idx = hash.insert(key, key * 10);
-    assert(idx != -1);
+    assert(idx != THash::npos);
     expected[key] = key * 10;
   }
 
   assert(hash._ext_equal(expected));
   assert(hash.full());
-  assert(hash.insert(1000, 10000) == -1);
-}
-
-template<typename TContainer>
-void bench_flat_hash(int32_t iters, const std::string& label = ":") {
-   
-  struct Benchmark {
-    Benchmark(int32_t iters)
-      : _iters(iters)
-    {
-    }
-
-    int32_t _iters;
-    TContainer _hash;
-    
-    void setup() {
-    }
-    
-    void run() {
-      for(int32_t i = 0; i < _iters; ++i) {
-        do_not_optimize(_hash.insert({typename TContainer::key_type{}, 
-                                      typename TContainer::mapped_type{}}));
-      }
-    }
-
-    void teardown() {
-      _hash.clear();
-    }
-
-  } bench(iters);
-
-  Timer<1>(bench).log([iters, label](int ns, const std::string& msg) {
-    std::cout << "Micro Benchmark: insert: (" << PROFILE << "): "
-              << label << ": "
-              << "(iters=" << iters << "): " << ns/1000 << " μs :: " << (ns / iters)
-              << " ns/iter :: " << (int)(1e9 * iters / ns) << " iter/s" << std::endl;
-  });
+  assert(hash.insert(1000, 10000) == THash::npos);
 }
 
 } // namespace
@@ -143,8 +107,4 @@ int main(){
   test_insert_find_and_update<FlatHash<int, int, 8>>();
   test_collisions_erase_and_tomb_reuse<FlatHash<int, int, 8>>();
   test_fill_to_capacity<FlatHash<int, int, 8>>();
-
-#ifdef NDEBUG
-  bench_flat_hash<FlatHash<int, int, 8>>(10'000, "FlatHash<int,int,8>");
-#endif
 }
