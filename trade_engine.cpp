@@ -510,8 +510,6 @@ void benchmark(int32_t iters) {
   });
 }
 
-#include "flat_hash.hpp"
-
 int main() {
 
 #ifndef NDEBUG

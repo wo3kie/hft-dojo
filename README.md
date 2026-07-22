@@ -27,14 +27,7 @@ Debug artifacts are generated under `build/debug/` and release artifacts under `
 ## Content
   
 - **branchless** - A collection of branchless functions like `min`, `max`... These functions are implemented using bitwise operations and arithmetic to avoid branching, which can improve performance in certain scenarios by reducing pipeline stalls.  
-    
-- **flat_hash** - A fixed‑capacity, array‑based open‑addressing hash map. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions, deletions, and lookups without dynamic memory allocation. The map maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
-
-  ```bash
-  # Intel(R) Core(TM) Ultra 7 165H GenuineIntel
-  Micro Benchmark: insert: (Release): FlatHash<int,int,8>: (iters=10000): 15 μs :: 1 ns/iter :: 638977635 iter/s
-  ```
-    
+      
 - **flat_list** - A fixed‑capacity, array‑based linked list. It is designed for scenarios where the maximum number of elements is known in advance, and it provides fast insertions and deletions without dynamic memory allocation. The list maintains a free list of available slots, which enables it to reuse memory efficiently without fragmentation.
 
 - **flat_queue** - It uses an open‑addressing approach to manage free slots, which can be more efficient in certain scenarios, especially when slot `id`s can't be cached.
