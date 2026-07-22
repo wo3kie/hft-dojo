@@ -18,8 +18,6 @@ void test_empty_hash() {
   assert(hash._ext_equal({}));
   assert(hash.find(123) == THash::npos);
   assert(hash.contains(123) == false);
-  assert(hash.get(THash::npos) == nullptr);
-  assert(hash.get(hash.capacity()) == nullptr);
   assert(hash.erase(THash::npos) == false);
 }
 

@@ -4,6 +4,7 @@
  * Author: Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
+#include <cassert>
 #include <cstdint>
 #include <type_traits>
 #include <unordered_map>
@@ -26,48 +27,23 @@ public:
   using mapped_type = TValue;
 
 public:
-constexpr static std::size_t npos = static_cast<std::size_t>(-1);
+  constexpr static std::size_t npos = static_cast<std::size_t>(-1);
+
+  static constexpr std::size_t capacity() noexcept {
+    return Capacity;
+  }
 
 public:
   FlatHash() {
+    _size = 0;
+    
     for(std::size_t i = 0; i < Bits; ++i) {
       _freeBits[i] = 0xFF;
       _tombBits[i] = 0x00;
     }
   }
 
-  ~FlatHash() {
-  }
-
-  static constexpr std::size_t capacity() noexcept {
-    return Capacity;
-  }
-
-  std::size_t size() const noexcept {
-    std::size_t count = 0;
-
-    for(std::size_t iter = 0; iter < Capacity; ++iter) {
-      const uint8_t f = _get_bit(_freeBits, iter);
-      const uint8_t t = _get_bit(_tombBits, iter);
-
-      const uint8_t isUsed = (~f & ~t) & 1;
-
-      if(isUsed) {
-        count += 1;
-      }
-    }
-
-    return count;
-  }
-
-  [[nodiscard]] bool empty() const noexcept {
-    return size() == 0;
-  }
-
-  bool full() const noexcept {
-    return size() == Capacity;
-  }
-
+public:
   std::size_t insert(const std::pair<TKey, TValue>& kv) noexcept {
     return insert(kv.first, kv.second);
   }
@@ -77,12 +53,9 @@ public:
     std::size_t firstTomb = npos;
 
     for(std::size_t iter = 0; iter < Capacity; ++iter) {
-      const uint8_t f = _get_bit(_freeBits, idx);
-      const uint8_t t = _get_bit(_tombBits, idx);
-
-      const uint8_t isFree = f;
-      const uint8_t isTomb = t;
-      const uint8_t isUsed = (~f & ~t) & 1;
+      const bool isFree = _get_bit(_freeBits, idx);
+      const bool isTomb = _get_bit(_tombBits, idx);
+      const bool isUsed = (isFree == false) && (isTomb == false);
 
       if(isUsed && _keys[idx] == key) {
         _values[idx] = value;
@@ -95,18 +68,21 @@ public:
 
       if(isFree) {
         firstTomb = (firstTomb != npos) ? firstTomb : idx;
+
         break;
       }
 
       idx = (idx + Step) & Mask;
     }
 
-    if (firstTomb != npos) {
+    if(firstTomb != npos) {
       _keys[firstTomb] = key;
       _values[firstTomb] = value;
 
       _clear_bit(_freeBits, firstTomb);
       _clear_bit(_tombBits, firstTomb);
+
+      _size += 1;
 
       return firstTomb;
     }
@@ -118,11 +94,9 @@ public:
     std::size_t idx = key & Mask;
 
     for(std::size_t iter = 0; iter < Capacity; ++iter) {
-      const uint8_t f = _get_bit(_freeBits, idx);
-      const uint8_t t = _get_bit(_tombBits, idx);
-
-      const uint8_t isFree = f;
-      const uint8_t isUsed = (~f & ~t) & 1;
+      const bool isFree = _get_bit(_freeBits, idx);
+      const bool isTomb = _get_bit(_tombBits, idx);
+      const bool isUsed = (isFree == false) && (isTomb == false);
 
       if(isUsed && _keys[idx] == key) {
         return idx;
@@ -143,6 +117,9 @@ public:
   }
 
   TValue* get(std::size_t idx) noexcept {
+    assert(idx < Capacity);
+    assert(_get_bit(_freeBits, idx) == 0);
+    assert(_get_bit(_tombBits, idx) == 0);
     return (idx < Capacity) ? &_values[idx] : nullptr;
   }
 
@@ -154,6 +131,8 @@ public:
     _clear_bit(_freeBits, idx);
     _set_bit(_tombBits, idx);
 
+    _size -= 1;
+
     return true;
   }
 
@@ -162,6 +141,20 @@ public:
       _freeBits[i] = 0xFF;
       _tombBits[i] = 0x00;
     }
+
+    _size = 0;
+  }
+
+  std::size_t size() const noexcept {
+    return _size;
+  }
+
+  [[nodiscard]] bool empty() const noexcept {
+    return size() == 0;
+  }
+
+  bool full() const noexcept {
+    return size() == Capacity;
   }
 
   /* extension */ bool _ext_equal(const std::unordered_map<TKey, TValue>& expected) const noexcept {
@@ -172,13 +165,10 @@ public:
     std::unordered_map<TKey, TValue> actual;
 
     for(std::size_t i = 0; i < Capacity; ++i) {
-      const uint8_t f = _get_bit(_freeBits, i);
-      const uint8_t t = _get_bit(_tombBits, i);
-
-      const uint8_t isFree = f;
-      const uint8_t isTomb = t;
-      const uint8_t isUsed = (~f & ~t) & 1;
-      assert((isUsed + isTomb + isFree) == 1);
+      const bool isFree = _get_bit(_freeBits, i);
+      const bool isTomb = _get_bit(_tombBits, i);
+      const bool isUsed = (isFree == false) && (isTomb == false);
+      assert(((uint8_t)isUsed + (uint8_t)isTomb + (uint8_t)isFree) == 1);
 
       if(isUsed) {
         actual[_keys[i]] = _values[i];
@@ -189,19 +179,21 @@ public:
   }
 
 private:
-  static inline uint8_t _get_bit(const Storage<uint8_t, Bits>& bits, std::size_t idx) noexcept {
-    return (bits[idx >> 3] >> (idx & 7)) & 1;
+  static bool _get_bit(const Storage<uint8_t, Bits>& bits, std::size_t idx) noexcept {
+    return (bool)((bits[idx >> 3] >> (idx & 7)) & 1);
   }
 
-  static inline void _set_bit(Storage<uint8_t, Bits>& bits, std::size_t idx) noexcept {
+  static void _set_bit(Storage<uint8_t, Bits>& bits, std::size_t idx) noexcept {
     bits[idx >> 3] |= uint8_t(1u << (idx & 7));
   }
 
-  static inline void _clear_bit(Storage<uint8_t, Bits>& bits, std::size_t idx) noexcept {
+  static void _clear_bit(Storage<uint8_t, Bits>& bits, std::size_t idx) noexcept {
     bits[idx >> 3] &= uint8_t(~(1u << (idx & 7)));
   }
 
 private:
+  std::size_t _size;
+
   Storage<TKey, Capacity> _keys;
   Storage<TValue, Capacity> _values;
 
