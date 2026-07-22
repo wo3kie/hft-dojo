@@ -11,23 +11,26 @@
 #include "common.hpp"
 #include "storage.hpp"
 
-template<typename TKey, typename TValue, int32_t Capacity>
+template<typename TKey, typename TValue, std::size_t Capacity>
   requires(std::is_integral_v<TKey>)
 struct FlatHash: noncopyable, nonmovable {
   static_assert(Capacity >= 8);
   static_assert((Capacity & (Capacity - 1)) == 0);
 
-  static constexpr int32_t Mask = Capacity - 1;
-  static constexpr int32_t Step = (Capacity / 2) - 1;
-  static constexpr int32_t Bits = Capacity / 8;
+  static constexpr std::size_t Mask = Capacity - 1;
+  static constexpr std::size_t Step = (Capacity / 2) - 1;
+  static constexpr std::size_t Bits = Capacity / 8;
 
 public:
   using key_type = TKey;
   using mapped_type = TValue;
 
 public:
+constexpr static std::size_t npos = static_cast<std::size_t>(-1);
+
+public:
   FlatHash() {
-    for(int32_t i = 0; i < Bits; ++i) {
+    for(std::size_t i = 0; i < Bits; ++i) {
       _freeBits[i] = 0xFF;
       _tombBits[i] = 0x00;
     }
@@ -36,14 +39,14 @@ public:
   ~FlatHash() {
   }
 
-  static constexpr int32_t capacity() noexcept {
+  static constexpr std::size_t capacity() noexcept {
     return Capacity;
   }
 
-  int32_t size() const noexcept {
-    int32_t count = 0;
+  std::size_t size() const noexcept {
+    std::size_t count = 0;
 
-    for(int32_t iter = 0; iter < Capacity; ++iter) {
+    for(std::size_t iter = 0; iter < Capacity; ++iter) {
       const uint8_t f = _get_bit(_freeBits, iter);
       const uint8_t t = _get_bit(_tombBits, iter);
 
@@ -65,15 +68,15 @@ public:
     return size() == Capacity;
   }
 
-  int32_t insert(const std::pair<TKey, TValue>& kv) noexcept {
+  std::size_t insert(const std::pair<TKey, TValue>& kv) noexcept {
     return insert(kv.first, kv.second);
   }
 
-  int32_t insert(TKey key, const TValue& value) noexcept {
-    int32_t idx = key & Mask;
-    int32_t firstTomb = -1;
+  std::size_t insert(TKey key, const TValue& value) noexcept {
+    std::size_t idx = key & Mask;
+    std::size_t firstTomb = npos;
 
-    for(int32_t iter = 0; iter < Capacity; ++iter) {
+    for(std::size_t iter = 0; iter < Capacity; ++iter) {
       const uint8_t f = _get_bit(_freeBits, idx);
       const uint8_t t = _get_bit(_tombBits, idx);
 
@@ -86,19 +89,19 @@ public:
         return idx;
       }
 
-      if(isTomb && firstTomb == -1) {
+      if(isTomb && firstTomb == npos) {
         firstTomb = idx;
       }
 
       if(isFree) {
-        firstTomb = (firstTomb != -1) ? firstTomb : idx;
+        firstTomb = (firstTomb != npos) ? firstTomb : idx;
         break;
       }
 
       idx = (idx + Step) & Mask;
     }
 
-    if (firstTomb != -1) {
+    if (firstTomb != npos) {
       _keys[firstTomb] = key;
       _values[firstTomb] = value;
 
@@ -108,13 +111,13 @@ public:
       return firstTomb;
     }
 
-    return -1;
+    return npos;
   }
 
-  int32_t find(TKey key) const noexcept {
-    int32_t idx = key & Mask;
+  std::size_t find(TKey key) const noexcept {
+    std::size_t idx = key & Mask;
 
-    for(int32_t iter = 0; iter < Capacity; ++iter) {
+    for(std::size_t iter = 0; iter < Capacity; ++iter) {
       const uint8_t f = _get_bit(_freeBits, idx);
       const uint8_t t = _get_bit(_tombBits, idx);
 
@@ -126,25 +129,25 @@ public:
       }
 
       if(isFree) {
-        return -1;
+        return npos;
       }
 
       idx = (idx + Step) & Mask;
     }
 
-    return -1;
+    return npos;
   }
 
   bool contains(TKey key) const noexcept {
-    return find(key) != -1;
+    return find(key) != npos;
   }
 
-  TValue* get(int32_t idx) noexcept {
-    return (idx >= 0 && idx < Capacity) ? &_values[idx] : nullptr;
+  TValue* get(std::size_t idx) noexcept {
+    return (idx < Capacity) ? &_values[idx] : nullptr;
   }
 
-  bool erase(int32_t idx) noexcept {
-    if(idx == -1) {
+  bool erase(std::size_t idx) noexcept {
+    if(idx == npos || idx >= Capacity) {
       return false;
     }
 
@@ -155,7 +158,7 @@ public:
   }
 
   void clear() noexcept {
-    for(int32_t i = 0; i < Bits; ++i) {
+    for(std::size_t i = 0; i < Bits; ++i) {
       _freeBits[i] = 0xFF;
       _tombBits[i] = 0x00;
     }
@@ -168,7 +171,7 @@ public:
 
     std::unordered_map<TKey, TValue> actual;
 
-    for(int32_t i = 0; i < Capacity; ++i) {
+    for(std::size_t i = 0; i < Capacity; ++i) {
       const uint8_t f = _get_bit(_freeBits, i);
       const uint8_t t = _get_bit(_tombBits, i);
 
@@ -186,15 +189,15 @@ public:
   }
 
 private:
-  static inline uint8_t _get_bit(const Storage<uint8_t, Bits>& bits, int32_t idx) noexcept {
+  static inline uint8_t _get_bit(const Storage<uint8_t, Bits>& bits, std::size_t idx) noexcept {
     return (bits[idx >> 3] >> (idx & 7)) & 1;
   }
 
-  static inline void _set_bit(Storage<uint8_t, Bits>& bits, int32_t idx) noexcept {
+  static inline void _set_bit(Storage<uint8_t, Bits>& bits, std::size_t idx) noexcept {
     bits[idx >> 3] |= uint8_t(1u << (idx & 7));
   }
 
-  static inline void _clear_bit(Storage<uint8_t, Bits>& bits, int32_t idx) noexcept {
+  static inline void _clear_bit(Storage<uint8_t, Bits>& bits, std::size_t idx) noexcept {
     bits[idx >> 3] &= uint8_t(~(1u << (idx & 7)));
   }
 
