@@ -48,7 +48,6 @@ public:
       return npos;
     }
 
-    
     const std::size_t index = (std::size_t)_free[_size++];
 
 #ifndef NDEBUG
