@@ -4,7 +4,6 @@
  * Author: Lukasz Czerwinski (https://www.lukaszczerwinski.pl/)
  */
 
-#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -14,81 +13,82 @@
 #include "common.hpp"
 #include "storage.hpp"
 
-template<typename T, int32_t Capacity>
+template<typename T, std::size_t Capacity>
   requires std::is_trivially_destructible_v<T>
 struct ObjectPool: noncopyable, nonmovable {
 public:
   static_assert((Capacity > 0) && (Capacity <= 1024 * 1024 * 1024));
 
+private:
   using index_type = index_type_t<Capacity>;
 
-  static constexpr int32_t npos = -1;
+public:
+  static constexpr std::size_t npos = -1;
 
+public:
+  static constexpr std::size_t capacity() noexcept {
+    return Capacity;
+  }
+
+public:
   ObjectPool() {
     _size = 0;
 
-    for(index_type i = 0; i < (index_type)Capacity; ++i) {
+    for(std::size_t i = 0; i < Capacity; ++i) {
       _free[i] = i;
     }
   }
 
-  ~ObjectPool() {
-  }
-
-  static constexpr int32_t capacity() noexcept {
-    return Capacity;
-  }
-
-  int32_t size() const noexcept {
-    return (int32_t)_size;
-  }
-
-  [[nodiscard]] bool empty() const noexcept {
-    return _size == 0;
-  }  
-
-  bool full() const noexcept {
-    return _size == (index_type)Capacity;
-  }  
-
-  int32_t allocate() noexcept {
+  std::size_t allocate() noexcept {
     if(full()) {
-      return (int32_t)npos;
+      return npos;
     }
 
-    return (int32_t)_free[_size++];
+    return (std::size_t)_free[_size++];
   }
 
   template<typename... Args>
-  int32_t allocate(Args&&... args) noexcept {
-    const int32_t slot = allocate();
-   
-    if(slot != npos) {
-      new(&_buffer[slot]) T(std::forward<Args>(args)...);
+  std::size_t allocate(Args&&... args) noexcept {
+    const std::size_t index = allocate();
+
+    if(index != npos) {
+      new(&_buffer[index]) T(std::forward<Args>(args)...);
     }
-   
-    return slot;
+
+    return index;
   }
 
-  void deallocate(int32_t slot) noexcept {
+  void deallocate(std::size_t index) noexcept {
     assert(empty() == false);
-    assert((slot >= 0) && (slot < Capacity));
-    
-    _free[--_size] = (index_type)slot;
-  }
-  
-  T& operator[](int32_t slot) noexcept {
-    assert(empty() == false);
-    assert((slot >= 0) && (slot < Capacity));
-    
-    return _buffer[slot];
-  }
-  
-  const T& operator[](int32_t slot) const noexcept {
-    assert(empty() == false);
-    assert((slot >= 0) && (slot < Capacity));
+    assert(index < Capacity);
 
-    return _buffer[slot];
+    _free[--_size] = index;
+  }
+
+  T& operator[](std::size_t index) noexcept {
+    assert(empty() == false);
+    assert(index < Capacity);
+
+    return _buffer[index];
+  }
+
+  const T& operator[](std::size_t index) const noexcept {
+    assert(empty() == false);
+    assert(index < Capacity);
+
+    return _buffer[index];
+  }
+
+  std::size_t size() const noexcept {
+    return _size;
+  }
+
+  [[nodiscard]] bool empty() const noexcept {
+    return size() == 0;
+  }
+
+  bool full() const noexcept {
+    return size() == Capacity;
   }
 
 private:
