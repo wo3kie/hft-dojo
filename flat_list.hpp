@@ -10,34 +10,29 @@
 
 #include "object_pool.hpp"
 
-template<typename Value, int32_t Capacity>
+template<typename Value, std::size_t Capacity>
 struct FlatList {
   static_assert((Capacity > 0) && (Capacity <= 1024 * 1024 * 1024));
 
 private:
   using index_type = index_type_t<Capacity>;
 
-public:
-  FlatList() noexcept 
-    : _head(-1)
-    , _tail(-1) 
-  {
-  }
+private:
+  constexpr static index_type none = static_cast<index_type>(-1);
 
-  static constexpr int32_t capacity() noexcept {
+public:
+  constexpr static std::size_t npos = static_cast<std::size_t>(-1);
+
+public:
+  static constexpr std::size_t capacity() noexcept {
     return Capacity;
   }
 
-  int32_t size() const noexcept {
-    return _pool.size();
-  }  
-
-  [[nodiscard]] bool empty() const noexcept {
-    return _pool.empty();
-  }
-
-  bool full() const noexcept {
-    return _pool.full();
+public:
+  FlatList() noexcept 
+    : _head(none)
+    , _tail(none) 
+  {
   }
 
   Value& front() noexcept {
@@ -48,22 +43,22 @@ public:
     return _pool[_tail]._value;
   }
 
-  Value& operator[](int32_t slot) noexcept {
+  Value& operator[](std::size_t slot) noexcept {
     return _pool[slot]._value;
   }
 
-  const Value& operator[](int32_t slot) const noexcept {
+  const Value& operator[](std::size_t slot) const noexcept {
     return _pool[slot]._value;
   }
 
-  int32_t insert(int32_t next, const Value& value) noexcept {
+  std::size_t insert(std::size_t next, const Value& value) noexcept {
     assert(! full());
 
     if (UNLIKELY(next == _head)) {
       return push_front(value);
     }
 
-    if (UNLIKELY(next == -1)) {
+    if (UNLIKELY(next == npos)) {
       return push_back(value);
     }
 
@@ -76,7 +71,7 @@ public:
     return slot;
   }
 
-  void erase(int32_t pos) noexcept {
+  void erase(std::size_t pos) noexcept {
     assert(! empty());
 
     if (UNLIKELY(pos == _head)) {
@@ -96,7 +91,7 @@ public:
     _pool.deallocate(pos);
   }
 
-  int32_t push_front(const Value& value) noexcept {
+  std::size_t push_front(const Value& value) noexcept {
     assert(! full());
 
     const index_type next = _head;
@@ -104,7 +99,7 @@ public:
 
     _head = slot;
 
-    if(next != -1) {
+    if(next != npos) {
       _pool[next]._prev = slot;
     } else {
       _tail = slot;
@@ -113,7 +108,7 @@ public:
     return (int32_t)slot;
   }
 
-  int32_t push_back(const Value& value) noexcept {
+  std::size_t push_back(const Value& value) noexcept {
     assert(! full());
 
     const index_type prev = _tail;
@@ -138,9 +133,9 @@ public:
     _head = next;
 
     if(slot != _tail) {
-      _pool[next]._prev = -1;
+      _pool[next]._prev = none;
     } else {
-      _tail = -1;
+      _tail = none;
     }
 
     _pool.deallocate(slot);
@@ -153,19 +148,19 @@ public:
     const index_type prev = _pool[slot]._prev;
 
     if(slot != _head) {
-      _pool[prev]._next = -1;
+      _pool[prev]._next = none;
     } else {
-      _head = -1;
+      _head = none;
     }
 
     _tail = prev;
     _pool.deallocate(slot);
   }
 
-  int32_t find(const Value& value) const noexcept {
+  std::size_t find(const Value& value) const noexcept {
     index_type head = _head;
 
-    while(head != -1) {
+    while(head != none) {
       if(_pool[head]._value == value) {
         return head;
       }
@@ -173,7 +168,19 @@ public:
       head = _pool[head]._next;
     }
 
-    return -1;
+    return npos;
+  }
+
+  std::size_t size() const noexcept {
+    return _pool.size();
+  }  
+
+  [[nodiscard]] bool empty() const noexcept {
+    return _pool.empty();
+  }
+
+  bool full() const noexcept {
+    return _pool.full();
   }
 
   /* extension */ bool _ext_equal(std::list<Value> expected) const noexcept {
