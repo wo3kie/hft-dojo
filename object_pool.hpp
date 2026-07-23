@@ -48,7 +48,15 @@ public:
       return npos;
     }
 
-    return (std::size_t)_free[_size++];
+    
+    const std::size_t index = (std::size_t)_free[_size++];
+
+#ifndef NDEBUG
+      assert(_debug_allocated.test(index) == false);
+      _debug_allocated.set(index);
+#endif
+
+    return index;
   }
 
   template<typename... Args>
@@ -57,12 +65,6 @@ public:
 
     if(index != npos) {
       new(&_buffer[index]) T(std::forward<Args>(args)...);
-
-#ifndef NDEBUG
-      assert(_debug_allocated.test(index) == false);
-      _debug_allocated.set(index);
-#endif
-
     }
 
     return index;
