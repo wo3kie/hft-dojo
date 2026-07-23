@@ -10,6 +10,10 @@
 #include <new>
 #include <type_traits>
 
+#ifndef NDEBUG
+#include <bitset>
+#endif
+
 #include "common.hpp"
 #include "storage.hpp"
 
@@ -53,6 +57,12 @@ public:
 
     if(index != npos) {
       new(&_buffer[index]) T(std::forward<Args>(args)...);
+
+#ifndef NDEBUG
+      assert(_debug_allocated.test(index) == false);
+      _debug_allocated.set(index);
+#endif
+
     }
 
     return index;
@@ -62,6 +72,11 @@ public:
     assert(empty() == false);
     assert(index < Capacity);
 
+#ifndef NDEBUG
+    assert(_debug_allocated.test(index));
+    _debug_allocated.reset(index);
+#endif
+
     _free[--_size] = index;
   }
 
@@ -69,12 +84,20 @@ public:
     assert(empty() == false);
     assert(index < Capacity);
 
+#ifndef NDEBUG
+    assert(_debug_allocated.test(index));
+#endif
+
     return _buffer[index];
   }
 
   const T& operator[](std::size_t index) const noexcept {
     assert(empty() == false);
     assert(index < Capacity);
+
+#ifndef NDEBUG
+    assert(_debug_allocated.test(index));
+#endif
 
     return _buffer[index];
   }
@@ -95,4 +118,8 @@ private:
   index_type _size{0};
   Storage<T, Capacity> _buffer;
   Storage<index_type, Capacity> _free;
+
+#ifndef NDEBUG
+  std::bitset<Capacity> _debug_allocated;
+#endif
 };
