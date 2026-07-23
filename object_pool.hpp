@@ -22,6 +22,7 @@ template<typename T, std::size_t Capacity>
 struct ObjectPool: noncopyable, nonmovable {
 public:
   static_assert((Capacity > 0) && (Capacity <= 1024 * 1024 * 1024));
+  static_assert(std::numeric_limits<index_type_t<Capacity>>::max() >= Capacity);
 
 private:
   using index_type = index_type_t<Capacity>;
