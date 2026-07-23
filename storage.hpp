@@ -17,10 +17,7 @@ public:
   static_assert((Capacity > 0) && (Capacity <= 1024 * 1024 * 1024));
 
 public:
-  using index_type = index_type_t<Capacity>;
-
-public:
-  static constexpr index_type capacity() noexcept {
+  static constexpr std::size_t capacity() noexcept {
     return Capacity;
   }
 
@@ -41,13 +38,13 @@ public:
     }
   }
 
-  T& operator[](index_type index) noexcept {
-    assert(index >= 0 && index < Capacity);
+  T& operator[](std::size_t index) noexcept {
+    assert(index < Capacity);
     return _buffer[index];
   }
 
-  const T& operator[](index_type index) const noexcept {
-    assert(index >= 0 && index < Capacity);
+  const T& operator[](std::size_t index) const noexcept {
+    assert(index < Capacity);
     return _buffer[index];
   }
 
